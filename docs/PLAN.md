@@ -48,7 +48,7 @@ Every row below is a table in SQLite. Kinds are closed sets, and each kind has i
 
 ## Restore speed
 
-A Postgres archive is restored with `pg_restore --jobs N`, which needs a seekable file. The restore therefore downloads the archive to a temp file first, then restores in parallel. MySQL restores stream. A files restore downloads first too, so a corrupt archive fails before anything is written; SQLite writes next to its target and swaps the file in with one rename.
+A Postgres archive is restored with `pg_restore --jobs N`, which needs a seekable file. The restore therefore downloads the archive to a temp file first, then restores in parallel. MySQL and files restores download first too, so a corrupt archive fails before anything is written; SQLite writes next to its target and swaps the file in with one rename.
 
 ## Open decisions
 

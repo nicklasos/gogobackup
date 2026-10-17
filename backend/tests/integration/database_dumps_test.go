@@ -300,7 +300,8 @@ func TestRestores_MySQL(t *testing.T) {
 	app.UseRealTool("mysql")
 	user := app.Create.User(factory.Admin())
 	config := plans.MySQLConfig{Host: server.Hostname(), Port: port(t, server, 3306), User: server.User.Username(), Database: name}
-	plan := app.Create.Plan(factory.MySQLSource(config, password), factory.WithStorages(app.Create.Storage(factory.LocalStorage(t.TempDir()))))
+	storageDir := t.TempDir()
+	plan := app.Create.Plan(factory.MySQLSource(config, password), factory.WithStorages(app.Create.Storage(factory.LocalStorage(storageDir))))
 	backup := runPlan(t, app, user, plan)
 	require.Equal(t, runs.StatusSucceeded, backup.Status, backup.Log)
 	archive := backup.Archives[0]
@@ -328,4 +329,18 @@ func TestRestores_MySQL(t *testing.T) {
 	require.Equal(t, runs.StatusSucceeded, over.Status, over.Log)
 	assert.Equal(t, []string{"Blue widget", "Red gadget"}, mysqlOrders(t, admin, name), "the original is back as it was backed up")
 	t.Logf("restore over the original:\n%s", over.Log)
+
+	_, err = admin.Exec("UPDATE " + name + ".orders SET item = 'Changed again' WHERE id = 1")
+	require.NoError(t, err)
+	object := filepath.Join(storageDir, archive.ObjectKey)
+	data, err := os.ReadFile(object)
+	require.NoError(t, err)
+	// The gzip trailer: every statement still decompresses, so only the checksum can tell.
+	data[len(data)-6] ^= 0xff
+	require.NoError(t, os.WriteFile(object, data, 0o644))
+
+	damaged := restore(t, app, user, archive.ID, body)
+
+	require.Equal(t, runs.StatusFailed, damaged.Status, damaged.Log)
+	assert.Equal(t, []string{"Changed again", "Red gadget"}, mysqlOrders(t, admin, name), "a damaged archive never reaches mysql")
 }

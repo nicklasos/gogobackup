@@ -141,7 +141,7 @@ restore, removed after it ends.
   `pg_restore --jobs` reads it in parallel from a file, so `work_dir` needs room for the largest PostgreSQL
   archive. A files restore downloads its archive there too, to check it before writing anything, and
   extracts into `work_dir/restores/` unless the admin names another directory. A SQLite restore writes
-  next to the target file and keeps the replaced one as `<file>.before-restore-<time>`. MySQL streams.
+  next to the target file and keeps the replaced one as `<file>.before-restore-<time>`. MySQL downloads first too, so a damaged archive never reaches `mysql`.
 - **Speed.** `restore_jobs` (`RESTORE_JOBS`, default 4) is how many parallel jobs `pg_restore` runs; up
   to the number of cores helps a large database.
 - `pg_restore` must be at least as new as the `pg_dump` that made the archive, and the target server at

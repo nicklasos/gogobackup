@@ -203,21 +203,23 @@ func restoreMySQL(ctx context.Context, job RestoreJob, log *runlog.Log) error {
 	}
 	defer os.Remove(path)
 
-	r, closeBody, err := job.Archive.stream(ctx)
+	// Verified before mysql sees a byte: mysql applies statements as they arrive, so a
+	// checksum checked at the end would only report damage it had already done.
+	archive, err := job.Archive.download(ctx, job.WorkDir, log)
 	if err != nil {
 		return err
 	}
-	defer closeBody()
-	gz, err := gzip.NewReader(r)
+	f, err := os.Open(archive)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	gz, err := gzip.NewReader(f)
 	if err != nil {
 		return fmt.Errorf("the archive is not gzip: %w", err)
 	}
 	log.Printf("Restoring %s (%s) into database %s on %s:%d", job.Archive.Name, formatSize(job.Archive.Size), c.Database, c.Host, c.Port)
-	if err := runTool(ctx, tool, MySQLRestoreArgs(path, c.Database), nil, gz, io.Discard, log); err != nil {
-		return err
-	}
-	log.Printf("Verified the archive (sha256 %s)", job.Archive.SHA256)
-	return nil
+	return runTool(ctx, tool, MySQLRestoreArgs(path, c.Database), nil, gz, io.Discard, log)
 }
 
 // MySQLRestoreArgs is the arguments of mysql for a restore. The password is in the defaults
