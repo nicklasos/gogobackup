@@ -65,12 +65,12 @@ func (f *Factory) Storage(opts ...StorageOption) *db.Storage {
 		secret = f.secrets.Seal(plain)
 	}
 
-	var storage db.Storage
-	err = f.conn.QueryRowContext(ctx,
-		`INSERT INTO storages (name, kind, config, secret) VALUES (?, ?, ?, ?)
-		 RETURNING id, name, kind, config, secret, created_at, updated_at`,
-		attrs.name, string(attrs.kind), string(config), secret,
-	).Scan(&storage.ID, &storage.Name, &storage.Kind, &storage.Config, &storage.Secret, &storage.CreatedAt, &storage.UpdatedAt)
+	storage, err := f.queries.FactoryCreateStorage(ctx, db.FactoryCreateStorageParams{
+		Name:   attrs.name,
+		Kind:   string(attrs.kind),
+		Config: string(config),
+		Secret: secret,
+	})
 	if err != nil {
 		f.t.Fatalf("factory.Storage: %v", err)
 	}

@@ -69,14 +69,16 @@ func (f *Factory) Run(plan *db.Plan, opts ...RunOption) *db.Run {
 		attrs.errText = sql.NullString{String: "factory: failed", Valid: true}
 	}
 
-	var run db.Run
-	err := f.conn.QueryRowContext(ctx,
-		`INSERT INTO runs (plan_id, trigger, scheduled_for, status, started_at, finished_at, size_bytes, error)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		 RETURNING id, plan_id, trigger, scheduled_for, status, started_at, finished_at, size_bytes, log, error, created_at`,
-		plan.ID, string(attrs.trigger), attrs.scheduledFor, string(attrs.status), attrs.startedAt, attrs.finishedAt, attrs.sizeBytes, attrs.errText,
-	).Scan(&run.ID, &run.PlanID, &run.Trigger, &run.ScheduledFor, &run.Status, &run.StartedAt, &run.FinishedAt,
-		&run.SizeBytes, &run.Log, &run.Error, &run.CreatedAt)
+	run, err := f.queries.FactoryCreateRun(ctx, db.FactoryCreateRunParams{
+		PlanID:       plan.ID,
+		Trigger:      string(attrs.trigger),
+		ScheduledFor: attrs.scheduledFor,
+		Status:       string(attrs.status),
+		StartedAt:    attrs.startedAt,
+		FinishedAt:   attrs.finishedAt,
+		SizeBytes:    attrs.sizeBytes,
+		Error:        attrs.errText,
+	})
 	if err != nil {
 		f.t.Fatalf("factory.Run: %v", err)
 	}
@@ -120,14 +122,16 @@ func (f *Factory) Archive(run *db.Run, storage *db.Storage, opts ...ArchiveOptio
 	}
 	sum := sha256.Sum256(attrs.content)
 
-	var archive db.Archive
-	err := f.conn.QueryRowContext(ctx,
-		`INSERT INTO archives (run_id, plan_id, storage_id, object_key, size_bytes, sha256, created_at, deleted_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		 RETURNING id, run_id, plan_id, storage_id, object_key, size_bytes, sha256, created_at, deleted_at`,
-		run.ID, run.PlanID, storage.ID, attrs.key, len(attrs.content), hex.EncodeToString(sum[:]), attrs.createdAt, attrs.deletedAt,
-	).Scan(&archive.ID, &archive.RunID, &archive.PlanID, &archive.StorageID, &archive.ObjectKey, &archive.SizeBytes,
-		&archive.Sha256, &archive.CreatedAt, &archive.DeletedAt)
+	archive, err := f.queries.FactoryCreateArchive(ctx, db.FactoryCreateArchiveParams{
+		RunID:     run.ID,
+		PlanID:    run.PlanID,
+		StorageID: storage.ID,
+		ObjectKey: attrs.key,
+		SizeBytes: int64(len(attrs.content)),
+		Sha256:    hex.EncodeToString(sum[:]),
+		CreatedAt: attrs.createdAt,
+		DeletedAt: attrs.deletedAt,
+	})
 	if err != nil {
 		f.t.Fatalf("factory.Archive: %v", err)
 	}
