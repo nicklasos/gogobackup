@@ -15,9 +15,8 @@ A spec runs because of the folder it is in. There is nothing to register.
 ## 2. Data
 
 - `loginAs(page, 'admin')` creates a user with that role and signs the page in. It returns the user.
-- `dbHelper.createUser({ roles, emailVerified })`, `dbHelper.createExample(userId, {...})`, `dbHelper.createExamples(userId, 25)`,
-  `dbHelper.createEmailToken(userId, 'password_reset')` seed the database directly.
-- Records created through the UI must be findable by cleanup: emails from `uniqueEmail('label')`, titles starting with `E2E`.
+- `dbHelper.createUser({ roles, emailVerified })` and `dbHelper.createEmailToken(userId, 'password_reset')` seed the database directly.
+- Records created through the UI must be findable by cleanup: emails from `uniqueEmail('label')`, names starting with `E2E`.
 - Add a method to `tests/e2e/helpers/db-helper.ts` when a new table needs seeding.
 
 ## 3. Page objects

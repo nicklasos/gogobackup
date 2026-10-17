@@ -30,13 +30,6 @@ interface CreateUserOptions {
 
 export type EmailTokenPurpose = 'password_reset' | 'email_verification'
 
-export interface TestExample {
-  id: number
-  user_id: number
-  title: string
-  description: string
-}
-
 let sequence = 0
 
 /** Emails start with `e2e-` so cleanup can find every user a test created, including through the UI. */
@@ -106,27 +99,7 @@ export class DatabaseHelper {
     return token
   }
 
-  async createExample(userId: number, { title = `E2E Example ${Date.now()}`, description = 'desc' } = {}): Promise<TestExample> {
-    return this.connection()
-      .prepare(
-        `INSERT INTO examples (user_id, title, description)
-         VALUES (?, ?, ?)
-         RETURNING id, user_id, title, description`
-      )
-      .get(userId, title, description) as unknown as TestExample
-  }
-
-  async createExamples(userId: number, count: number, prefix = 'E2E Example'): Promise<void> {
-    this.connection()
-      .prepare(
-        `WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < ?)
-         INSERT INTO examples (user_id, title, description)
-         SELECT ?, ? || ' ' || printf('%03d', n), 'desc' FROM seq`
-      )
-      .run(count, userId, prefix)
-  }
-
-  /** Examples and refresh tokens go with their user (ON DELETE CASCADE). Storages are global: theirs start with "E2E". */
+  /** Refresh tokens and emailed tokens go with their user (ON DELETE CASCADE). Storages are global: theirs start with "E2E". */
   async cleanupTestData(): Promise<void> {
     this.connection().exec(`DELETE FROM users WHERE email LIKE 'e2e-%@example.com'; DELETE FROM storages WHERE name LIKE 'E2E%'`)
   }

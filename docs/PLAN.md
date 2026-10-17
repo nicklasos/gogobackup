@@ -17,7 +17,7 @@ This file is the plan. Each phase is one pull request that ends with `make test`
 | 7 | Restore | Pick an archive, pick a target, watch the restore log |
 | 8 | Self-deploy | `deploy/` installs Gogobackup and Gogobackup backs up its own database |
 
-Phase 1 also removed the gopulse monitoring dashboard. Phase 2 comes before the features on purpose. The `uploads` module and Redis existed for the template, not for a backup service. Removing them first means phases 3 to 7 build on a smaller base. The scheduler runs inside the API by default; `ENABLE_SCHEDULER=false` (`scheduler_in_api: false` in deploy) moves it to the separate `cmd/cron` process. `examples` stays until phase 4 lands, because `backend/AGENTS.md` uses it as the reference module.
+Phase 1 also removed the gopulse monitoring dashboard. Phase 2 comes before the features on purpose. The `uploads` module and Redis existed for the template, not for a backup service. Removing them first means phases 3 to 7 build on a smaller base. The scheduler runs inside the API by default; `ENABLE_SCHEDULER=false` (`scheduler_in_api: false` in deploy) moves it to the separate `cmd/cron` process. Phase 4 removed the `examples` demo module before adding plans; `internal/storages` is the reference module since.
 
 ## Data model
 

@@ -13,8 +13,6 @@ const ResetPasswordPage = lazy(() => import('@/auth/ResetPasswordPage'))
 const VerifyEmailPage = lazy(() => import('@/auth/VerifyEmailPage'))
 const ProfilePage = lazy(() => import('@/features/account/ProfilePage'))
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'))
-const ExampleEditorPage = lazy(() => import('@/features/examples/pages/ExampleEditorPage'))
-const ExamplesPage = lazy(() => import('@/features/examples/pages/ExamplesPage'))
 const StorageBrowserPage = lazy(() => import('@/features/storages/pages/StorageBrowserPage'))
 const StorageEditorPage = lazy(() => import('@/features/storages/pages/StorageEditorPage'))
 const StoragesPage = lazy(() => import('@/features/storages/pages/StoragesPage'))
@@ -49,9 +47,6 @@ export function AppRoutes() {
         <Route index element={<DashboardPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="verify-email" element={<VerifyEmailPage />} />
-        <Route path="examples" element={<ExamplesPage />} />
-        <Route path="examples/new" element={<ExampleEditorPage />} />
-        <Route path="examples/:id/edit" element={<ExampleEditorPage />} />
         <Route
           path="storages"
           element={

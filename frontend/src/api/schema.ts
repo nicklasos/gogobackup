@@ -106,34 +106,6 @@ export interface InternalAuthVerifyEmailRequest {
   token: string;
 }
 
-export interface InternalExampleCreateExampleRequest {
-  description?: string;
-  title: string;
-}
-
-export interface InternalExampleExampleDataResponse {
-  data: InternalExampleExampleResponse;
-}
-
-export interface InternalExampleExampleResponse {
-  created_at: string;
-  description: string;
-  id: number;
-  title: string;
-  updated_at: string;
-  user_id: number;
-}
-
-export interface InternalExamplePaginatedExamplesResponse {
-  data: InternalExampleExampleResponse[];
-  pagination: InternalPaginationMeta;
-}
-
-export interface InternalExampleUpdateExampleRequest {
-  description?: string;
-  title: string;
-}
-
 export interface InternalMessageData {
   message: string;
 }

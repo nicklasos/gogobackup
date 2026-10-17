@@ -2,7 +2,7 @@
 
 ## Start here
 - **Recipes**: `docs/recipes/` has step-by-step procedures for the common changes: add a module, add an endpoint, change the schema, add a scheduled job. Use the matching one instead of improvising.
-- **Reference module**: `internal/example`. Copy its shape.
+- **Reference module**: `internal/storages`. Copy its shape.
 - **Finish every task with `make test`** and fix what fails. Do not start the API; the owner runs it.
 - **The kit**: this repo is the API. [gogo-front](https://github.com/nicklasos/gogo-front) is its admin UI and generates its TypeScript types from `docs/swagger.json`, so run `make swagger` after changing request or response types.
 
@@ -31,7 +31,6 @@ gogo/
 │   │   ├── routes.go            # Route registration (sets app.AuthMiddleware)
 │   │   └── types.go             # Request/response types
 │   ├── users/                   # User management (super admins, admins, users)
-│   ├── example/                 # Example CRUD module (cache demo)
 │   ├── storages/                # Where backups go: kinds registry (kinds.go), service, handlers
 │   │   └── driver/              # Driver interface (Put/Open/List/Delete), local, S3, GCS, Probe
 │   ├── secretbox/               # AES-256-GCM sealing of credentials with ENCRYPTION_KEY
@@ -103,10 +102,10 @@ When adding new modules:
 - Look records up by ID alone and let the policy decide; do not hide the rule inside a `WHERE user_id = ...`.
 - `middleware.RequireRole` on a route group is for "this whole area is admins only". A policy is for rules that depend on the record.
 - gogo-front mirrors each policy in `features/<module>/policy.ts` to hide what is not allowed. The API stays the authority.
-- `internal/example/policy.go` and `internal/users/policy.go` are the references; `tests/unit/policy_test.go` shows how to test one.
+- `internal/users/policy.go` is the reference; `tests/unit/policy_test.go` shows how to test one. A module that only admins reach, such as `storages`, needs no policy: `RequireRole` on its route group is the rule.
 
 ## Factories and seed data
-- `internal/factory` creates records with defaults. In a test it is `app.Create`: `app.Create.User()`, `app.Create.User(factory.Admin(), factory.Unverified())`, `app.Create.Example(user.ID, factory.WithTitle("..."))`, `app.Create.Examples(user.ID, 25, "Sample")`, `app.Create.Storage(factory.LocalStorage(dir))`. Elsewhere: `factory.New(t, conn, secrets)`, where `secrets` seals storage credentials.
+- `internal/factory` creates records with defaults. In a test it is `app.Create`: `app.Create.User()`, `app.Create.User(factory.Admin(), factory.Unverified())`, `app.Create.Storage(factory.LocalStorage(dir))`. Elsewhere: `factory.New(t, conn, secrets)`, where `secrets` seals storage credentials.
 - Every new table gets a factory. Tests never write `INSERT` statements by hand.
 - Users from a factory have the password `factory.DefaultPassword` and a verified email unless `factory.Unverified()` is passed.
 - `make seed` fills an empty development database through the same factories (`cmd/cli/internal/commands/seed.go`); add a new module's sample data there.
@@ -170,19 +169,19 @@ Transactions take SQLite's write lock when they begin (`_txlock=immediate`), so 
 `id, ok := middleware.PathID(c, "id")` parses a positive integer and answers 400 otherwise.
 
 ### Handler shape
-Keep handlers to: helpers above, bind the body (`errs.RespondWithValidationError` on failure), call the service, `errs.RespondWithError(c, err)` on failure, map to the response type with one small function per module. `internal/example/handler.go` is the reference.
+Keep handlers to: helpers above, bind the body (`errs.RespondWithValidationError` on failure), call the service, `errs.RespondWithError(c, err)` on failure, map to the response type with one small function per module. `internal/storages/handler.go` is the reference.
 - Do not log errors in handlers. `RespondWithError` hands every 5xx to the error middleware, which logs it once with the request ID; 4xx are not logged.
 - `internal.RespondMessage(c, "...")` for actions with nothing to return; `internal.FormatTime(ts)` for timestamps.
 
 ### List caching
-Put a per-owner version in the cache key and change it on every write (see `example_service.go`). Never try to enumerate the keys to forget.
+A list cached with `cache.Remember` gets a version in its key, changed on every write. Never try to enumerate the keys to forget.
 
 ## Types.go Pattern
 
 ### Rule
 - **All request/response types** go in `types.go` within each module
 - Swagger marks every field required (`--requiredByDefault`), because gogo-front generates its TypeScript types from it. Tag a field that may be absent with `validate:"optional"`, and an enum with `enums:"a,b,c"`.
-- **Service types** (e.g., `PaginatedExamplesResult`) are defined in service files
+- **Service types** (e.g., `PaginatedStoragesResult`) are defined in service files
 - **Handlers** use types from `types.go` for requests/responses
 - **Services** use internal types and convert to handler types
 
@@ -226,7 +225,7 @@ make up / make down   # Mailpit in Docker
 - **Services**: `UserService`, `OrderService`
 - **SQL queries**: `GetUserByID`, `CreateUser`, `ListUsers`
 - **Files**: `user_service.go`, `order_handler.go`
-- **Cache keys**: `user:123`, `examples:user:123:v<version>:page:1:size:20`
+- **Cache keys**: `user:123`, `storages:v<version>:page:1:size:20`
 
 ## Key Principles
 1. **Dependency Injection via Routes** - Only `routes.go` knows about `*internal.App`
@@ -237,7 +236,7 @@ make up / make down   # Mailpit in Docker
 6. **Module-based organization** - Self-contained domains
 7. **Context patterns** - Use middleware for user ID and pagination
 8. **Types.go pattern** - All request/response types in types.go
-9. **Cache where useful** - `Remember` + invalidate on writes (see example module)
+9. **Cache where useful** - `Remember` + invalidate on writes
 
 ## Testing Framework
 
@@ -253,23 +252,22 @@ make up / make down   # Mailpit in Docker
 Every test starts from `testkit.New(t)` (`tests/testkit`). `tests/README.md` is the cheat sheet: requests, response assertions, database assertions, factories.
 
 ```go
-func TestExampleAPI_GetExample(t *testing.T) {
+func TestStoragesAPI_GetStorage(t *testing.T) {
     app := testkit.New(t)
-    user := app.Create.User()
-    record := app.Create.Example(user.ID)
+    admin := app.Create.User(factory.Admin())
+    record := app.Create.Storage()
 
-    app.As(user).GET("/api/v1/examples/%d", record.ID).
+    app.As(admin).GET("/api/v1/storages/%d", record.ID).
         AssertOK().
-        AssertJSONPath("data.title", record.Title)
-    app.GET("/api/v1/examples/%d", record.ID).AssertUnauthorized()
+        AssertJSONPath("data.name", record.Name)
+    app.GET("/api/v1/storages/%d", record.ID).AssertUnauthorized()
 }
 
-func TestExampleService_GetExample(t *testing.T) {
+func TestStorageService_GetStorage(t *testing.T) {
     app := testkit.New(t)
-    user := app.Create.User()
-    record := app.Create.Example(user.ID)
+    record := app.Create.Storage()
 
-    result, err := example.NewExampleService(app.Queries, nil).GetExample(app.Ctx, testkit.Actor(user), record.ID)
+    result, err := storages.NewStorageService(app.Queries, app.Secrets).GetStorage(app.Ctx, record.ID)
 
     require.NoError(t, err)
     assert.Equal(t, record.ID, result.ID)

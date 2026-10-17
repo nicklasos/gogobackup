@@ -62,7 +62,6 @@
   },
   "navigation": {
     "dashboard": "Дашборд",
-    "examples": "Приклади",
     "storages": "Сховища",
     "users": "Користувачі",
     "profile": "Профіль",
@@ -91,21 +90,7 @@
   "dashboard": {
     "title": "Дашборд",
     "welcome": "Вітаємо, {{name}}",
-    "subtitle": "Використовуйте меню для керування прикладами."
-  },
-  "examples": {
-    "title": "Приклади",
-    "add": "Додати приклад",
-    "edit": "Редагувати приклад",
-    "create": "Створити приклад",
-    "titleField": "Заголовок",
-    "descriptionField": "Опис",
-    "titleRequired": "Заголовок обовʼязковий",
-    "deleted": "Приклад видалено",
-    "saved": "Приклад збережено",
-    "deleteConfirm": "Видалити цей приклад?",
-    "empty": "Прикладів ще немає",
-    "view": "Переглянути"
+    "subtitle": "Скористайтеся меню, щоб перейти до потрібних сторінок."
   },
   "storages": {
     "title": "Сховища",
@@ -238,7 +223,6 @@
     "users.not_found": "Користувача не знайдено",
     "users.forbidden_role": "Ви не можете керувати користувачами з цією роллю",
     "users.cannot_delete_self": "Ви не можете видалити себе",
-    "examples.not_found": "Приклад не знайдено",
     "validation.failed": "Помилка валідації",
     "validation.required": "Обовʼязкове поле",
     "validation.email": "Некоректний email",
@@ -248,7 +232,6 @@
     "validation.invalid": "Некоректне значення",
     "validation.type_mismatch": "Невірний тип значення",
     "validation.body_invalid": "Некоректний запит",
-    "validation.title.required": "Заголовок обовʼязковий",
     "network": "Не вдалося зʼєднатися із сервером. Перевірте зʼєднання і спробуйте ще раз.",
     "auth.too_many_requests": "Забагато спроб. Спробуйте пізніше.",
     "auth.registration_disabled": "Реєстрацію вимкнено",

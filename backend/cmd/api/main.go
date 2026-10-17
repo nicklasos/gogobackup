@@ -28,7 +28,7 @@ import (
 
 // @title           Gogo API Template
 // @version         1.0
-// @description     A production-ready Go API template with authentication and CRUD examples
+// @description     Gogobackup: storages, backup plans and the accounts that manage them
 // @termsOfService  http://swagger.io/terms/
 
 // @contact.name   API Support

@@ -4,14 +4,14 @@ import { selectActiveNav, selectNavKey, visibleNav, type NavItem } from './navMa
 
 const items: NavItem[] = [
   { key: 'home', labelKey: '', icon: null, testId: '', roles: 'all', path: '/' },
-  { key: 'examples', labelKey: '', icon: null, testId: '', roles: 'all', path: '/examples' },
+  { key: 'reports', labelKey: '', icon: null, testId: '', roles: 'all', path: '/reports' },
   { key: 'users', labelKey: '', icon: null, testId: '', roles: ['admin'], path: '/users' },
 ]
 
 describe('visibleNav', () => {
   it('filters by role', () => {
-    assert.deepEqual(visibleNav(items, { roles: ['user'] }).map((i) => i.key), ['home', 'examples'])
-    assert.deepEqual(visibleNav(items, { roles: ['admin'] }).map((i) => i.key), ['home', 'examples', 'users'])
+    assert.deepEqual(visibleNav(items, { roles: ['user'] }).map((i) => i.key), ['home', 'reports'])
+    assert.deepEqual(visibleNav(items, { roles: ['admin'] }).map((i) => i.key), ['home', 'reports', 'users'])
   })
 
   it('shows everything to a super admin', () => {
@@ -19,7 +19,7 @@ describe('visibleNav', () => {
   })
 
   it('keeps only public items without a user', () => {
-    assert.deepEqual(visibleNav(items, null).map((i) => i.key), ['home', 'examples'])
+    assert.deepEqual(visibleNav(items, null).map((i) => i.key), ['home', 'reports'])
   })
 })
 
@@ -30,11 +30,11 @@ describe('selectNavKey', () => {
   })
 
   it('matches nested paths', () => {
-    assert.equal(selectNavKey(items, '/examples/12/edit'), 'examples')
+    assert.equal(selectNavKey(items, '/reports/12/edit'), 'reports')
   })
 
   it('does not match a path that only shares a prefix', () => {
-    assert.equal(selectNavKey(items, '/examples-archive'), undefined)
+    assert.equal(selectNavKey(items, '/reports-archive'), undefined)
   })
 
   it('picks the longest matching prefix', () => {

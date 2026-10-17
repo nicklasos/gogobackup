@@ -58,7 +58,6 @@
   },
   "navigation": {
     "dashboard": "Dashboard",
-    "examples": "Examples",
     "storages": "Storages",
     "users": "Users",
     "profile": "Profile",
@@ -87,21 +86,7 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome, {{name}}",
-    "subtitle": "Use the sidebar to manage examples."
-  },
-  "examples": {
-    "title": "Examples",
-    "add": "Add example",
-    "edit": "Edit example",
-    "create": "Create example",
-    "titleField": "Title",
-    "descriptionField": "Description",
-    "titleRequired": "Title is required",
-    "deleted": "Example deleted",
-    "saved": "Example saved",
-    "deleteConfirm": "Delete this example?",
-    "empty": "No examples yet",
-    "view": "View"
+    "subtitle": "Use the menu to get to your pages."
   },
   "storages": {
     "title": "Storages",
@@ -234,7 +219,6 @@
     "users.not_found": "User not found",
     "users.forbidden_role": "You cannot manage users with this role",
     "users.cannot_delete_self": "You cannot delete yourself",
-    "examples.not_found": "Example not found",
     "validation.failed": "Validation failed",
     "validation.required": "Required field",
     "validation.email": "Invalid email",
@@ -244,7 +228,6 @@
     "validation.invalid": "Invalid value",
     "validation.type_mismatch": "Wrong value type",
     "validation.body_invalid": "Invalid request",
-    "validation.title.required": "Title is required",
     "network": "Could not reach the server. Check your connection and try again.",
     "auth.too_many_requests": "Too many attempts. Try again later.",
     "auth.registration_disabled": "Registration is disabled",

@@ -102,15 +102,19 @@ func TestSQLite_DeletingAUserCascadesToTheirRows(t *testing.T) {
 	app := testkit.New(t)
 	owner := app.Create.User()
 	other := app.Create.User()
-	app.Create.Examples(owner.ID, 3, "Owned")
-	app.Create.Example(other.ID)
+	for userID, raw := range map[int64]string{owner.ID: "owned", other.ID: "other"} {
+		_, err := app.Queries.CreateRefreshToken(app.Ctx, db.CreateRefreshTokenParams{
+			UserID: userID, Token: sha256Hex(raw), ExpiresAt: time.Now().Add(time.Hour),
+		})
+		require.NoError(t, err)
+	}
 
 	app.DB.SetMaxIdleConns(0)
 	require.NoError(t, app.Queries.DeleteUser(app.Ctx, owner.ID))
 
-	app.AssertDatabaseCount("examples", 0, testkit.Row{"user_id": owner.ID})
-	app.AssertDatabaseCount("examples", 1, testkit.Row{"user_id": other.ID})
+	app.AssertDatabaseCount("refresh_tokens", 0, testkit.Row{"user_id": owner.ID})
+	app.AssertDatabaseCount("refresh_tokens", 1, testkit.Row{"user_id": other.ID})
 
-	_, err := app.DB.ExecContext(app.Ctx, "INSERT INTO examples (user_id, title) VALUES (?, 'orphan')", owner.ID)
+	_, err := app.DB.ExecContext(app.Ctx, "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, 'orphan', datetime('now'))", owner.ID)
 	assert.Error(t, err, "a row pointing at a missing user is refused")
 }

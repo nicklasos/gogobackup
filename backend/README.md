@@ -91,7 +91,6 @@ Run the tests with `make test`. They need no database setup: each test gets its 
 - **Transactions**: `app.Tx.WithTx(ctx, func(q *db.Queries) error { ... })`
 - **Request ID**: `X-Request-ID` on every response and in every `*Context` log line
 - **Graceful shutdown** and env-driven CORS
-- **CRUD Example**: Complete example module with `Remember` caching
 - **Pagination**: `?page` / `?page_size` parsing and a `pagination` block on every list
 - **Type Safety**: SQLC for type-safe database operations
 - **Swagger**: Auto-generated API documentation
@@ -119,7 +118,6 @@ gogo/
 │   ├── server/                  # Engine middleware + the list of modules
 │   ├── auth/                    # Authentication module
 │   ├── users/                   # User management
-│   ├── example/                 # Example CRUD module (cache demo)
 │   ├── storages/                # Storages: kinds registry, service, handlers
 │   │   └── driver/              # Local, S3 and GCS drivers: Put, Open, List, Delete, Probe
 │   ├── secretbox/               # AES-256-GCM for credentials at rest
@@ -176,13 +174,6 @@ make swagger          # Generate API docs
 
 Admins can only manage accounts whose role is `user`; anything else returns 403 `users.forbidden_role`.
 
-### Examples
-- `GET /api/v1/examples` - List examples with pagination (protected, cached)
-- `POST /api/v1/examples` - Create example (protected)
-- `GET /api/v1/examples/:id` - Get example (protected)
-- `PUT /api/v1/examples/:id` - Update example (protected)
-- `DELETE /api/v1/examples/:id` - Delete example (protected)
-
 ### Storages (admins)
 - `GET /api/v1/storages` - List storages, without credentials
 - `POST /api/v1/storages` - Create a storage: `{name, kind, local|s3|gcs: {...}}`, the block named by `kind`
@@ -234,11 +225,11 @@ page, ok := middleware.Page(c)              // 400 when ?page / ?page_size are i
 
 ### Types.go Pattern
 - All request/response types go in `types.go` within each module
-- Services define internal types (e.g., `PaginatedExamplesResult`) in service files
+- Services define internal types (e.g., `PaginatedStoragesResult`) in service files
 - Handlers convert service types to response types from `types.go`
 
 ### Cache Pattern
-- Use `cache.Remember` for short-lived list responses (see `example` module)
+- Use `cache.Remember` for short-lived list responses
 - The cache is `cache.MemoryCache`, in the API process: it starts empty on every restart
 - Invalidate on create/update/delete
 
@@ -305,7 +296,7 @@ The project uses structured error handling with the `errs` package. See `docs/ER
 - Services return domain errors: `errs.NewNotFoundError(key, message)`
 - Handlers use: `errs.RespondWithError(c, err)` or `errs.RespondWithValidationError(c, err)`
 - DB helpers: `errs.WrapDatabaseError`, `errs.DomainErrorFromUniqueViolation`
-- See `internal/example/` for complete examples
+- See `internal/storages/` for a complete module
 
 ## Links
 

@@ -57,13 +57,12 @@ test.describe('Authentication', () => {
       localStorage.setItem(key, JSON.stringify(stored))
     }, AUTH_STORAGE_KEY)
 
-    await page.goto('/examples')
-    await expect(page.getByTestId('examples-page')).toBeVisible({ timeout: 15000 })
-    await expect(page.getByTestId('examples-table')).toBeVisible()
+    await page.goto('/profile')
+    await expect(page.getByTestId('profile-email-input')).toHaveValue(user.email, { timeout: 15000 })
   })
 
   test('should show login when accessing routes without authentication', async ({ page }) => {
-    await page.goto('/examples')
+    await page.goto('/profile')
     await expect(loginPage.emailInput).toBeVisible()
   })
 
@@ -78,7 +77,7 @@ test.describe('Authentication', () => {
     const user = await dbHelper.createUser()
     await loginPage.login(user.email, user.password)
     await appShell.logoutViaUI()
-    await page.goto('/examples')
+    await page.goto('/profile')
     await expect(loginPage.emailInput).toBeVisible()
   })
 })

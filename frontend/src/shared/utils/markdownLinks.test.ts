@@ -40,7 +40,7 @@ describe('markdown links', () => {
     assert.equal(normalizeMarkdownLinks('[Mail](user@example.com)'), '[Mail](mailto:user@example.com)')
     assert.equal(normalizeMarkdownLinks('[Web](https://example.com)'), '[Web](https://example.com)')
     assert.equal(normalizeMarkdownLinks('[Already](tel:+380)'), '[Already](tel:+380)')
-    assert.equal(normalizeMarkdownLinks('[Page](/examples)'), '[Page](/examples)')
+    assert.equal(normalizeMarkdownLinks('[Page](/storages)'), '[Page](/storages)')
     assert.equal(normalizeMarkdownLinks(''), '')
   })
 })

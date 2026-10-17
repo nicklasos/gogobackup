@@ -1,20 +1,22 @@
 import { test, expect } from '@playwright/test'
-import { ExampleEditorPage } from '../pages/ExampleEditorPage'
-import { ExamplesPage } from '../pages/ExamplesPage'
+import { loginAs } from '../helpers/test-helpers'
+import { StorageEditorPage } from '../pages/StorageEditorPage'
+import { StoragesPage } from '../pages/StoragesPage'
 
 test.describe('Unsaved changes', () => {
   test('prompts when leaving a dirty editor', async ({ page }) => {
-    const list = new ExamplesPage(page)
-    const editor = new ExampleEditorPage(page)
+    await loginAs(page, 'admin')
+    const list = new StoragesPage(page)
+    const editor = new StorageEditorPage(page)
     await list.gotoList()
     await list.clickAdd()
 
-    await editor.titleInput.fill('Dirty draft')
+    await editor.nameInput.fill('E2E dirty draft')
     await editor.backButton.click()
 
     await page.getByTestId('unsaved-changes-stay-button').click()
     await expect(editor.root).toBeVisible()
-    await expect(editor.titleInput).toHaveValue('Dirty draft')
+    await expect(editor.nameInput).toHaveValue('E2E dirty draft')
 
     await editor.backButton.click()
     await page.getByTestId('unsaved-changes-leave-button').click()

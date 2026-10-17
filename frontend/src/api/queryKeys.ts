@@ -1,15 +1,10 @@
 import type { ID, PageParams } from './types'
 
 /**
- * Query keys are hierarchical tuples, so invalidating a prefix (`qk.examples.all`)
+ * Query keys are hierarchical tuples, so invalidating a prefix (`qk.storages.all`)
  * invalidates every list and detail under it.
  */
 export const qk = {
-  examples: {
-    all: ['examples'] as const,
-    list: (params: PageParams) => ['examples', 'list', params] as const,
-    detail: (id: ID) => ['examples', 'detail', id] as const,
-  },
   storages: {
     all: ['storages'] as const,
     list: (params: PageParams) => ['storages', 'list', params] as const,

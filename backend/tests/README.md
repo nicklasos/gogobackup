@@ -11,34 +11,34 @@ Everything starts from `testkit.New(t)`. There is nothing to close and no contex
 An API test (`tests/integration`):
 
 ```go
-func TestExampleAPI_CreateExample(t *testing.T) {
+func TestStoragesAPI_CreateStorage(t *testing.T) {
     app := testkit.New(t)
-    user := app.Create.User()
+    admin := app.Create.User(factory.Admin())
+    body := storages.StorageRequest{Name: "Nightly", Kind: storages.KindLocal, Local: &storages.LocalInput{Path: t.TempDir()}}
 
-    app.As(user).POST("/api/v1/examples", example.CreateExampleRequest{Title: "Hello"}).
+    app.As(admin).POST("/api/v1/storages", body).
         AssertOK().
-        AssertJSONPath("data.title", "Hello")
+        AssertJSONPath("data.name", "Nightly")
 
-    app.POST("/api/v1/examples", example.CreateExampleRequest{Title: "Hello"}).AssertUnauthorized()
-    app.As(user).POST("/api/v1/examples", `{}`).AssertInvalid("title")
+    app.POST("/api/v1/storages", body).AssertUnauthorized()
+    app.As(admin).POST("/api/v1/storages", `{}`).AssertInvalid("name")
 
-    app.AssertDatabaseHas("examples", testkit.Row{"user_id": user.ID, "title": "Hello"})
+    app.AssertDatabaseHas("storages", testkit.Row{"name": "Nightly", "kind": "local"})
 }
 ```
 
 A service test (`tests/unit`):
 
 ```go
-func TestExampleService_GetExample(t *testing.T) {
+func TestStorageService_GetStorage(t *testing.T) {
     app := testkit.New(t)
-    user := app.Create.User()
-    record := app.Create.Example(user.ID)
-    service := example.NewExampleService(app.Queries, nil)
+    record := app.Create.Storage()
+    service := storages.NewStorageService(app.Queries, app.Secrets)
 
-    result, err := service.GetExample(app.Ctx, testkit.Actor(user), record.ID)
+    result, err := service.GetStorage(app.Ctx, record.ID)
 
     require.NoError(t, err)
-    assert.Equal(t, record.Title, result.Title)
+    assert.Equal(t, record.Name, result.Name)
 }
 ```
 
@@ -49,13 +49,13 @@ func TestExampleService_GetExample(t *testing.T) {
 | `use RefreshDatabase` | `app := testkit.New(t)` |
 | `User::factory()->create()` | `app.Create.User()` |
 | `User::factory()->admin()->create(['email' => $e])` | `app.Create.User(factory.Admin(), factory.WithEmail(e))` |
-| `$this->getJson($url)` | `app.GET("/api/v1/examples/%d", id)` |
-| `$this->actingAs($user)->postJson($url, $data)` | `app.As(user).POST("/api/v1/examples", data)` |
+| `$this->getJson($url)` | `app.GET("/api/v1/storages/%d", id)` |
+| `$this->actingAs($user)->postJson($url, $data)` | `app.As(user).POST("/api/v1/storages", data)` |
 | `->assertOk()`, `->assertForbidden()` | `.AssertOK()`, `.AssertForbidden()` |
-| `->assertJsonPath('data.0.title', 'Hi')` | `.AssertJSONPath("data.0.title", "Hi")` |
+| `->assertJsonPath('data.0.name', 'Hi')` | `.AssertJSONPath("data.0.name", "Hi")` |
 | `->assertJsonCount(3, 'data')` | `.AssertJSONCount("data", 3)` |
-| `->assertJsonValidationErrors(['title'])` | `.AssertInvalid("title")` |
-| `$this->assertDatabaseHas('examples', [...])` | `app.AssertDatabaseHas("examples", testkit.Row{...})` |
+| `->assertJsonValidationErrors(['name'])` | `.AssertInvalid("name")` |
+| `$this->assertDatabaseHas('storages', [...])` | `app.AssertDatabaseHas("storages", testkit.Row{...})` |
 | `Mail::fake()` / `Mail::assertSent` | `app.Mail.Sent()` |
 | `config(['app.x' => false])` | `testkit.New(t, func(cfg *config.Config) { cfg.X = false })` |
 
@@ -65,7 +65,7 @@ func TestExampleService_GetExample(t *testing.T) {
 - `app.Ctx`, `app.Queries`, `app.DB` (`*sql.DB`, for raw SQL with `?` placeholders), `app.TxRunner`, `app.Config`, `app.Logger`, `app.Cache` — what a service constructor asks for
 - `app.Mail.Sent()` — every email the application sent during the test
 - `app.Secrets` — seals and opens stored credentials with the test key; `testkit.NewFakeS3(t)` and `testkit.NewFakeGCS(t)` are offline storage servers
-- `app.Token(user)`, `testkit.Actor(user)`, `testkit.JPEG`, `testkit.PDF`
+- `app.Token(user)`, `testkit.Actor(user)`
 
 ### Requests (`tests/testkit/request.go`)
 
@@ -74,7 +74,7 @@ func TestExampleService_GetExample(t *testing.T) {
 - `app.As(user)` — the same verbs, logged in as the user
 - `app.WithToken(token)`, `app.WithHeader(key, value)`
 
-The path takes `fmt.Sprintf` arguments: `app.PUT("/api/v1/examples/%d", body, id)`.
+The path takes `fmt.Sprintf` arguments: `app.PUT("/api/v1/storages/%d", body, id)`.
 
 ### Response (`tests/testkit/response.go`)
 
@@ -97,15 +97,13 @@ Every `Assert` stops the test on failure, prints the response body, and returns 
 | Factory | Options |
 |---|---|
 | `app.Create.User()` | `WithEmail`, `WithName`, `WithPassword`, `WithRoles`, `Admin()`, `SuperAdmin()`, `Unverified()` |
-| `app.Create.Example(userID)` | `WithTitle`, `WithDescription` |
-| `app.Create.Examples(userID, count, prefix)` | |
 | `app.Create.Storage()` | `WithStorageName`, `LocalStorage(path)`, `S3Storage(config, keyID, secret)`, `GCSStorage(config, credentialsJSON)` |
 
 A user has the password `factory.DefaultPassword`. Tests never write `INSERT` by hand: a new table gets a factory.
 
 ## Adding a factory
 
-One file in `internal/factory`, copied from `example.go`:
+One file in `internal/factory`, shaped like `storage.go`:
 
 ```go
 type orderAttrs struct {

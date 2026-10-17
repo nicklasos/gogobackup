@@ -68,12 +68,12 @@ The E2E run starts its own gogo API against the test database and its own Vite s
 
 - **Auth**: email/password login, automatic token refresh, session kept across reloads and tabs
 - **Password reset and email verification**: forgot-password, reset and confirm pages for the emailed links, and a "try again in N minutes" message when the API throttles sign-in
-- **Policies**: per-record rules (`canUpdateExample(user, example)`) that mirror the API's and decide what the UI offers
+- **Policies**: rules (`canManageUser(actor, target)`) that mirror the API's and decide what the UI offers
 - **Agent recipes**: step-by-step procedures in `docs/recipes/` for the common changes, also available as Claude Code skills
 - **Roles**: `super-admin`, `admin`, `user`, with route guards and role-filtered menus
 - **User management**: super admins and admins from a right-side admin menu that only super admins see; users from the main menu
 - **Profile**: name, email, language and password
-- **Examples module**: a server-paginated list and an editor with an unsaved-changes guard, as the pattern to copy
+- **Storages**: a server-paginated list and an editor with a kind picker, a connection test and an unsaved-changes guard, as the pattern to copy
 - **Markdown editor**: a WYSIWYG editor (headings, lists, quotes, links, phone and email links) that saves markdown, plus a safe viewer
 - **Generated API types**: `make api-types` turns the backend's OpenAPI file into `src/api/schema.ts`
 - **Typed API client**: `ApiError`, server validation errors mapped onto form fields, translated error keys
@@ -85,17 +85,13 @@ The E2E run starts its own gogo API against the test database and its own Vite s
 
 ## Screenshots
 
-| Sign in | List with server-side paging |
+| Sign in | Create an admin |
 |---|---|
-| ![Sign in](docs/screenshots/login.png) | ![Examples list](docs/screenshots/examples.png) |
+| ![Sign in](docs/screenshots/login.png) | ![Create an admin](docs/screenshots/add-admin.png) |
 
-| Editor | Create an admin |
+| Admins | Profile |
 |---|---|
-| ![Example editor](docs/screenshots/example-editor.png) | ![Create an admin](docs/screenshots/add-admin.png) |
-
-| Profile | On a phone |
-|---|---|
-| ![Profile](docs/screenshots/profile.png) | <img src="docs/screenshots/mobile.png" alt="Examples on a phone" width="300"> |
+| ![Admins](docs/screenshots/admins.png) | ![Profile](docs/screenshots/profile.png) |
 
 ## Make targets
 
@@ -134,14 +130,14 @@ src/
   auth/       authStore (persist key: gogo-auth), roles, guards, LoginPage
   layout/     AppShell, nav registry
   shared/     components, hooks, utils, lib/unsavedChanges
-  features/   dashboard, examples, users, account
+  features/   dashboard, storages, users, account
   locales/{en,uk}/
 tests/e2e/    Playwright specs, page objects, helpers
 ```
 
 ## Adding a module
 
-Follow [docs/recipes/add-feature.md](docs/recipes/add-feature.md), or [full-stack-feature.md](docs/recipes/full-stack-feature.md) when the API side is new too. In short: `src/features/<module>/{types,api,hooks,policy}.ts` and `pages/`, query keys, a route, a menu entry and locale keys. `features/examples` is the reference.
+Follow [docs/recipes/add-feature.md](docs/recipes/add-feature.md), or [full-stack-feature.md](docs/recipes/full-stack-feature.md) when the API side is new too. In short: `src/features/<module>/{types,api,hooks,policy}.ts` and `pages/`, query keys, a route, a menu entry and locale keys. `features/storages` is the reference.
 
 ## API contract (gogo)
 

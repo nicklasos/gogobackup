@@ -1,13 +1,13 @@
 // Package testkit is what a test starts from:
 //
-//	func TestExamples_List(t *testing.T) {
+//	func TestStorages_List(t *testing.T) {
 //		app := testkit.New(t)
-//		user := app.Create.User()
-//		app.Create.Example(user.ID, factory.WithTitle("Hello"))
+//		admin := app.Create.User(factory.Admin())
+//		app.Create.Storage(factory.WithStorageName("Nightly"))
 //
-//		app.As(user).GET("/api/v1/examples").
+//		app.As(admin).GET("/api/v1/storages").
 //			AssertOK().
-//			AssertJSONPath("data.0.title", "Hello")
+//			AssertJSONPath("data.0.name", "Nightly")
 //	}
 //
 // New gives each test its own freshly migrated SQLite file, so tests never see each other's

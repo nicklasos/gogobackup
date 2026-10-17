@@ -8,6 +8,10 @@ export class StorageEditorPage extends BasePage {
     return this.page.getByTestId('storage-editor-page')
   }
 
+  get backButton(): Locator {
+    return this.page.getByTestId('storage-editor-back-button')
+  }
+
   get nameInput(): Locator {
     return this.page.getByTestId('storage-name-input')
   }

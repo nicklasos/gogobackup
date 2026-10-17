@@ -9,15 +9,6 @@ import (
 	"time"
 )
 
-type Example struct {
-	ID          int64          `db:"id" json:"id"`
-	UserID      int64          `db:"user_id" json:"user_id"`
-	Title       string         `db:"title" json:"title"`
-	Description sql.NullString `db:"description" json:"description"`
-	CreatedAt   sql.NullTime   `db:"created_at" json:"created_at"`
-	UpdatedAt   sql.NullTime   `db:"updated_at" json:"updated_at"`
-}
-
 type RefreshToken struct {
 	ID        int64        `db:"id" json:"id"`
 	UserID    int64        `db:"user_id" json:"user_id"`

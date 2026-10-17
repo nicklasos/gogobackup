@@ -5,8 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"app/internal/db"
-	"app/internal/example"
 	"app/internal/middleware"
 	"app/internal/users"
 )
@@ -22,33 +20,6 @@ func TestActor(t *testing.T) {
 	assert.False(t, admin.IsSuperAdmin())
 	assert.True(t, superAdmin.IsSuperAdmin())
 	assert.False(t, middleware.Actor{}.IsAdmin())
-}
-
-func TestExamplePolicy(t *testing.T) {
-	owner := middleware.Actor{ID: 1, Roles: []string{middleware.RoleUser}}
-	stranger := middleware.Actor{ID: 2, Roles: []string{middleware.RoleUser}}
-	admin := middleware.Actor{ID: 3, Roles: []string{middleware.RoleAdmin}}
-	superAdmin := middleware.Actor{ID: 4, Roles: []string{middleware.RoleSuperAdmin}}
-	record := db.Example{ID: 10, UserID: owner.ID}
-
-	cases := []struct {
-		name                string
-		actor               middleware.Actor
-		view, edit, destroy bool
-	}{
-		{"owner", owner, true, true, true},
-		{"another user", stranger, false, false, false},
-		{"admin", admin, true, false, true},
-		{"super admin", superAdmin, true, false, true},
-		{"nobody", middleware.Actor{}, false, false, false},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.view, example.CanView(tc.actor, record), "view")
-			assert.Equal(t, tc.edit, example.CanUpdate(tc.actor, record), "update")
-			assert.Equal(t, tc.destroy, example.CanDelete(tc.actor, record), "delete")
-		})
-	}
 }
 
 func TestUsersPolicy_CanManage(t *testing.T) {

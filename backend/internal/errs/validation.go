@@ -121,8 +121,7 @@ func getJSONErrorKey(errMsg string) string {
 	}
 }
 
-// extractFieldFromJSONError extracts the field name from JSON unmarshal errors
-// Examples:
+// extractFieldFromJSONError extracts the field name from JSON unmarshal errors such as:
 //   - "json: cannot unmarshal number 1761901442695 into Go struct field CreateAssessmentInput.Questions.id of type int32"
 //   - "json: cannot unmarshal string into Go struct field CreateAssessmentInput.title of type string"
 func extractFieldFromJSONError(errMsg string) string {

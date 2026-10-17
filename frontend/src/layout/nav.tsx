@@ -1,5 +1,4 @@
 import {
-  AppstoreOutlined,
   CloudServerOutlined,
   CrownOutlined,
   DashboardOutlined,
@@ -18,14 +17,6 @@ export const MAIN_NAV: NavItem[] = [
     testId: 'nav-dashboard',
     roles: 'all',
     path: '/',
-  },
-  {
-    key: 'examples',
-    labelKey: 'navigation.examples',
-    icon: <AppstoreOutlined />,
-    testId: 'nav-examples',
-    roles: 'all',
-    path: '/examples',
   },
   {
     key: 'storages',

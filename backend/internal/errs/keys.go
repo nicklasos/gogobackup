@@ -30,12 +30,6 @@ const (
 	ErrKeyUsersCannotDeleteSelf = "users.cannot_delete_self"
 )
 
-// Example error keys
-const (
-	ErrKeyExampleNotFound  = "examples.not_found"
-	ErrKeyExampleInvalidID = "examples.invalid_id"
-)
-
 // Storages error keys
 const (
 	ErrKeyStoragesNotFound      = "storages.not_found"
