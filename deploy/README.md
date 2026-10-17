@@ -216,4 +216,4 @@ The same steps as commands to run yourself, without Ansible, are in [MANUAL_INST
 - **Several servers.** Everything, database included, is on one machine; SQLite is a local file.
 - **Zero-downtime releases.** A deploy restarts the API; requests in flight are finished first, new ones wait a moment.
 - **Rollback.** To go back, revert the commit and deploy again. Migrations are not rolled back automatically.
-- **Restoring from the panel.** Restoring a plan's archive is phase 7 of `../docs/PLAN.md`. Until then, Gogobackup's own database is restored by hand: see [Backing up Gogobackup itself](#backing-up-gogobackup-itself).
+- **Restoring Gogobackup's own database from its panel.** The panel restores every other plan, but refuses to overwrite the database it runs on. Restore that one by hand: see [Backing up Gogobackup itself](#backing-up-gogobackup-itself).
