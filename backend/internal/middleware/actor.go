@@ -9,7 +9,7 @@ import (
 // Actor is who is making the request: the input of every policy function.
 // Handlers get it from CurrentActor and pass it to the service.
 type Actor struct {
-	ID    int32
+	ID    int64
 	Roles []string
 }
 

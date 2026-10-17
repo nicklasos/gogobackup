@@ -7,17 +7,16 @@ package db
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
 )
 
 const countExamplesForUser = `-- name: CountExamplesForUser :one
 SELECT COUNT(*) FROM examples
-WHERE user_id = $1
+WHERE user_id = ?1
 `
 
-func (q *Queries) CountExamplesForUser(ctx context.Context, userID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, countExamplesForUser, userID)
+func (q *Queries) CountExamplesForUser(ctx context.Context, userID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countExamplesForUser, userID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -27,19 +26,19 @@ const createExample = `-- name: CreateExample :one
 INSERT INTO examples (
     user_id, title, description
 ) VALUES (
-    $1, $2, $3
+    ?1, ?2, ?3
 )
 RETURNING id, user_id, title, description, created_at, updated_at
 `
 
 type CreateExampleParams struct {
-	UserID      int32       `db:"user_id" json:"user_id"`
-	Title       string      `db:"title" json:"title"`
-	Description pgtype.Text `db:"description" json:"description"`
+	UserID      int64          `db:"user_id" json:"user_id"`
+	Title       string         `db:"title" json:"title"`
+	Description sql.NullString `db:"description" json:"description"`
 }
 
 func (q *Queries) CreateExample(ctx context.Context, arg CreateExampleParams) (Example, error) {
-	row := q.db.QueryRow(ctx, createExample, arg.UserID, arg.Title, arg.Description)
+	row := q.db.QueryRowContext(ctx, createExample, arg.UserID, arg.Title, arg.Description)
 	var i Example
 	err := row.Scan(
 		&i.ID,
@@ -54,21 +53,21 @@ func (q *Queries) CreateExample(ctx context.Context, arg CreateExampleParams) (E
 
 const deleteExample = `-- name: DeleteExample :exec
 DELETE FROM examples
-WHERE id = $1
+WHERE id = ?1
 `
 
-func (q *Queries) DeleteExample(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteExample, id)
+func (q *Queries) DeleteExample(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteExample, id)
 	return err
 }
 
 const getExampleByID = `-- name: GetExampleByID :one
 SELECT id, user_id, title, description, created_at, updated_at FROM examples
-WHERE id = $1 LIMIT 1
+WHERE id = ?1 LIMIT 1
 `
 
-func (q *Queries) GetExampleByID(ctx context.Context, id int32) (Example, error) {
-	row := q.db.QueryRow(ctx, getExampleByID, id)
+func (q *Queries) GetExampleByID(ctx context.Context, id int64) (Example, error) {
+	row := q.db.QueryRowContext(ctx, getExampleByID, id)
 	var i Example
 	err := row.Scan(
 		&i.ID,
@@ -83,19 +82,19 @@ func (q *Queries) GetExampleByID(ctx context.Context, id int32) (Example, error)
 
 const listExamplesForUserPaginated = `-- name: ListExamplesForUserPaginated :many
 SELECT id, user_id, title, description, created_at, updated_at FROM examples
-WHERE user_id = $1
+WHERE user_id = ?1
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
+LIMIT ?2 OFFSET ?3
 `
 
 type ListExamplesForUserPaginatedParams struct {
-	UserID int32 `db:"user_id" json:"user_id"`
-	Limit  int32 `db:"limit" json:"limit"`
-	Offset int32 `db:"offset" json:"offset"`
+	UserID int64 `db:"user_id" json:"user_id"`
+	Limit  int64 `db:"limit" json:"limit"`
+	Offset int64 `db:"offset" json:"offset"`
 }
 
 func (q *Queries) ListExamplesForUserPaginated(ctx context.Context, arg ListExamplesForUserPaginatedParams) ([]Example, error) {
-	rows, err := q.db.Query(ctx, listExamplesForUserPaginated, arg.UserID, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, listExamplesForUserPaginated, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -115,6 +114,9 @@ func (q *Queries) ListExamplesForUserPaginated(ctx context.Context, arg ListExam
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -124,21 +126,21 @@ func (q *Queries) ListExamplesForUserPaginated(ctx context.Context, arg ListExam
 const updateExample = `-- name: UpdateExample :one
 UPDATE examples
 SET
-    title = $2,
-    description = $3,
+    title = ?2,
+    description = ?3,
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = ?1
 RETURNING id, user_id, title, description, created_at, updated_at
 `
 
 type UpdateExampleParams struct {
-	ID          int32       `db:"id" json:"id"`
-	Title       string      `db:"title" json:"title"`
-	Description pgtype.Text `db:"description" json:"description"`
+	ID          int64          `db:"id" json:"id"`
+	Title       string         `db:"title" json:"title"`
+	Description sql.NullString `db:"description" json:"description"`
 }
 
 func (q *Queries) UpdateExample(ctx context.Context, arg UpdateExampleParams) (Example, error) {
-	row := q.db.QueryRow(ctx, updateExample, arg.ID, arg.Title, arg.Description)
+	row := q.db.QueryRowContext(ctx, updateExample, arg.ID, arg.Title, arg.Description)
 	var i Example
 	err := row.Scan(
 		&i.ID,

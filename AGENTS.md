@@ -7,7 +7,7 @@ backups and server provisioning in one repository.
 
 | Folder | What it is |
 |---|---|
-| `backend/` | Go API: Gin, PostgreSQL through sqlc, Redis, JWT auth with roles |
+| `backend/` | Go API: Gin, SQLite through sqlc, Redis, JWT auth with roles |
 | `frontend/` | Admin panel: React, TypeScript, Ant Design, TanStack Query |
 | `backup/` | Shell scripts that back up the database and uploaded files |
 | `deploy/` | Ansible: provision a server or install on an existing one, deploy and update the application |
@@ -31,7 +31,7 @@ This project owns all four folders: edit them directly. There is no sync with th
 
 ```bash
 make help            # everything below
-make up              # local Postgres, Redis and Mailpit
+make up              # local Redis and Mailpit
 make cli migrate up  # a console command; flags go after -- (make cli -- create-user --email a@b.c --password secret123)
 make test            # backend tests, then frontend typecheck, lint, unit and Playwright
 make provision       # set up a new server (see deploy/README.md)

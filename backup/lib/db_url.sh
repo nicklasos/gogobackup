@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# DATABASE_URL helpers for postgres / mysql.
+# DATABASE_URL helpers for postgres / mysql / sqlite.
 
 url_decode() {
   local encoded="$1"
@@ -45,7 +45,18 @@ parse_database_url() {
   DB_NAME="${DB_NAME%%\?*}"
 }
 
-# Normalize DB_ENGINE to postgres|mysql. Must be set explicitly in .env.
+# SQLite DATABASE_URL is a file path, optionally as sqlite:///abs/path or sqlite:relative/path.
+sqlite_database_path() {
+  local url="$1"
+  case "$url" in
+    sqlite://*) url="${url#sqlite://}" ;;
+    sqlite:*) url="${url#sqlite:}" ;;
+  esac
+  [ -n "$url" ] || die "DATABASE_URL is empty (expected the SQLite file path)"
+  echo "$url"
+}
+
+# Normalize DB_ENGINE to postgres|mysql|sqlite. Must be set explicitly in .env.
 resolve_db_engine() {
   local engine="${DB_ENGINE:-}"
   engine=$(echo "$engine" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
@@ -57,11 +68,14 @@ resolve_db_engine() {
     mysql|mariadb)
       DB_ENGINE="mysql"
       ;;
+    sqlite|sqlite3)
+      DB_ENGINE="sqlite"
+      ;;
     "")
-      die "DB_ENGINE is required in .env (set to postgres or mysql)"
+      die "DB_ENGINE is required in .env (set to postgres, mysql or sqlite)"
       ;;
     *)
-      die "DB_ENGINE must be postgres or mysql (got: '${DB_ENGINE}')"
+      die "DB_ENGINE must be postgres, mysql or sqlite (got: '${DB_ENGINE}')"
       ;;
   esac
 }

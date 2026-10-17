@@ -9,7 +9,7 @@
 ## Start here
 - **Recipes**: `docs/recipes/` has step-by-step procedures: build a feature across the API and this UI, add a feature, add a Playwright test. Use the matching one instead of improvising.
 - **Reference feature**: `src/features/examples`.
-- **The kit**: this repo is the admin UI. [gogo](https://github.com/nicklasos/gogo) is the API, expected next to it at `../backend`; its OpenAPI file becomes `src/api/schema.ts` through `make api-types`. [gopulse](https://github.com/nicklasos/gopulse) is the monitoring dashboard the API serves at `/_pulse`.
+- **The kit**: this repo is the admin UI. [gogo](https://github.com/nicklasos/gogo) is the API, expected next to it at `../backend`; its OpenAPI file becomes `src/api/schema.ts` through `make api-types`.
 
 ## Role
 Admin UI starter for the **gogo** Go API (`../backend`). A new project is a copy of this one plus feature folders.
@@ -117,7 +117,7 @@ make build
 - Users are seeded straight into the test database (`helpers/db-helper.ts`); emails start with `e2e-` so cleanup finds them. Use `uniqueEmail()` for users created through the UI.
 - The API is started with `AUTH_RATE_LIMIT=false` and `APP_DEBUG=true` (no throttling, mail only logged).
 - Emailed links cannot be read back (only a hash is stored): plant a token with `dbHelper.createEmailToken(userId, purpose)`.
-- Requires `TEST_DATABASE_URL` (database name ending in `_test`) in `.env`.
+- Requires `TEST_DATABASE_PATH` (a SQLite file whose name ends in `_test.db`, relative to `../backend`) in `../backend/.env`. The helper opens the same file the API writes.
 
 ## Don’t
 - Don’t add project domain modules to this skeleton.

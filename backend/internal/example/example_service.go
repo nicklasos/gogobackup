@@ -6,12 +6,10 @@ import (
 	"app/internal/errs"
 	"app/internal/middleware"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const listCacheTTL = 30 * time.Second
@@ -44,7 +42,7 @@ func (s *ExampleService) CreateExample(ctx context.Context, actor middleware.Act
 	example, err := s.queries.CreateExample(ctx, db.CreateExampleParams{
 		UserID:      actor.ID,
 		Title:       title,
-		Description: pgtype.Text{String: description, Valid: description != ""},
+		Description: sql.NullString{String: description, Valid: description != ""},
 	})
 	if err != nil {
 		return nil, errs.WrapDatabaseError(err)
@@ -54,11 +52,11 @@ func (s *ExampleService) CreateExample(ctx context.Context, actor middleware.Act
 	return &example, nil
 }
 
-func (s *ExampleService) GetExample(ctx context.Context, actor middleware.Actor, exampleID int32) (*db.Example, error) {
+func (s *ExampleService) GetExample(ctx context.Context, actor middleware.Actor, exampleID int64) (*db.Example, error) {
 	return s.authorized(ctx, actor, exampleID, CanView)
 }
 
-func (s *ExampleService) UpdateExample(ctx context.Context, actor middleware.Actor, exampleID int32, title, description string) (*db.Example, error) {
+func (s *ExampleService) UpdateExample(ctx context.Context, actor middleware.Actor, exampleID int64, title, description string) (*db.Example, error) {
 	if _, err := s.authorized(ctx, actor, exampleID, CanUpdate); err != nil {
 		return nil, err
 	}
@@ -66,7 +64,7 @@ func (s *ExampleService) UpdateExample(ctx context.Context, actor middleware.Act
 	example, err := s.queries.UpdateExample(ctx, db.UpdateExampleParams{
 		ID:          exampleID,
 		Title:       title,
-		Description: pgtype.Text{String: description, Valid: description != ""},
+		Description: sql.NullString{String: description, Valid: description != ""},
 	})
 	if err != nil {
 		return nil, notFoundOr(err)
@@ -76,7 +74,7 @@ func (s *ExampleService) UpdateExample(ctx context.Context, actor middleware.Act
 	return &example, nil
 }
 
-func (s *ExampleService) DeleteExample(ctx context.Context, actor middleware.Actor, exampleID int32) error {
+func (s *ExampleService) DeleteExample(ctx context.Context, actor middleware.Actor, exampleID int64) error {
 	example, err := s.authorized(ctx, actor, exampleID, CanDelete)
 	if err != nil {
 		return err
@@ -92,7 +90,7 @@ func (s *ExampleService) DeleteExample(ctx context.Context, actor middleware.Act
 
 // authorized loads an example and applies a policy to it: 404 when it does not exist,
 // 403 when it does and the actor may not do this.
-func (s *ExampleService) authorized(ctx context.Context, actor middleware.Actor, exampleID int32, allowed func(middleware.Actor, db.Example) bool) (*db.Example, error) {
+func (s *ExampleService) authorized(ctx context.Context, actor middleware.Actor, exampleID int64, allowed func(middleware.Actor, db.Example) bool) (*db.Example, error) {
 	example, err := s.queries.GetExampleByID(ctx, exampleID)
 	if err != nil {
 		return nil, notFoundOr(err)
@@ -104,7 +102,7 @@ func (s *ExampleService) authorized(ctx context.Context, actor middleware.Actor,
 }
 
 // ListExamplesPaginated returns one page of a user's examples, cached for a short time.
-func (s *ExampleService) ListExamplesPaginated(ctx context.Context, userID, page, pageSize int32) (*PaginatedExamplesResult, error) {
+func (s *ExampleService) ListExamplesPaginated(ctx context.Context, userID int64, page, pageSize int32) (*PaginatedExamplesResult, error) {
 	if s.cache == nil {
 		return s.loadPage(ctx, userID, page, pageSize)
 	}
@@ -119,11 +117,11 @@ func (s *ExampleService) ListExamplesPaginated(ctx context.Context, userID, page
 	return &result, nil
 }
 
-func (s *ExampleService) loadPage(ctx context.Context, userID, page, pageSize int32) (*PaginatedExamplesResult, error) {
+func (s *ExampleService) loadPage(ctx context.Context, userID int64, page, pageSize int32) (*PaginatedExamplesResult, error) {
 	examples, err := s.queries.ListExamplesForUserPaginated(ctx, db.ListExamplesForUserPaginatedParams{
 		UserID: userID,
-		Limit:  pageSize,
-		Offset: (page - 1) * pageSize,
+		Limit:  int64(pageSize),
+		Offset: int64(page-1) * int64(pageSize),
 	})
 	if err != nil {
 		return nil, errs.WrapDatabaseError(err)
@@ -143,17 +141,17 @@ func (s *ExampleService) loadPage(ctx context.Context, userID, page, pageSize in
 // The cache pattern for lists: every cached page carries the user's list version in its
 // key, and a write changes the version. All pages go stale at once, whatever page sizes
 // were requested, and the old entries simply expire.
-func (s *ExampleService) listVersionKey(userID int32) string {
+func (s *ExampleService) listVersionKey(userID int64) string {
 	return fmt.Sprintf("examples:user:%d:version", userID)
 }
 
-func (s *ExampleService) listCacheKey(ctx context.Context, userID, page, pageSize int32) string {
+func (s *ExampleService) listCacheKey(ctx context.Context, userID int64, page, pageSize int32) string {
 	var version int64
 	_ = s.cache.Get(ctx, s.listVersionKey(userID), &version)
 	return fmt.Sprintf("examples:user:%d:v%d:page:%d:size:%d", userID, version, page, pageSize)
 }
 
-func (s *ExampleService) invalidateList(ctx context.Context, userID int32) {
+func (s *ExampleService) invalidateList(ctx context.Context, userID int64) {
 	if s.cache == nil {
 		return
 	}
@@ -161,7 +159,7 @@ func (s *ExampleService) invalidateList(ctx context.Context, userID int32) {
 }
 
 func notFoundOr(err error) error {
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) {
 		return ErrExampleNotFound
 	}
 	return errs.WrapDatabaseError(err)

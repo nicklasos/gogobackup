@@ -28,12 +28,3 @@
     content: |
       export PATH=$PATH:/usr/local/go/bin
     mode: "0644"
-
-- name: Install goose {{ goose_version }} for migrations
-  ansible.builtin.command: "/usr/local/go/bin/go install github.com/pressly/goose/v3/cmd/goose@{{ goose_version }}"
-  environment:
-    GOBIN: /usr/local/bin
-    GOPATH: /root/go
-    HOME: /root
-  args:
-    creates: /usr/local/bin/goose

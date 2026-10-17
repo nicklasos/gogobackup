@@ -18,7 +18,6 @@ import (
 	"app/internal/db"
 	"app/internal/logger"
 	"app/internal/mail"
-	"app/internal/monitoring"
 	"app/internal/redis"
 	"app/internal/scheduler"
 	"app/internal/server"
@@ -50,7 +49,7 @@ import (
 func main() {
 	var (
 		port      = flag.String("port", "", "Server port (overrides config)")
-		useTestDB = flag.Bool("test-db", false, "Use TEST_DATABASE_URL instead of DATABASE_URL")
+		useTestDB = flag.Bool("test-db", false, "Use TEST_DATABASE_PATH instead of DATABASE_PATH")
 	)
 	flag.Parse()
 
@@ -63,7 +62,7 @@ func main() {
 		if err := cfg.UseTestDatabase(); err != nil {
 			log.Fatal(err)
 		}
-		log.Println("Using TEST_DATABASE_URL for database connection")
+		log.Println("Using TEST_DATABASE_PATH for the database")
 	}
 
 	if *port != "" {
@@ -80,17 +79,12 @@ func main() {
 	}
 	defer redisClient.Close()
 
-	// Created before the logger and the database pool, because it observes both
-	pulse := monitoring.New(cfg, redisClient)
-	defer monitoring.Close(pulse)
-
 	logger, err := logger.New(logger.Config{
 		Level:     cfg.LogLevel,
 		Format:    cfg.LogFormat,
 		Output:    cfg.LogOutput,
 		AddSource: cfg.Debug,
 		RequestID: true,
-		Wrap:      monitoring.LogHandler(pulse),
 	})
 	if err != nil {
 		log.Fatal("Failed to initialize logger:", err)
@@ -106,11 +100,8 @@ func main() {
 	if cfg.JWTSecretIsWeak() {
 		logger.Warn("JWT_SECRET is weak: fine for local development, refused when APP_ENV=production")
 	}
-	if pulse != nil {
-		logger.Info("Monitoring dashboard enabled", "path", cfg.PulsePath)
-	}
 
-	database, err := db.NewConnection(cfg, monitoring.QueryTracer(pulse))
+	database, err := db.NewConnection(cfg)
 	if err != nil {
 		logger.Error("Failed to connect to database", "error", err)
 		log.Fatal("Failed to connect to database:", err)
@@ -119,17 +110,16 @@ func main() {
 
 	queries := db.New(database)
 
-	r := server.NewEngine(cfg, logger, pulse)
+	r := server.NewEngine(cfg, logger)
 
 	app := &internal.App{
 		Config:  cfg,
 		DB:      database,
 		Queries: queries,
-		Tx:      db.NewTxRunner(database, queries),
+		Tx:      db.NewTxRunner(database),
 		Cache:   cache.NewRedisCache(redisClient, cfg.AppName+":"),
 		Logger:  logger,
 		Mail:    mail.NewService(cfg, logger),
-		Pulse:   pulse,
 		Api:     r.Group("/api/v1"),
 	}
 

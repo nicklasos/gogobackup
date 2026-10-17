@@ -15,7 +15,7 @@ import (
 
 func main() {
 	global := flag.NewFlagSet("cli", flag.ExitOnError)
-	useTestDB := global.Bool("test", false, "Use TEST_DATABASE_URL instead of DATABASE_URL")
+	useTestDB := global.Bool("test", false, "Use TEST_DATABASE_PATH instead of DATABASE_PATH")
 	global.Usage = printUsage
 	global.Parse(os.Args[1:])
 
@@ -66,7 +66,7 @@ func initializeApp(useTestDB bool) (*internal.CLIApp, error) {
 		if err := cfg.UseTestDatabase(); err != nil {
 			return nil, err
 		}
-		log.Println("Using TEST_DATABASE_URL for database connection")
+		log.Println("Using TEST_DATABASE_PATH for the database")
 	}
 
 	appLogger, err := logger.New(logger.Config{
@@ -100,7 +100,7 @@ func printUsage() {
 	fmt.Println("  go run ./cmd/cli [--test] <command> [options]")
 	fmt.Println()
 	fmt.Println("Global options:")
-	fmt.Println("  --test               Use TEST_DATABASE_URL instead of DATABASE_URL")
+	fmt.Println("  --test               Use TEST_DATABASE_PATH instead of DATABASE_PATH")
 	fmt.Println()
 	fmt.Println("Available Commands:")
 	fmt.Println("  migrate              Run database migrations")

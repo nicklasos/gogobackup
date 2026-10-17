@@ -1,5 +1,5 @@
 # Installs the application on a server that already runs other things and already has Go,
-# Node.js, nginx, PostgreSQL, Redis and supervisor. Unlike provision.yml it installs no packages
+# Node.js, nginx, Redis and supervisor. Unlike provision.yml it installs no packages
 # and touches nothing but this application's own files. Safe to run again.
 #
 #   ansible-playbook install.yml
@@ -11,7 +11,6 @@
   vars:
     # The account the API runs as. The checkout stays with root, who also builds and pulls.
     app_user: "{{ install_user | default('www-data') }}"
-    database_url: "{{ install_database_url }}"
     # The API runs the scheduled jobs itself, so there is no cron program
     enable_scheduler: false
     scheduler_in_api: true
@@ -21,7 +20,6 @@
     - name: Check the settings
       ansible.builtin.assert:
         that:
-          - install_database_url is defined and 'PASSWORD' not in install_database_url
           - jwt_secret is defined and jwt_secret != 'CHANGE_ME' and jwt_secret | length >= 32
           - app_name is match('^[a-z][a-z0-9-]*$')
           - domain != 'example.com'
@@ -29,7 +27,7 @@
           - tls_mode in ['cloudflare', 'none']
           - install_nginx | default('write') in ['write', 'print']
         fail_msg: >-
-          Set install_database_url and jwt_secret (32+ characters) in group_vars/all/secrets.yml, and
+          Set jwt_secret (32+ characters) in group_vars/all/secrets.yml, and
           app_name, domain, repo_url and tls_mode (cloudflare or none) in group_vars/all/main.yml or
           for the host in inventory/hosts.yml.
         quiet: true
@@ -58,6 +56,7 @@
       loop:
         - { path: "{{ app_root }}/shared", owner: root }
         - { path: "{{ uploads_dir }}", owner: "{{ app_user }}" }
+        - { path: "{{ database_path | dirname }}", owner: "{{ app_user }}" }
         - { path: "{{ log_dir }}", owner: root }
 
     - name: Write the backend environment file

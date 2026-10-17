@@ -78,7 +78,7 @@ func RunCreateUser(app *internal.CLIApp, args []string) {
 		EmailVerified: true,
 	})
 	if err != nil {
-		if domainErr := errs.DomainErrorFromPostgresUniqueViolation(err); domainErr != nil {
+		if domainErr := errs.DomainErrorFromUniqueViolation(err); domainErr != nil {
 			fmt.Fprintf(os.Stderr, "User with this email already exists: %s\n", *email)
 			os.Exit(1)
 		}

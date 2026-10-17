@@ -15,19 +15,19 @@ type Config struct {
 	AppName    string
 	AppVersion string
 
-	DatabaseURL     string
-	TestDatabaseURL string
-	RedisURL        string
-	Port            string
-	Environment     string
-	Debug           bool
-	LogLevel        string
-	LogFormat       string
-	LogOutput       string
-	JWTSecret       string
-	AppURL          string
-	FilesBaseURL    string
-	UploadFolder    string
+	DatabasePath     string
+	TestDatabasePath string
+	RedisURL         string
+	Port             string
+	Environment      string
+	Debug            bool
+	LogLevel         string
+	LogFormat        string
+	LogOutput        string
+	JWTSecret        string
+	AppURL           string
+	FilesBaseURL     string
+	UploadFolder     string
 
 	// Auth
 	AccessTokenTTL       time.Duration
@@ -42,11 +42,6 @@ type Config struct {
 	FrontendURL string
 	// TrustedProxies are the proxies whose X-Forwarded-For is believed when resolving the client IP
 	TrustedProxies []string
-
-	// Monitoring dashboard (gopulse). It is off until PulsePassword is set.
-	PulseUsername string
-	PulsePassword string
-	PulsePath     string
 
 	// Mail (SMTP)
 	MailMailer      string
@@ -73,19 +68,19 @@ func Load() (*Config, error) {
 		AppName:    getEnv("APP_NAME", "Gogobackup"),
 		AppVersion: "1.0.0",
 
-		DatabaseURL:     getEnv("DATABASE_URL", ""),
-		TestDatabaseURL: getEnv("TEST_DATABASE_URL", ""),
-		RedisURL:        getEnv("REDIS_URL", "redis://localhost:6379/1"),
-		Port:            getEnv("PORT", "8181"),
-		Environment:     getEnv("APP_ENV", "development"),
-		Debug:           getEnvBool("APP_DEBUG", false),
-		LogLevel:        getEnv("LOG_LEVEL", "info"),
-		LogFormat:       getEnv("LOG_FORMAT", "json"),
-		LogOutput:       getEnv("LOG_OUTPUT", "both"),
-		JWTSecret:       getEnv("JWT_SECRET", ""),
-		AppURL:          getEnv("APP_URL", "localhost:8181"),
-		FilesBaseURL:    getEnv("FILES_BASE_URL", fmt.Sprintf("http://localhost:%s/api/files", getEnv("PORT", "8181"))),
-		UploadFolder:    getEnv("UPLOAD_FOLDER", "./uploads"),
+		DatabasePath:     getEnv("DATABASE_PATH", "./data/gogobackup.db"),
+		TestDatabasePath: getEnv("TEST_DATABASE_PATH", "./data/gogobackup_test.db"),
+		RedisURL:         getEnv("REDIS_URL", "redis://localhost:6379/1"),
+		Port:             getEnv("PORT", "8181"),
+		Environment:      getEnv("APP_ENV", "development"),
+		Debug:            getEnvBool("APP_DEBUG", false),
+		LogLevel:         getEnv("LOG_LEVEL", "info"),
+		LogFormat:        getEnv("LOG_FORMAT", "json"),
+		LogOutput:        getEnv("LOG_OUTPUT", "both"),
+		JWTSecret:        getEnv("JWT_SECRET", ""),
+		AppURL:           getEnv("APP_URL", "localhost:8181"),
+		FilesBaseURL:     getEnv("FILES_BASE_URL", fmt.Sprintf("http://localhost:%s/api/files", getEnv("PORT", "8181"))),
+		UploadFolder:     getEnv("UPLOAD_FOLDER", "./uploads"),
 
 		AccessTokenTTL:       getEnvDuration("JWT_ACCESS_TOKEN_TTL", time.Hour),
 		RefreshTokenTTL:      getEnvDuration("JWT_REFRESH_TOKEN_TTL", 30*24*time.Hour),
@@ -95,10 +90,6 @@ func Load() (*Config, error) {
 		AuthRateLimit:        getEnvBool("AUTH_RATE_LIMIT", true),
 		FrontendURL:          strings.TrimRight(getEnv("FRONTEND_URL", "http://localhost:5173"), "/"),
 		TrustedProxies:       getEnvListDefault("TRUSTED_PROXIES", []string{"127.0.0.1", "::1"}),
-
-		PulseUsername: getEnv("PULSE_USERNAME", "admin"),
-		PulsePassword: getEnv("PULSE_PASSWORD", ""),
-		PulsePath:     getEnv("PULSE_PATH", "/_pulse"),
 
 		MailMailer:      getEnv("MAIL_MAILER", "smtp"),
 		MailScheme:      getEnv("MAIL_SCHEME", "smtp"),

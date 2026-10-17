@@ -10,6 +10,7 @@
     # Outside the checkout on purpose, so uploaded files survive whatever happens to the code
     - "{{ app_root }}/shared"
     - "{{ uploads_dir }}"
+    - "{{ database_path | dirname }}"
     - "{{ log_dir }}"
 
 - name: Read the deploy key
@@ -96,12 +97,9 @@
   changed_when: true
 
 - name: Apply database migrations
-  ansible.builtin.command: goose -dir migrations up
+  ansible.builtin.command: ./bin/gogo-cli migrate up
   args:
     chdir: "{{ backend_dir }}"
-  environment:
-    GOOSE_DRIVER: postgres
-    GOOSE_DBSTRING: "{{ database_url }}"
   become: true
   become_user: "{{ app_user }}"
   register: migrations
@@ -161,11 +159,10 @@
   delay: 2
 
 - name: Count the accounts
-  community.postgresql.postgresql_query:
-    db: "{{ db_name }}"
-    query: SELECT count(*) AS total FROM users
+  ansible.builtin.command:
+    argv: [sqlite3, "{{ database_path }}", "SELECT count(*) FROM users"]
   become: true
-  become_user: postgres
+  become_user: "{{ app_user }}"
   register: accounts
   changed_when: false
 
@@ -177,4 +174,4 @@
         sudo -u {{ app_user }} sh -c 'cd {{ backend_dir }} && ./bin/gogo-cli create-user --email you@example.com --password "a-long-password"'
 
       Then sign in at {{ site_url }}
-  when: accounts.query_result[0].total | int == 0
+  when: accounts.stdout | int == 0

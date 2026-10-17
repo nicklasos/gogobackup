@@ -2,7 +2,7 @@
 // seeding a development database. Every factory takes options for the fields a caller
 // cares about and fills in the rest:
 //
-//	create := factory.New(t, tx)
+//	create := factory.New(t, conn)
 //	user := create.User()
 //	admin := create.User(factory.WithRoles("admin"), factory.WithEmail("boss@example.com"))
 //	example := create.Example(user.ID, factory.WithTitle("Release notes"))
@@ -13,11 +13,10 @@ package factory
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"sync/atomic"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 )
 
 // DefaultPassword is the password of every user a factory creates, unless WithPassword is used.
@@ -29,9 +28,9 @@ type TB interface {
 	Fatalf(format string, args ...any)
 }
 
-// DB is satisfied by a transaction (tests) and by a connection pool (seeding).
+// DB is satisfied by *sql.DB and *sql.Tx.
 type DB interface {
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 // Factory creates records on one connection and reports failures to one TB.

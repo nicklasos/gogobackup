@@ -1,12 +1,14 @@
 import { createHash, randomBytes } from 'crypto'
-import { Client } from 'pg'
 import bcrypt from 'bcryptjs'
 import dotenv from 'dotenv'
 import path from 'path'
+import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const backendDir = path.resolve(__dirname, '../../../../backend')
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
+dotenv.config({ path: path.join(backendDir, '.env') })
 
 export type TestRole = 'super-admin' | 'admin' | 'user'
 
@@ -44,30 +46,30 @@ export function uniqueEmail(label = 'user'): string {
 }
 
 /** Cleanup deletes rows unconditionally, so refuse anything that is not clearly a test database. */
-export function assertTestDatabaseUrl(rawUrl: string | undefined): string {
-  if (!rawUrl) throw new Error('TEST_DATABASE_URL environment variable is required')
-  const dbName = new URL(rawUrl).pathname.replace(/^\//, '')
-  if (!dbName.endsWith('_test')) {
-    throw new Error(`Refusing to use database "${dbName}": TEST_DATABASE_URL must point at a database whose name ends in "_test"`)
+export function assertTestDatabasePath(rawPath: string | undefined): string {
+  if (!rawPath) throw new Error('TEST_DATABASE_PATH environment variable is required')
+  if (!path.basename(rawPath).endsWith('_test.db')) {
+    throw new Error(`Refusing to use database "${rawPath}": TEST_DATABASE_PATH must point at a file whose name ends in "_test.db"`)
   }
-  return rawUrl
+  return path.resolve(backendDir, rawPath)
 }
 
 export class DatabaseHelper {
-  private client: Client | null = null
+  private db: DatabaseSync | null = null
 
-  private async connection(): Promise<Client> {
-    if (!this.client) {
-      this.client = new Client({ connectionString: assertTestDatabaseUrl(process.env.TEST_DATABASE_URL) })
-      await this.client.connect()
+  private connection(): DatabaseSync {
+    if (!this.db) {
+      this.db = new DatabaseSync(assertTestDatabasePath(process.env.TEST_DATABASE_PATH))
+      // The API writes the same file from another process.
+      this.db.exec('PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;')
     }
-    return this.client
+    return this.db
   }
 
   async disconnect(): Promise<void> {
-    if (this.client) {
-      await this.client.end()
-      this.client = null
+    if (this.db) {
+      this.db.close()
+      this.db = null
     }
   }
 
@@ -78,15 +80,15 @@ export class DatabaseHelper {
     roles = ['user'],
     emailVerified = true,
   }: CreateUserOptions = {}): Promise<TestUser> {
-    const client = await this.connection()
     const hashed = await bcrypt.hash(password, 4)
-    const result = await client.query(
-      `INSERT INTO users (email, name, password, roles, email_verified_at)
-       VALUES ($1, $2, $3, $4, CASE WHEN $5 THEN CURRENT_TIMESTAMP END)
-       RETURNING id, email, name`,
-      [email, name, hashed, roles, emailVerified]
-    )
-    return { ...result.rows[0], password, roles }
+    const row = this.connection()
+      .prepare(
+        `INSERT INTO users (email, name, password, roles, email_verified_at)
+         VALUES (?, ?, ?, ?, CASE WHEN ? THEN CURRENT_TIMESTAMP END)
+         RETURNING id, email, name`
+      )
+      .get(email, name, hashed, JSON.stringify(roles), emailVerified ? 1 : 0) as Pick<TestUser, 'id' | 'email' | 'name'>
+    return { ...row, password, roles }
   }
 
   /**
@@ -94,40 +96,39 @@ export class DatabaseHelper {
    * cannot read one back and plants its own instead.
    */
   async createEmailToken(userId: number, purpose: EmailTokenPurpose, { expired = false } = {}): Promise<string> {
-    const client = await this.connection()
     const token = randomBytes(32).toString('hex')
-    await client.query(
-      `INSERT INTO auth_tokens (user_id, purpose, token_hash, expires_at)
-       VALUES ($1, $2, $3, CURRENT_TIMESTAMP + $4 * INTERVAL '1 hour')`,
-      [userId, purpose, createHash('sha256').update(token).digest('hex'), expired ? -1 : 1]
-    )
+    this.connection()
+      .prepare(
+        `INSERT INTO auth_tokens (user_id, purpose, token_hash, expires_at)
+         VALUES (?, ?, ?, datetime('now', ?))`
+      )
+      .run(userId, purpose, createHash('sha256').update(token).digest('hex'), expired ? '-1 hour' : '+1 hour')
     return token
   }
 
   async createExample(userId: number, { title = `E2E Example ${Date.now()}`, description = 'desc' } = {}): Promise<TestExample> {
-    const client = await this.connection()
-    const result = await client.query(
-      `INSERT INTO examples (user_id, title, description)
-       VALUES ($1, $2, $3)
-       RETURNING id, user_id, title, description`,
-      [userId, title, description]
-    )
-    return result.rows[0]
+    return this.connection()
+      .prepare(
+        `INSERT INTO examples (user_id, title, description)
+         VALUES (?, ?, ?)
+         RETURNING id, user_id, title, description`
+      )
+      .get(userId, title, description) as unknown as TestExample
   }
 
   async createExamples(userId: number, count: number, prefix = 'E2E Example'): Promise<void> {
-    const client = await this.connection()
-    await client.query(
-      `INSERT INTO examples (user_id, title, description)
-       SELECT $1, $2 || ' ' || lpad(n::text, 3, '0'), 'desc' FROM generate_series(1, $3) AS n`,
-      [userId, prefix, count]
-    )
+    this.connection()
+      .prepare(
+        `WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < ?)
+         INSERT INTO examples (user_id, title, description)
+         SELECT ?, ? || ' ' || printf('%03d', n), 'desc' FROM seq`
+      )
+      .run(count, userId, prefix)
   }
 
   /** Examples, uploads and refresh tokens go with their user (ON DELETE CASCADE). */
   async cleanupTestData(): Promise<void> {
-    const client = await this.connection()
-    await client.query(`DELETE FROM users WHERE email LIKE 'e2e-%@example.com'`)
+    this.connection().exec(`DELETE FROM users WHERE email LIKE 'e2e-%@example.com'`)
   }
 }
 

@@ -14,6 +14,6 @@ SELECT 1
 `
 
 func (q *Queries) Healthcheck(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, healthcheck)
+	_, err := q.db.ExecContext(ctx, healthcheck)
 	return err
 }

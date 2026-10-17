@@ -1,16 +1,17 @@
 package internal
 
 import (
+	"database/sql"
+
 	"app/config"
 	"app/internal/db"
 	"app/internal/logger"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // CLIApp contains shared components for CLI commands
 type CLIApp struct {
 	Config   *config.Config
-	Database *pgxpool.Pool
+	Database *sql.DB
 	Queries  *db.Queries
 	Logger   *logger.Logger
 }

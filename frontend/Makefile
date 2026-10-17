@@ -49,7 +49,7 @@ test-e2e-headed: ## Playwright headed
 playwright-browsers: ## Install Playwright browsers
 	npx playwright install
 
-db-test-setup: ## Apply gogo migrations to TEST_DATABASE_URL
+db-test-setup: ## Apply gogo migrations to TEST_DATABASE_PATH
 	cd ../backend && $(MAKE) test-db-setup
 
 env-check: ## Check local environment

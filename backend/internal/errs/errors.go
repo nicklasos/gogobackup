@@ -4,16 +4,16 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/jackc/pgx/v5"
+	"database/sql"
 )
 
 // WrapDatabaseError wraps common database errors into DomainErrors.
-// pgx.ErrNoRows becomes a 404; other errors become 500 with full error logged.
+// sql.ErrNoRows becomes a 404; other errors become 500 with full error logged.
 func WrapDatabaseError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) {
 		return NewNotFoundError(ErrKeyNotFound, "resource not found")
 	}
 	return WrapInternal(ErrKeyInternalError, "database error", err)

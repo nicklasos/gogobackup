@@ -1,81 +1,75 @@
 package tests
 
 import (
-	"context"
-	"log"
+	"database/sql"
 	"os"
+	"path/filepath"
 	"sync"
+	"testing"
 
-	"app/config"
+	"app/internal/db"
+	"app/migrations"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
+	"github.com/pressly/goose/v3"
 )
 
 var (
-	testPool *pgxpool.Pool
-	once     sync.Once
+	templateOnce  sync.Once
+	templateBytes []byte
+	templateErr   error
 )
 
-// GetTestDBPool returns a shared test database connection pool
-func GetTestDBPool() *pgxpool.Pool {
-	once.Do(func() {
-		// Try to load .env file from common locations
-		envPaths := []string{
-			".env",       // Current directory
-			"../.env",    // Parent directory
-			"../../.env", // Two levels up
-		}
+// NewTestDB opens a fresh, migrated database file that only this test uses, removed when
+// the test ends. The schema is migrated once per test binary and copied for each test.
+func NewTestDB(t testing.TB) *sql.DB {
+	t.Helper()
 
-		var envLoaded bool
-		for _, path := range envPaths {
-			if err := godotenv.Load(path); err == nil {
-				log.Printf("Loaded .env file from: %s", path)
-				envLoaded = true
-				break
-			}
-		}
+	templateOnce.Do(func() { templateBytes, templateErr = migrateTemplate() })
+	if templateErr != nil {
+		t.Fatalf("tests: migrate template database: %v", templateErr)
+	}
 
-		if !envLoaded {
-			log.Printf("Could not load .env file from any location, using system environment variables")
-		}
+	path := filepath.Join(t.TempDir(), "app_test.db")
+	if err := os.WriteFile(path, templateBytes, 0o600); err != nil {
+		t.Fatalf("tests: copy template database: %v", err)
+	}
 
-		testDBURL := os.Getenv("TEST_DATABASE_URL")
-		if testDBURL == "" {
-			panic("TEST_DATABASE_URL environment variable is required for tests")
-		}
+	conn, err := db.Open(path)
+	if err != nil {
+		t.Fatalf("tests: open database: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	return conn
+}
 
-		if err := config.AssertTestDatabaseURL(testDBURL); err != nil {
-			panic(err.Error())
-		}
+// migrateTemplate returns the bytes of a freshly migrated database. Closing the last
+// connection checkpoints the WAL, so the single file holds the whole schema.
+func migrateTemplate() ([]byte, error) {
+	dir, err := os.MkdirTemp("", "gogobackup-template-")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(dir)
 
-		// Create test configuration
-		cfg := &config.Config{
-			DatabaseURL: testDBURL,
-		}
+	path := filepath.Join(dir, "template_test.db")
+	conn, err := db.Open(path)
+	if err != nil {
+		return nil, err
+	}
 
-		// Create connection pool with same settings as production
-		poolConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
-		if err != nil {
-			panic("Failed to parse test database URL: " + err.Error())
-		}
+	goose.SetBaseFS(migrations.FS)
+	goose.SetLogger(goose.NopLogger())
+	if err := goose.SetDialect(migrations.Dialect); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	if err := goose.Up(conn, "."); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	if err := conn.Close(); err != nil {
+		return nil, err
+	}
 
-		// Configure for testing - smaller pool
-		poolConfig.MaxConns = 5
-		poolConfig.MinConns = 1
-
-		pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
-		if err != nil {
-			panic("Failed to create test database pool: " + err.Error())
-		}
-
-		if err := pool.Ping(context.Background()); err != nil {
-			pool.Close()
-			panic("Failed to ping test database: " + err.Error())
-		}
-
-		testPool = pool
-	})
-
-	return testPool
+	return os.ReadFile(path)
 }

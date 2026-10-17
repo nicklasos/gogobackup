@@ -4,7 +4,7 @@ Ansible playbooks that turn a fresh Ubuntu server into a running deployment, and
 
 | Playbook | What it does |
 |---|---|
-| `provision.yml` | Everything, from an empty server: packages, firewall, PostgreSQL, Redis, Go, Node.js, the application, nginx, TLS, backups. Safe to run again. |
+| `provision.yml` | Everything, from an empty server: packages, firewall, Redis, Go, Node.js, the application, nginx, TLS, backups. Safe to run again. |
 | `deploy.yml` | Releases new code: pull, build, migrate, restart, health check. |
 | `install.yml` | Adds the application to a server that already has everything. Installs no packages. |
 
@@ -23,6 +23,7 @@ A server that already runs other applications gets `install.yml` instead: see [O
   frontend -> repo/frontend    admin panel; nginx serves frontend/dist
   backup   -> repo/backup      backup scripts, run by cron
   shared/uploads/              uploaded files, outside the checkout
+  shared/database/<app>.db     the SQLite database, outside the checkout
 /var/log/<app>/                api.log, api-error.log, cron.log, cron-error.log
 /var/backups/<app>/            local backups (when backup_storage includes "local")
 /etc/supervisor/conf.d/<app>.conf
@@ -30,8 +31,8 @@ A server that already runs other applications gets `install.yml` instead: see [O
 ```
 
 - **Processes**: supervisor runs `<app>-api` and, when `enable_scheduler` is true, `<app>-cron`, both as the unprivileged `deploy` user.
-- **nginx**: `domain` serves the admin panel and proxies `/api/`, `/health` and `/_pulse` to the API on `127.0.0.1:8181`. An optional `api_domain` proxies everything to the API.
-- **PostgreSQL and Redis** listen on localhost only. The firewall allows SSH, 80 and 443.
+- **nginx**: `domain` serves the admin panel and proxies `/api/` and `/health` to the API on `127.0.0.1:8181`. An optional `api_domain` proxies everything to the API.
+- **SQLite** is a file the API opens directly; there is no database server. **Redis** listens on localhost only. The firewall allows SSH, 80 and 443.
 - **Backups**: cron runs the database and uploaded-files backups every night.
 
 ## Requirements
@@ -76,7 +77,7 @@ All in `group_vars/all/main.yml`, each with a comment. The ones you will set for
 
 | Variable | Meaning |
 |---|---|
-| `app_name` | Short name: database, log folder, supervisor programs, nginx site |
+| `app_name` | Short name: database file, log folder, supervisor programs, nginx site |
 | `repo_url`, `repo_branch` | Where the code comes from |
 | `domain`, `api_domain` | Hostnames. `api_domain` is optional |
 | `tls_mode` | `letsencrypt`, `cloudflare` or `none` (below) |
@@ -84,7 +85,7 @@ All in `group_vars/all/main.yml`, each with a comment. The ones you will set for
 | `mail_host` and friends | SMTP, for password reset and verification emails |
 | `backup_storage` | `local`, `gcs` or `local,gcs` |
 
-Secrets (`group_vars/all/secrets.yml`): `db_password`, `jwt_secret`, `pulse_password`, `mail_password`.
+Secrets (`group_vars/all/secrets.yml`): `jwt_secret`, `mail_password`.
 
 ### TLS modes
 
@@ -110,22 +111,20 @@ sudo -u deploy sh -c 'cd /var/www/<app>/backend && ./bin/gogo-cli help'
 sudo -u deploy /var/www/<app>/backup/backup_db.sh   # a backup right now
 ```
 
-The monitoring dashboard is at `https://<domain>/_pulse` (user `admin`, password `pulse_password`).
-
 ## On a server that already has everything
 
-For a server that already runs other applications, with Go, Node.js, nginx, PostgreSQL, Redis and
+For a server that already runs other applications, with Go, Node.js, nginx, Redis and
 supervisor installed. `provision.yml` is not for it: it installs packages and a firewall, replaces
-nginx's default site and creates its own database and user. `install.yml` only adds this application:
-clone into `/var/www/<app>` (no `repo/` folder and links), the two `.env` files, build, migrations,
-one supervisor program and one nginx site.
+nginx's default site. `install.yml` only adds this application:
+clone into `/var/www/<app>` (no `repo/` folder and links), the two `.env` files, build, migrations
+(which create the SQLite database in `shared/database/`), one supervisor program and one nginx site.
 
-Create the database yourself first. Then, on your machine:
+On your machine:
 
 ```bash
 cd deploy
 cp inventory/hosts.example.yml inventory/hosts.yml          # address, and domain / api_port / tls_mode for this host
-cp secrets.example.yml group_vars/all/secrets.yml           # jwt_secret and install_database_url
+cp secrets.example.yml group_vars/all/secrets.yml           # jwt_secret
 ansible-playbook install.yml                                # or, from the project root: make install-remote
 ```
 
@@ -147,7 +146,7 @@ The same steps as commands to run yourself, without Ansible, are in [MANUAL_INST
 
 ## What is not handled
 
-- **Several servers.** Everything, database included, is on one machine.
+- **Several servers.** Everything, database included, is on one machine; SQLite is a local file.
 - **Zero-downtime releases.** A deploy restarts the API; requests in flight are finished first, new ones wait a moment.
 - **Rollback.** To go back, revert the commit and deploy again. Migrations are not rolled back automatically.
 - **Restoring a backup.** The steps are in `../backup/README.md`.

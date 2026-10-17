@@ -1,17 +1,17 @@
 package internal
 
 import (
+	"database/sql"
 	"math"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const timeFormat = "2006-01-02T15:04:05Z07:00"
 
 // FormatTime renders a database timestamp the way every API response does.
-func FormatTime(t pgtype.Timestamp) string {
+func FormatTime(t sql.NullTime) string {
 	return t.Time.Format(timeFormat)
 }
 

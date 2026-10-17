@@ -34,7 +34,7 @@ run-cron-test-db:
 run-test-db:
 	go run ./cmd/api --test-db
 
-# Local Postgres, Redis and Mailpit in Docker (see docker-compose.yml)
+# Local Redis and Mailpit in Docker (see docker-compose.yml)
 up:
 	docker compose up -d --wait
 
@@ -50,70 +50,41 @@ sqlc:
 sqlc-install:
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 
-# Database schema commands
-schema-dump:
-	@if [ -z "$(DATABASE_URL)" ]; then echo "ERROR: DATABASE_URL not found in .env file or environment"; exit 1; fi
-	@echo "Dumping database schema to internal/db/schema.sql..."
-	pg_dump --schema-only --no-comments --no-owner --no-privileges "$(DATABASE_URL)" > internal/db/schema.sql
-	@echo "Schema dumped successfully!"
-
 swagger:
 	swag init --parseDependency --parseInternal --requiredByDefault -g cmd/api/main.go
 
-# Apply migrations to TEST_DATABASE_URL before tests so schema matches migrations/
+# Every test creates its own temporary SQLite database, so tests need no setup
 test:
-	@if [ -n "$(TEST_DATABASE_URL)" ]; then goose -dir migrations postgres "$(TEST_DATABASE_URL)" up; fi
 	go test ./tests/unit/... ./tests/integration/...
 
 test-unit:
-	@if [ -n "$(TEST_DATABASE_URL)" ]; then goose -dir migrations postgres "$(TEST_DATABASE_URL)" up; fi
 	go test ./tests/unit/...
 
 test-integration:
-	@if [ -n "$(TEST_DATABASE_URL)" ]; then goose -dir migrations postgres "$(TEST_DATABASE_URL)" up; fi
 	go test ./tests/integration/...
 
 test-verbose:
-	@if [ -n "$(TEST_DATABASE_URL)" ]; then goose -dir migrations postgres "$(TEST_DATABASE_URL)" up; fi
 	go test -v ./tests/unit/... ./tests/integration/...
 
 test-coverage:
-	@if [ -n "$(TEST_DATABASE_URL)" ]; then goose -dir migrations postgres "$(TEST_DATABASE_URL)" up; fi
 	go test -cover ./tests/unit/... ./tests/integration/...
 
-# Test database setup
+# TEST_DATABASE_PATH is the database of --test-db, which the frontend E2E suite runs against
 test-db-setup:
-	@if [ -z "$(TEST_DATABASE_URL)" ]; then echo "ERROR: TEST_DATABASE_URL not found in .env file or environment"; exit 1; fi
-	@echo "Setting up test database..."
-	goose -dir migrations postgres "$(TEST_DATABASE_URL)" up
-	@echo "Test database ready!"
+	go run ./cmd/cli --test migrate up
 
 test-db-reset:
-	@if [ -z "$(TEST_DATABASE_URL)" ]; then echo "ERROR: TEST_DATABASE_URL not found in .env file or environment"; exit 1; fi
-	@echo "Resetting test database..."
-	goose -dir migrations postgres "$(TEST_DATABASE_URL)" reset
-	goose -dir migrations postgres "$(TEST_DATABASE_URL)" up
-	@echo "Test database reset complete!"
+	go run ./cmd/cli --test migrate reset
+	go run ./cmd/cli --test migrate up
 
-# Run tests with test database setup
-test-with-db:
-	@if [ -z "$(TEST_DATABASE_URL)" ]; then echo "ERROR: TEST_DATABASE_URL not found in .env file or environment"; exit 1; fi
-	@echo "Running tests with test database..."
-	$(MAKE) test-db-setup
-	go test ./tests/unit/... ./tests/integration/...
-
-# Test database migrations
 test-migrate-up:
-	@if [ -z "$(TEST_DATABASE_URL)" ]; then echo "ERROR: TEST_DATABASE_URL not found in .env file or environment"; exit 1; fi
-	goose -dir migrations postgres "$(TEST_DATABASE_URL)" up
+	go run ./cmd/cli --test migrate up
 
 test-migrate-down:
-	@if [ -z "$(TEST_DATABASE_URL)" ]; then echo "ERROR: TEST_DATABASE_URL not found in .env file or environment"; exit 1; fi
-	goose -dir migrations postgres "$(TEST_DATABASE_URL)" down
+	go run ./cmd/cli --test migrate down
 
 test-migrate-status:
-	@if [ -z "$(TEST_DATABASE_URL)" ]; then echo "ERROR: TEST_DATABASE_URL not found in .env file or environment"; exit 1; fi
-	goose -dir migrations postgres "$(TEST_DATABASE_URL)" status
+	go run ./cmd/cli --test migrate status
 
 fmt:
 	go fmt ./...
@@ -124,52 +95,22 @@ ifneq (,$(wildcard .env))
     export
 endif
 
-# Migration commands (uses DATABASE_URL from .env or environment)
+# Migration commands (DATABASE_PATH from .env or environment)
 migrate-up:
-	@if [ -z "$(DATABASE_URL)" ]; then echo "ERROR: DATABASE_URL not found in .env file or environment"; exit 1; fi
-	goose -dir migrations postgres "$(DATABASE_URL)" up
+	go run ./cmd/cli migrate up
 
 migrate-down:
-	@if [ -z "$(DATABASE_URL)" ]; then echo "ERROR: DATABASE_URL not found in .env file or environment"; exit 1; fi
-	goose -dir migrations postgres "$(DATABASE_URL)" down
+	go run ./cmd/cli migrate down
 
 migrate-status:
-	@if [ -z "$(DATABASE_URL)" ]; then echo "ERROR: DATABASE_URL not found in .env file or environment"; exit 1; fi
-	goose -dir migrations postgres "$(DATABASE_URL)" status
+	go run ./cmd/cli migrate status
 
 migrate-reset:
-	@if [ -z "$(DATABASE_URL)" ]; then echo "ERROR: DATABASE_URL not found in .env file or environment"; exit 1; fi
-	goose -dir migrations postgres "$(DATABASE_URL)" reset
+	go run ./cmd/cli migrate reset
 
 migrate-create:
 	@read -p "Enter migration name: " name; \
-	goose -dir migrations create $$name sql
-
-migrate-install:
-	go install github.com/pressly/goose/v3/cmd/goose@latest
-
-# CLI-based migration commands
-cli-migrate-up:
-	go run ./cmd/cli migrate up
-
-cli-migrate-down:
-	go run ./cmd/cli migrate down
-
-cli-migrate-status:
-	go run ./cmd/cli migrate status
-
-cli-migrate-create:
-	@read -p "Enter migration name: " name; \
 	go run ./cmd/cli migrate create $$name
-
-cli-migrate-test-up:
-	go run ./cmd/cli --test migrate up
-
-cli-migrate-test-down:
-	go run ./cmd/cli --test migrate down
-
-cli-migrate-test-status:
-	go run ./cmd/cli --test migrate status
 
 # CLI test command
 cli-test:
@@ -226,11 +167,11 @@ help:
 	@echo "Gogo API Template - available targets:"
 	@echo ""
 	@echo "  Development:"
-	@echo "    up                  Start Postgres, Redis and Mailpit in Docker"
+	@echo "    up                  Start Redis and Mailpit in Docker"
 	@echo "    down                Stop them"
 	@echo "    docker-build        Build the API image"
 	@echo "    run                 Start API server"
-	@echo "    run-test-db         Start API with TEST_DATABASE_URL"
+	@echo "    run-test-db         Start API with TEST_DATABASE_PATH"
 	@echo "    dev                 Hot reload (air)"
 	@echo "    build               Build API binary"
 	@echo "    build-cron          Build cron binary"
@@ -244,23 +185,21 @@ help:
 	@echo "    migrate-status      Show migration status"
 	@echo "    migrate-reset       Reset all migrations"
 	@echo "    migrate-create      Create a new migration"
-	@echo "    migrate-install     Install goose CLI"
 	@echo "    sqlc                Generate sqlc code"
 	@echo "    sqlc-install        Install sqlc CLI"
-	@echo "    schema-dump         Dump schema to internal/db/schema.sql"
 	@echo "    seed                Accounts and sample data for an empty development database"
 	@echo "    cli                 Run a console command (make cli migrate up)"
 	@echo "    cli-create-user     Create a user (EMAIL=, PASSWORD=, NAME=, ROLE=)"
 	@echo "    cli-mail            Send a test email (TO=)"
 	@echo ""
 	@echo "  Testing:"
-	@echo "    test                Run all tests (auto-migrates test DB)"
+	@echo "    test                Run all tests (each test gets its own SQLite file)"
 	@echo "    test-unit           Run unit tests"
 	@echo "    test-integration    Run integration tests"
 	@echo "    test-verbose        Run tests with -v"
 	@echo "    test-coverage       Run tests with coverage"
-	@echo "    test-db-setup       Apply migrations to test DB"
-	@echo "    test-db-reset       Reset and re-migrate test DB"
+	@echo "    test-db-setup       Apply migrations to TEST_DATABASE_PATH (E2E)"
+	@echo "    test-db-reset       Reset and re-migrate TEST_DATABASE_PATH"
 	@echo ""
 	@echo "  Docs / Cron / Deploy:"
 	@echo "    swagger             Generate Swagger docs"
@@ -268,6 +207,6 @@ help:
 	@echo "    supervisor-restart  Restart supervisord program"
 	@echo "    help                Show this help"
 
-.PHONY: up down docker-build seed run dev build build-cron build-cli run-cron run-cron-test-db run-test-db sqlc sqlc-install schema-dump swagger test test-unit test-integration test-verbose test-coverage test-db-setup test-db-reset test-with-db test-migrate-up test-migrate-down test-migrate-status fmt tidy clean air-install migrate-up migrate-down migrate-status migrate-reset migrate-create migrate-install cli-migrate-up cli-migrate-down cli-migrate-status cli-migrate-create cli-migrate-test-up cli-migrate-test-down cli-migrate-test-status cli-test cli-test-db cli-create-user cli-mail cli-help supervisor-restart supervisor-status supervisor-stop supervisor-start supervisor-logs supervisor-error-logs help
+.PHONY: up down docker-build seed run dev build build-cron build-cli run-cron run-cron-test-db run-test-db sqlc sqlc-install swagger test test-unit test-integration test-verbose test-coverage test-db-setup test-db-reset test-migrate-up test-migrate-down test-migrate-status fmt tidy clean air-install migrate-up migrate-down migrate-status migrate-reset migrate-create cli-test cli-test-db cli-create-user cli-mail cli-help supervisor-restart supervisor-status supervisor-stop supervisor-start supervisor-logs supervisor-error-logs help
 
 endif

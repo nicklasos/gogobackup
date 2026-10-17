@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -13,7 +14,6 @@ import (
 	"app/internal/mail"
 	"app/tests/testkit"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,7 +102,7 @@ func TestAuthAPI_PasswordReset(t *testing.T) {
 		verifyToken := emailToken(t, app.Mail.Sent()[1])
 		app.POST("/api/v1/auth/reset-password", fmt.Sprintf(`{"token": %q, "password": "brand-new-password"}`, verifyToken)).AssertError(http.StatusBadRequest, errs.ErrKeyAuthInvalidEmailToken)
 
-		_, err := app.Tx.Exec(app.Ctx, "UPDATE auth_tokens SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute' WHERE user_id = $1", user.ID)
+		_, err := app.DB.ExecContext(app.Ctx, "UPDATE auth_tokens SET expires_at = datetime('now', '-1 minute') WHERE user_id = ?", user.ID)
 		require.NoError(t, err)
 		app.POST("/api/v1/auth/reset-password", fmt.Sprintf(`{"token": %q, "password": "brand-new-password"}`, resetToken)).AssertError(http.StatusBadRequest, errs.ErrKeyAuthInvalidEmailToken)
 
@@ -116,7 +116,7 @@ func TestAuthAPI_PasswordReset(t *testing.T) {
 		token := emailToken(t, app.Mail.Sent()[0])
 
 		var stored string
-		require.NoError(t, app.Tx.QueryRow(app.Ctx, "SELECT token_hash FROM auth_tokens WHERE user_id = $1", user.ID).Scan(&stored))
+		require.NoError(t, app.DB.QueryRowContext(app.Ctx, "SELECT token_hash FROM auth_tokens WHERE user_id = ?", user.ID).Scan(&stored))
 		assert.NotEqual(t, token, stored)
 		assert.Len(t, stored, 64)
 	})
@@ -185,7 +185,7 @@ func TestAuthAPI_EmailVerification(t *testing.T) {
 
 		var created struct {
 			Data struct {
-				ID            int32 `json:"id"`
+				ID            int64 `json:"id"`
 				EmailVerified bool  `json:"email_verified"`
 			} `json:"data"`
 		}
@@ -208,7 +208,7 @@ func TestAuthAPI_RegistrationDisabled(t *testing.T) {
 	app.POST("/api/v1/auth/register", `{"email": "closed@example.com", "name": "Closed", "password": "password123"}`).AssertError(http.StatusForbidden, errs.ErrKeyAuthRegistrationClosed)
 
 	_, err := app.Queries.GetUserByEmail(app.Ctx, "closed@example.com")
-	assert.ErrorIs(t, err, pgx.ErrNoRows)
+	assert.ErrorIs(t, err, sql.ErrNoRows)
 }
 
 func TestAuthAPI_LoginRateLimit(t *testing.T) {
