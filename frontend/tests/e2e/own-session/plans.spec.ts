@@ -7,7 +7,8 @@ import { assertTestDatabasePath } from '../helpers/db-helper'
 import { dbHelper, loginAs } from '../helpers/test-helpers'
 import { AppShell } from '../pages/AppShell'
 import { PlanEditorPage } from '../pages/PlanEditorPage'
-import { PlansPage } from '../pages/PlansPage'
+import { DashboardPage } from '../pages/DashboardPage'
+import { PlanPage } from '../pages/PlanPage'
 import { StoragesPage } from '../pages/StoragesPage'
 
 /** A local storage the API can write to, named so cleanup finds it. */
@@ -30,11 +31,12 @@ test.describe('Backup plans as an admin', () => {
     await loginAs(page, 'admin')
     const target = await storage('Plan target')
     const name = `E2E Plan ${Date.now()}`
-    const list = new PlansPage(page)
+    const dashboard = new DashboardPage(page)
+    const planPage = new PlanPage(page)
     const editor = new PlanEditorPage(page)
 
-    await list.gotoList()
-    await list.clickAdd()
+    await dashboard.gotoDashboard()
+    await dashboard.clickAdd()
     await editor.nameInput.fill(name)
     await editor.chooseKind('sqlite')
     await editor.sqlitePathInput.fill(assertTestDatabasePath(process.env.TEST_DATABASE_PATH))
@@ -57,32 +59,39 @@ test.describe('Backup plans as an admin', () => {
     await expect(editor.retentionSummary).toContainText('30')
     await editor.save()
 
-    await expect(list.row(name)).toBeVisible()
-    await expect(list.schedule(name)).toContainText('03:00')
-    await expect(list.schedule(name)).toContainText('18:00')
-    await expect(list.nextRun(name)).toContainText('UTC')
-    await expect(list.row(name)).toContainText(target.name)
+    await expect(planPage.root).toBeVisible()
+    await expect(page.getByTestId('plan-title')).toHaveText(name)
+    await expect(planPage.scheduleSummary).toContainText('03:00')
+    await expect(planPage.scheduleSummary).toContainText('18:00')
+    await expect(planPage.nextRun).toContainText('UTC')
+    await planPage.openTab('storages')
+    await expect(page.getByTestId('plan-storages-list')).toContainText(target.name)
 
-    await list.edit(name)
+    await planPage.editButton.click()
+    await expect(editor.root).toBeVisible()
     await expect(editor.sqlitePathInput).toHaveValue(assertTestDatabasePath(process.env.TEST_DATABASE_PATH))
     await expect(editor.scheduleRows).toHaveCount(2)
     await editor.removeSchedule(1)
     await expect(editor.scheduleRows).toHaveCount(1)
     await editor.save()
-    await expect(list.schedule(name)).toContainText('03:00')
-    await expect(list.schedule(name)).not.toContainText('18:00')
+    await expect(planPage.scheduleSummary).toContainText('03:00')
+    await expect(planPage.scheduleSummary).not.toContainText('18:00')
 
-    await list.delete(name)
+    const id = Number(new URL(page.url()).pathname.split('/').pop())
+    await planPage.editButton.click()
+    await editor.delete()
+    await expect(dashboard.root).toBeVisible()
+    await expect(dashboard.card(id)).toHaveCount(0)
   })
 
   test('fills a Postgres source from a pasted URL and reports a refused connection', async ({ page }) => {
     await loginAs(page, 'admin')
     const port = await closedPort()
-    const list = new PlansPage(page)
+    const dashboard = new DashboardPage(page)
     const editor = new PlanEditorPage(page)
 
-    await list.gotoList()
-    await list.clickAdd()
+    await dashboard.gotoDashboard()
+    await dashboard.clickAdd()
     await editor.chooseKind('postgres')
     await editor.urlInput.fill(`postgres://shop:s3cret@127.0.0.1:${port}/shop?sslmode=require`)
     await editor.urlInput.press('Enter')
@@ -101,11 +110,11 @@ test.describe('Backup plans as an admin', () => {
     await loginAs(page, 'admin')
     const target = await storage('Plan names')
     const taken = await dbHelper.createPlan(`E2E Taken ${Date.now()}`, target.id)
-    const list = new PlansPage(page)
+    const dashboard = new DashboardPage(page)
     const editor = new PlanEditorPage(page)
 
-    await list.gotoList()
-    await list.clickAdd()
+    await dashboard.gotoDashboard()
+    await dashboard.clickAdd()
     await editor.nameInput.fill(taken.name.toUpperCase())
     await editor.chooseKind('files')
     await page.getByTestId('plan-files-path-input-0').fill(os.tmpdir())
@@ -130,18 +139,21 @@ test.describe('Backup plans as an admin', () => {
 })
 
 test.describe('Backup plans as a plain user', () => {
-  test('sees no plans menu and is refused on the pages', async ({ page }) => {
+  test('sees no plans and is refused on the plan pages', async ({ page }) => {
     await loginAs(page, 'user')
     const shell = new AppShell(page)
-    const list = new PlansPage(page)
+    const dashboard = new DashboardPage(page)
 
     await shell.goto('/')
     await expect(shell.navItem('dashboard')).toBeVisible()
-    await expect(shell.navItem('plans')).toHaveCount(0)
+    await expect(dashboard.noAccess).toBeVisible()
 
-    for (const target of ['/plans', '/plans/new', '/plans/1/edit']) {
-      await list.goto(target)
-      await expect(list.forbidden).toBeVisible()
+    await dashboard.goto('/plans')
+    await expect(page).toHaveURL(/\/$/)
+    await expect(dashboard.noAccess).toBeVisible()
+    for (const target of ['/plans/new', '/plans/1', '/plans/1/edit']) {
+      await dashboard.goto(target)
+      await expect(dashboard.forbidden).toBeVisible()
     }
   })
 })

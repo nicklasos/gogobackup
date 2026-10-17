@@ -58,7 +58,6 @@
   },
   "navigation": {
     "dashboard": "Dashboard",
-    "plans": "Backup plans",
     "storages": "Storages",
     "users": "Users",
     "profile": "Profile",
@@ -117,20 +116,41 @@
       "fri": "Fri",
       "sat": "Sat",
       "sun": "Sun"
+    },
+    "health": {
+      "ok": "OK",
+      "failed": "Failed",
+      "overdue": "Overdue",
+      "running": "Running",
+      "paused": "Paused",
+      "never": "Never run"
     }
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "Backups",
+    "subtitle": "Every backup plan and how it is doing.",
     "welcome": "Welcome, {{name}}",
-    "subtitle": "Use the menu to get to your pages."
+    "noAccess": "Backups are managed by admins. Ask one for access.",
+    "empty": "No backup plans yet",
+    "emptyHint": "Add a plan to back up a database or files on this server.",
+    "lastBackup": "Last backup: {{when}}",
+    "noBackup": "No backup yet",
+    "next": "Next: {{when}}",
+    "dayRuns": "{{date}}: {{succeeded}} succeeded, {{failed}} failed",
+    "dayNone": "{{date}}: no runs",
+    "summary": {
+      "failed": "{{count}} failed",
+      "overdue": "{{count}} overdue",
+      "running": "{{count}} running",
+      "ok": "{{count}} ok",
+      "paused": "{{count}} paused",
+      "never": "{{count}} never ran"
+    }
   },
   "plans": {
-    "title": "Backup plans",
-    "subtitle": "What to back up, when, where to, and how long to keep it.",
     "add": "Add backup plan",
     "create": "New backup plan",
     "edit": "Edit backup plan",
-    "empty": "No backup plans yet",
     "saved": "Backup plan saved",
     "deleted": "Backup plan deleted",
     "deleteConfirm": "Delete this backup plan?",
@@ -140,15 +160,8 @@
     "nameRequired": "Give the plan a name",
     "source": "Source",
     "schedules": "Schedule",
-    "lastRunColumn": "Last run",
-    "nextRunColumn": "Next run",
-    "storagesColumn": "Storages",
-    "enabledColumn": "Enabled",
-    "on": "On",
-    "off": "Off",
     "paused": "Paused",
     "manual": "Manual",
-    "neverRun": "Never run",
     "runNow": "Run now",
     "runBusy": "Running",
     "runQueued": "Backup queued",
@@ -238,7 +251,18 @@
       "sentenceExcept": "Delete {{rule}}, but keep {{keeps}}."
     },
     "enabled": "Run on schedule",
-    "enabledHint": "When off, the plan keeps its settings but does not run on its schedule."
+    "enabledHint": "When off, the plan keeps its settings but does not run on its schedule.",
+    "page": {
+      "runs": "Runs",
+      "archives": "Archives",
+      "storages": "Storages",
+      "nextRun": "Next run",
+      "lastBackup": "Last backup",
+      "keep": "Keep",
+      "paused": "Plan paused",
+      "resumed": "Plan resumed",
+      "browseFolder": "Open the plan's folder"
+    }
   },
   "storages": {
     "title": "Storages",
@@ -412,6 +436,37 @@
     "validation.keep_weekly.max": "At most 520 weeks",
     "validation.keep_monthly.max": "At most 240 months",
     "validation.storage_ids.min": "Choose at least one storage",
-    "validation.storage_ids.required": "Choose at least one storage"
+    "validation.storage_ids.required": "Choose at least one storage",
+    "archives.not_found": "This archive is no longer kept",
+    "archives.invalid_link": "The download link has expired. Try again."
+  },
+  "runs": {
+    "chart": "Last 30 runs: height is the archive size",
+    "empty": "No runs yet",
+    "status": "Status",
+    "trigger": "Started by",
+    "started": "Started",
+    "finished": "Finished",
+    "scheduledFor": "Scheduled for",
+    "duration": "Duration",
+    "size": "Size",
+    "error": "Error",
+    "drawerTitle": "Run #{{id}}",
+    "log": "Log",
+    "logEmpty": "Nothing logged yet",
+    "archives": "Stored",
+    "noArchives": "Nothing was stored"
+  },
+  "archives": {
+    "file": "File",
+    "storage": "Storage",
+    "size": "Size",
+    "created": "Created",
+    "sha256": "SHA-256",
+    "download": "Download",
+    "browse": "Open in storage browser",
+    "empty": "No archives kept",
+    "allStorages": "All storages",
+    "deleted": "Deleted by retention"
   }
 }

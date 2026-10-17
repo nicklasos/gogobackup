@@ -30,6 +30,26 @@ interface CreateUserOptions {
 
 export type EmailTokenPurpose = 'password_reset' | 'email_verification'
 
+export type RunStatus = 'queued' | 'running' | 'succeeded' | 'failed'
+
+interface CreatePlanOptions {
+  paths?: string[]
+  schedules?: { time: string; days: string[] }[]
+  enabled?: boolean
+}
+
+interface CreateRunOptions {
+  status: RunStatus
+  /** A finished run ends a minute after it started. */
+  startedAt?: Date
+  sizeBytes?: number
+  log?: string
+  error?: string
+}
+
+/** A timestamp as SQLite writes it, which the API reads back. */
+const sqliteTime = (date: Date) => date.toISOString().replace('T', ' ').replace(/\.\d+Z$/, '')
+
 let sequence = 0
 
 /** Emails start with `e2e-` so cleanup can find every user a test created, including through the UI. */
@@ -106,15 +126,23 @@ export class DatabaseHelper {
       .get(name, JSON.stringify({ path: dir })) as { id: number; name: string }
   }
 
-  /** A files plan, 03:00 every day, uploading to the given storage; the name should start with "E2E". */
-  async createPlan(name: string, storageId: number, paths: string[] = ['/tmp']): Promise<{ id: number; name: string }> {
+  /**
+   * A files plan, 03:00 every day unless `schedules` says otherwise, uploading to the given storage;
+   * the name should start with "E2E". It is saved now, so the scheduler runs none of today's slots
+   * that have passed.
+   */
+  async createPlan(
+    name: string,
+    storageId: number,
+    { paths = ['/tmp'], schedules = [{ time: '03:00', days: [] }], enabled = true }: CreatePlanOptions = {}
+  ): Promise<{ id: number; name: string }> {
     const db = this.connection()
     const plan = db
       .prepare(
-        `INSERT INTO plans (name, source_kind, source_config, schedules, max_age_days)
-         VALUES (?, 'files', ?, '[{"time":"03:00","days":[]}]', 30) RETURNING id, name`
+        `INSERT INTO plans (name, source_kind, source_config, schedules, max_age_days, enabled)
+         VALUES (?, 'files', ?, ?, 30, ?) RETURNING id, name`
       )
-      .get(name, JSON.stringify({ paths, excludes: [] })) as { id: number; name: string }
+      .get(name, JSON.stringify({ paths, excludes: [] }), JSON.stringify(schedules), enabled ? 1 : 0) as { id: number; name: string }
     db.prepare('INSERT INTO plan_storages (plan_id, storage_id) VALUES (?, ?)').run(plan.id, storageId)
     return plan
   }
@@ -127,6 +155,38 @@ export class DatabaseHelper {
       .get(name, JSON.stringify({ path: databasePath })) as { id: number; name: string }
     db.prepare('INSERT INTO plan_storages (plan_id, storage_id) VALUES (?, ?)').run(plan.id, storageId)
     return plan
+  }
+
+  /**
+   * A manual run of the plan, recorded as it would be. Use `running` rather than `queued` for one
+   * in progress: the test API's worker would pick a queued run up and run it.
+   */
+  async createRun(planId: number, { status, startedAt = new Date(), sizeBytes, log = '', error }: CreateRunOptions): Promise<{ id: number }> {
+    const finished = status === 'succeeded' || status === 'failed'
+    return this.connection()
+      .prepare(
+        `INSERT INTO runs (plan_id, trigger, status, started_at, finished_at, size_bytes, log, error)
+         VALUES (?, 'manual', ?, ?, ?, ?, ?, ?) RETURNING id`
+      )
+      .get(
+        planId,
+        status,
+        status === 'queued' ? null : sqliteTime(startedAt),
+        finished ? sqliteTime(new Date(startedAt.getTime() + 60_000)) : null,
+        sizeBytes ?? null,
+        log,
+        error ?? (status === 'failed' ? 'E2E: the dump failed' : null)
+      ) as { id: number }
+  }
+
+  /** Records an archive of the run; the spec writes the object itself. */
+  async createArchive(run: { id: number }, planId: number, storageId: number, key: string, content: Buffer): Promise<{ id: number }> {
+    return this.connection()
+      .prepare(
+        `INSERT INTO archives (run_id, plan_id, storage_id, object_key, size_bytes, sha256)
+         VALUES (?, ?, ?, ?, ?, ?) RETURNING id`
+      )
+      .get(run.id, planId, storageId, key, content.length, createHash('sha256').update(content).digest('hex')) as { id: number }
   }
 
   /**

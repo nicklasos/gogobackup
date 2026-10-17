@@ -7,8 +7,12 @@ import type { ID, PageParams } from './types'
 export const qk = {
   plans: {
     all: ['plans'] as const,
-    list: (params: PageParams) => ['plans', 'list', params] as const,
+    dashboard: ['plans', 'dashboard'] as const,
     detail: (id: ID) => ['plans', 'detail', id] as const,
+    runsOf: (id: ID) => ['plans', 'runs', id] as const,
+    runs: (id: ID, params: PageParams) => ['plans', 'runs', id, params] as const,
+    run: (id: ID) => ['plans', 'run', id] as const,
+    archives: (id: ID, params: PageParams, storageId?: ID) => ['plans', 'archives', id, params, storageId ?? null] as const,
   },
   storages: {
     all: ['storages'] as const,

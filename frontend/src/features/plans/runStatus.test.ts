@@ -1,10 +1,9 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { anyRunActive, isRunActive } from './runStatus'
-import type { LastRun, Plan, RunStatus } from './types'
+import { anyRunActive, dashboardPollMs, DASHBOARD_POLL_MS, isRunActive } from './runStatus'
+import type { Dashboard, DashboardPlan, Health, RunStatus } from './types'
 
-const run = (status: RunStatus): LastRun => ({ id: 1, status, trigger: 'manual', started_at: null, finished_at: null, size_bytes: null })
-const plan = (last_run: LastRun | null) => ({ id: 1, last_run }) as Plan
+const run = (status: RunStatus) => ({ status })
 
 describe('run status', () => {
   it('is active while queued or running', () => {
@@ -16,10 +15,17 @@ describe('run status', () => {
     assert.equal(isRunActive(undefined), false)
   })
 
-  it('polls a page only while one of its plans has a run in progress', () => {
+  it('polls a page only while one of its runs is in progress', () => {
     assert.equal(anyRunActive(undefined), false)
     assert.equal(anyRunActive([]), false)
-    assert.equal(anyRunActive([plan(null), plan(run('failed')), plan(run('succeeded'))]), false)
-    assert.equal(anyRunActive([plan(run('succeeded')), plan(run('running'))]), true)
+    assert.equal(anyRunActive([run('failed'), run('succeeded')]), false)
+    assert.equal(anyRunActive([run('succeeded'), run('running')]), true)
+  })
+
+  it('polls the dashboard fast while a plan runs', () => {
+    const dashboard = (...healths: Health[]) => ({ plans: healths.map((health) => ({ health }) as DashboardPlan) }) as Dashboard
+    assert.equal(dashboardPollMs(undefined), DASHBOARD_POLL_MS.idle)
+    assert.equal(dashboardPollMs(dashboard('ok', 'failed', 'overdue')), DASHBOARD_POLL_MS.idle)
+    assert.equal(dashboardPollMs(dashboard('ok', 'running')), DASHBOARD_POLL_MS.active)
   })
 })
