@@ -1,7 +1,7 @@
 # Gogobackup
 
 Built from [Gogokit](https://github.com/nicklasos/gogokit): a Go API (`backend/`), a React admin panel
-(`frontend/`), database backups (`backup/`) and Ansible deployment (`deploy/`).
+(`frontend/`) and Ansible deployment (`deploy/`).
 
 ## Run it locally
 
@@ -58,7 +58,9 @@ ansible-playbook provision.yml
 
 That installs Go, Node.js, nginx, supervisor and the dump programs (sqlite3, pg_dump, mysqldump), creates the directories
 (the SQLite database lives in `shared/database/`), builds the API and the admin panel, obtains a
-certificate, and schedules the backups. To release new code afterwards:
+certificate, and adds the plan "Gogobackup itself", which backs up the service's own database to
+`shared/backups/` every night. Add an S3 or GCS storage to that plan for a copy off the server, and
+keep `encryption_key` somewhere off the server too. To release new code afterwards:
 
 ```bash
 ansible-playbook deploy.yml                              # or, from the root: make deploy-remote
@@ -89,7 +91,6 @@ Everything about it, including the three TLS modes and what ends up where on the
 
 - [backend/README.md](backend/README.md): API endpoints, configuration, patterns
 - [frontend/README.md](frontend/README.md): structure, commands, conventions
-- [backup/README.md](backup/README.md): storage backends, restore
 - [deploy/README.md](deploy/README.md): provisioning and releasing
 - [deploy/MANUAL_INSTALL.md](deploy/MANUAL_INSTALL.md): installing by hand on a server you already have
 - [AGENTS.md](AGENTS.md): the guide for coding agents
