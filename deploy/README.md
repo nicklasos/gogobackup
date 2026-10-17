@@ -29,7 +29,8 @@ A server that already runs other applications gets `install.yml` instead: see [O
 /etc/nginx/sites-available/<app>.conf
 ```
 
-- **Processes**: supervisor runs `<app>-api` as the unprivileged `deploy` user. The API runs the scheduled jobs itself. Set `scheduler_in_api: false` to run them in a separate `<app>-cron` program.
+- **Processes**: supervisor runs `<app>-api` as the unprivileged `deploy` user. The API runs the scheduled jobs and the backups itself. Set `scheduler_in_api: false` to run them in a separate `<app>-cron` program. `runner_concurrency` (default 2) is how many backups run at once.
+- **Dump tools**: `sqlite3`, `pg_dump` (`postgresql-client`) and `mysqldump` (`default-mysql-client`) from the distribution. `install_postgres_client: false` or `install_mysql_client: false` leaves one out. See [Dump tools](#dump-tools).
 - **nginx**: `domain` serves the admin panel and proxies `/api/` and `/health` to the API on `127.0.0.1:8181`. An optional `api_domain` proxies everything to the API.
 - **SQLite** is a file the API opens directly; there is no database server. The firewall allows SSH, 80 and 443.
 - **Backups**: cron runs the database backup every night.
@@ -105,6 +106,26 @@ The Cloudflare address ranges are in `roles/nginx/defaults/main.yml`; refresh th
 
 Set `backup_storage: gcs` (or `local,gcs`), `backup_gcs_bucket`, and `backup_gcs_credentials_file` to the path **on your machine** of the service account key. The playbook installs the Google Cloud CLI and uploads the key to `shared/gcs-sa.json`. See `../backup/GCS_SETUP.md` for creating the bucket and the key.
 
+### Dump tools
+
+Backups of a PostgreSQL or MySQL plan run `pg_dump` or `mysqldump` on this server, as the API user,
+and a SQLite plan runs `sqlite3`. A plan's connection test in the admin panel shows the version it finds.
+
+`pg_dump` refuses to dump a server of a newer major version than itself, and the run fails saying so.
+Ubuntu 24.04's `postgresql-client` is 16 and 22.04's is 14, so a PostgreSQL 17 server needs the
+client from the PostgreSQL apt repository (PGDG), which installs beside the distribution's:
+
+```bash
+sudo install -d /usr/share/postgresql-common/pgdg
+sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+sudo apt-get update && sudo apt-get install -y postgresql-client-17
+```
+
+A newer client dumps an older server without trouble, so the newest one serves every plan. Ubuntu's
+`/usr/bin/pg_dump` is a wrapper that picks among the installed clients; check which one runs with
+`sudo -u <api user> pg_dump --version`, or with a plan's connection test. The playbooks do not add the repository.
+
 ## Day-to-day on the server
 
 ```bash
@@ -132,7 +153,8 @@ cp secrets.example.yml group_vars/all/secrets.yml           # jwt_secret, encryp
 ansible-playbook install.yml                                # or, from the project root: make install-remote
 ```
 
-- The API runs as `www-data` (`install_user`) and runs the scheduled jobs itself (`scheduler_in_api: true`, the default).
+- The API runs as `www-data` (`install_user`) and runs the scheduled jobs and the backups itself (`scheduler_in_api: true`, the default).
+- `install.yml` installs no packages, so the dump tools the plans need (`sqlite3`, `pg_dump`, `mysqldump`) must already be on the server: see [Dump tools](#dump-tools).
 - `tls_mode` is `cloudflare` or `none`: the site listens on port 80 and certificates are not handled.
 - `install_nginx: print` shows the nginx site instead of writing it, to paste into a file nginx already loads, such as `sites-enabled/default`. Add `cloudflare_real_ip: false` when that file already has the `set_real_ip_from` lines.
 - root clones the repository, so root on the server needs access to it.
