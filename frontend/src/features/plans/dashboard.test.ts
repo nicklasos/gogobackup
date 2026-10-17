@@ -6,7 +6,7 @@ import { chartBars } from './runChart'
 import { objectFolder, objectName, sourceSummary } from './source'
 import type { Dashboard, DashboardPlan, Health, Plan, Run } from './types'
 
-const HEALTHS: Health[] = ['running', 'failed', 'paused', 'overdue', 'never', 'ok']
+const HEALTHS: Health[] = ['restoring', 'running', 'failed', 'paused', 'overdue', 'never', 'ok']
 
 describe('health', () => {
   it('has a look for every health, and the summary order lists each once', () => {
@@ -14,7 +14,7 @@ describe('health', () => {
     assert.deepEqual([...HEALTH_ORDER].sort(), [...HEALTHS].sort())
   })
 
-  it('colours ok green, failed red, overdue amber, running blue, paused and never grey', () => {
+  it('colours ok green, failed red, overdue amber, running blue, restoring purple, paused and never grey', () => {
     assert.equal(HEALTH.ok.color, 'colorSuccess')
     assert.equal(HEALTH.failed.color, 'colorError')
     assert.equal(HEALTH.overdue.color, 'colorWarning')
@@ -22,20 +22,23 @@ describe('health', () => {
     assert.equal(HEALTH.paused.color, 'colorTextTertiary')
     assert.equal(HEALTH.never.color, 'colorTextTertiary')
     assert.equal(HEALTH.running.spin, true)
+    assert.equal(HEALTH.restoring.color, 'purple')
+    assert.equal(HEALTH.restoring.tag, 'purple')
   })
 
   it('summarises only the healths some plan has, problems first', () => {
-    assert.deepEqual(summaryCounts({ ok: 5, failed: 1, overdue: 0, running: 0, paused: 2, never: 0 }), [
+    assert.deepEqual(summaryCounts({ ok: 5, failed: 1, overdue: 0, restoring: 1, running: 0, paused: 2, never: 0 }), [
       { health: 'failed', count: 1 },
+      { health: 'restoring', count: 1 },
       { health: 'ok', count: 5 },
       { health: 'paused', count: 2 },
     ])
-    assert.deepEqual(summaryCounts({ ok: 0, failed: 0, overdue: 0, running: 0, paused: 0, never: 0 }), [])
+    assert.deepEqual(summaryCounts({ ok: 0, failed: 0, overdue: 0, restoring: 0, running: 0, paused: 0, never: 0 }), [])
   })
 
   it('marks a plan running as soon as its run is queued', () => {
     const plan = (id: number, health: Health) => ({ id, health, last_run: null }) as unknown as DashboardPlan
-    const dashboard: Dashboard = { plans: [plan(1, 'ok'), plan(2, 'failed')], summary: { ok: 1, failed: 1, overdue: 0, running: 0, paused: 0, never: 0 } }
+    const dashboard: Dashboard = { plans: [plan(1, 'ok'), plan(2, 'failed')], summary: { ok: 1, failed: 1, overdue: 0, restoring: 0, running: 0, paused: 0, never: 0 } }
     const run = { id: 9, status: 'queued', trigger: 'manual', started_at: null, finished_at: null, size_bytes: null } as Run
 
     const next = withRunQueued(dashboard, 2, run)
@@ -43,7 +46,7 @@ describe('health', () => {
     assert.equal(next.plans[1].health, 'running')
     assert.equal(next.plans[1].last_run?.id, 9)
     assert.equal(next.plans[0], dashboard.plans[0])
-    assert.deepEqual(next.summary, { ok: 1, failed: 0, overdue: 0, running: 1, paused: 0, never: 0 })
+    assert.deepEqual(next.summary, { ok: 1, failed: 0, overdue: 0, restoring: 0, running: 1, paused: 0, never: 0 })
     assert.equal(withRunQueued(dashboard, 3, run), dashboard, 'a plan that is not on the dashboard changes nothing')
   })
 })

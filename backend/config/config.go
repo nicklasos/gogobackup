@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -60,8 +61,13 @@ type Config struct {
 	CORSAllowedOrigins []string
 
 	EnableScheduler bool
-	// RunnerConcurrency is how many backups run at once. Runs of one plan never overlap.
+	// RunnerConcurrency is how many backups and restores run at once. A plan runs one at a time.
 	RunnerConcurrency int
+	// WorkDir is the absolute directory restores download archives to and extract into by
+	// default. It needs room for the largest Postgres archive.
+	WorkDir string
+	// RestoreJobs is how many parallel jobs pg_restore runs.
+	RestoreJobs int
 }
 
 // Load loads configuration from environment
@@ -72,6 +78,10 @@ func Load() (*Config, error) {
 	encryptionKey, err := parseEncryptionKey(os.Getenv("ENCRYPTION_KEY"))
 	if err != nil {
 		return nil, err
+	}
+	workDir, err := filepath.Abs(getEnv("WORK_DIR", "./data/work"))
+	if err != nil {
+		return nil, fmt.Errorf("WORK_DIR: %w", err)
 	}
 
 	return &Config{
@@ -112,6 +122,8 @@ func Load() (*Config, error) {
 
 		EnableScheduler:   getEnvBool("ENABLE_SCHEDULER", true),
 		RunnerConcurrency: max(getEnvInt("RUNNER_CONCURRENCY", 2), 1),
+		WorkDir:           workDir,
+		RestoreJobs:       max(getEnvInt("RESTORE_JOBS", 4), 1),
 	}, nil
 }
 

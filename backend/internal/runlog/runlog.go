@@ -100,8 +100,8 @@ func (l *Log) Tail(n int) string {
 	return strings.Join(lines, "\n")
 }
 
-// Writer adds what a program prints, a line at a time, each after prefix. Close adds a last
-// line that did not end in a newline.
+// Writer adds what a program prints, a line at a time, each after prefix unless it starts with
+// it already, as pg_restore's do. Close adds a last line that did not end in a newline.
 func (l *Log) Writer(prefix string) *LineWriter {
 	return &LineWriter{log: l, prefix: prefix}
 }
@@ -122,21 +122,29 @@ func (w *LineWriter) Write(p []byte) (int, error) {
 		if i < 0 {
 			break
 		}
-		w.log.add(w.prefix, strings.TrimRight(string(w.pending[:i]), "\r"))
+		w.line(strings.TrimRight(string(w.pending[:i]), "\r"))
 		w.pending = w.pending[i+1:]
 	}
 	if len(w.pending) > MaxBytes {
-		w.log.add(w.prefix, string(w.pending))
+		w.line(string(w.pending))
 		w.pending = nil
 	}
 	return len(p), nil
+}
+
+func (w *LineWriter) line(text string) {
+	if strings.HasPrefix(text, w.prefix) {
+		w.log.add("", text)
+		return
+	}
+	w.log.add(w.prefix, text)
 }
 
 func (w *LineWriter) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if len(w.pending) > 0 {
-		w.log.add(w.prefix, string(w.pending))
+		w.line(string(w.pending))
 		w.pending = nil
 	}
 	return nil

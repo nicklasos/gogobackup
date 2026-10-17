@@ -21,12 +21,14 @@ var (
 	errSecretMissing   = errors.New("the stored password is missing")
 )
 
-// Plan is a plan with the storages it uploads to, its latest run (nil before the first), and
-// when its last successful run finished and the size of what it stored.
+// Plan is a plan with the storages it uploads to, its latest run (nil before the first), whether
+// a restore of it is queued or running, and when its last successful run finished and the size
+// of what it stored.
 type Plan struct {
 	db.Plan
 	Storages        []db.ListStoragesOfPlansRow
 	LastRun         *db.Run
+	Restoring       bool
 	LastSuccessAt   sql.NullTime
 	LastSuccessSize sql.NullInt64
 }
@@ -266,6 +268,13 @@ func (s *PlanService) withRelations(ctx context.Context, rows []db.Plan) ([]Plan
 	for _, row := range latest {
 		run := db.Run(row)
 		plans[index[row.PlanID]].LastRun = &run
+	}
+	restoring, err := s.queries.ListRestoringPlans(ctx, ids)
+	if err != nil {
+		return nil, errs.WrapDatabaseError(err)
+	}
+	for _, id := range restoring {
+		plans[index[id]].Restoring = true
 	}
 	successes, err := s.queries.LatestSuccessesOfPlans(ctx, ids)
 	if err != nil {

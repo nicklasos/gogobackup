@@ -60,6 +60,15 @@ const (
 	ErrKeyArchivesInvalidLink = "archives.invalid_link"
 )
 
+// Restores error keys
+const (
+	ErrKeyRestoresNotFound    = "restores.not_found"
+	ErrKeyRestoresInProgress  = "restores.in_progress"
+	ErrKeyRestoresConfirm     = "restores.confirm_mismatch"
+	ErrKeyRestoresOwnDatabase = "restores.own_database"
+	ErrKeyRestoresKindChanged = "restores.kind_changed"
+)
+
 // Validation error keys
 const (
 	ErrKeyValidationFailed       = "validation.failed"

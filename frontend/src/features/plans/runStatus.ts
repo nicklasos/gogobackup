@@ -1,5 +1,5 @@
 import type { ColorToken } from './health'
-import type { Dashboard, RunStatus } from './types'
+import type { Dashboard, Health, RunStatus } from './types'
 
 /** Tag colours: grey while waiting, blue while it runs, then green or red. */
 export const RUN_STATUS_COLOR: Record<RunStatus, string> = {
@@ -35,6 +35,11 @@ export function anyRunActive(runs: readonly { status: RunStatus }[] | undefined)
   return (runs ?? []).some(isRunActive)
 }
 
+/** A plan with a backup or a restore in progress, which is when its pages poll fast. */
+export function isPlanBusy(plan: { health: Health; last_run?: { status: RunStatus } | null } | undefined): boolean {
+  return plan?.health === 'restoring' || isRunActive(plan?.last_run)
+}
+
 export function dashboardPollMs(dashboard: Dashboard | undefined): number {
-  return dashboard?.plans.some((plan) => plan.health === 'running') ? DASHBOARD_POLL_MS.active : DASHBOARD_POLL_MS.idle
+  return dashboard?.plans.some((plan) => plan.health === 'running' || plan.health === 'restoring') ? DASHBOARD_POLL_MS.active : DASHBOARD_POLL_MS.idle
 }

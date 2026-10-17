@@ -45,8 +45,11 @@ api_port: 8181
 # supervisor program instead.
 scheduler_in_api: true
 
-# How many backups run at once. Runs of one plan never overlap.
+# How many backups and restores run at once. A plan runs one at a time.
 runner_concurrency: 2
+
+# Parallel jobs of pg_restore. Up to the server's cores helps a large database.
+restore_jobs: 4
 
 # The dump programs backups of PostgreSQL and MySQL sources run, from the distribution. pg_dump
 # must be at least the major version of every server it dumps; for a newer server than the
@@ -82,6 +85,9 @@ self_backup_dir: "{{ app_root }}/shared/backups"
 # --- Derived (no need to change) --------------------------------------------
 # Outside the checkout, in a folder of its own: SQLite writes -wal and -shm files next to the database
 database_path: "{{ app_root }}/shared/database/{{ app_name }}.db"
+# Where restores download archives and extract files by default. A Postgres restore downloads
+# the whole archive here first, so it needs room for the largest one.
+work_dir: "{{ app_root }}/shared/work"
 site_scheme: "{{ 'http' if tls_mode == 'none' else 'https' }}"
 site_url: "{{ site_scheme }}://{{ domain }}"
 log_dir: "/var/log/{{ app_name }}"

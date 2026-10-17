@@ -65,7 +65,7 @@ func planResponse(plan *Plan, now time.Time) (*PlanResponse, error) {
 	if plan.LastSuccessSize.Valid {
 		response.LastSize = &plan.LastSuccessSize.Int64
 	}
-	response.Health = PlanHealth(plan.Enabled, response.Schedules, plan.UpdatedAt.Time, plan.LastRun, plan.LastSuccessAt, now)
+	response.Health = PlanHealth(plan.Enabled, response.Schedules, plan.UpdatedAt.Time, plan.LastRun, plan.Restoring, plan.LastSuccessAt, now)
 	response.Folder = Folder(plan.Name)
 	return response, nil
 }
@@ -89,7 +89,7 @@ func dashboardResponse(plans []DashboardPlan, now time.Time) (*DashboardResponse
 
 func (s *HealthSummaryResponse) add(health Health) {
 	counters := map[Health]*int{
-		HealthRunning: &s.Running, HealthFailed: &s.Failed, HealthPaused: &s.Paused,
+		HealthRestoring: &s.Restoring, HealthRunning: &s.Running, HealthFailed: &s.Failed, HealthPaused: &s.Paused,
 		HealthOverdue: &s.Overdue, HealthNever: &s.Never, HealthOK: &s.OK,
 	}
 	*counters[health]++

@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import { Alert, Button, Descriptions, Drawer, Grid, List, Spin, Typography, theme } from 'antd'
 import { DownloadOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +5,7 @@ import { enumLabel } from '@/shared/utils/enums'
 import { formatBytes, formatDuration, formatUtcDateTime } from '@/shared/utils/format'
 import { useDownloadArchive, useRun } from '../hooks'
 import { isRunActive } from '../runStatus'
+import { LogBox } from './LogBox'
 import { RunStatusTag } from './RunStatusTag'
 
 /** One run: its log, followed live while it runs, what it stored, and how it failed. */
@@ -15,14 +15,7 @@ export function RunDrawer({ runId, onClose }: { runId: number | undefined; onClo
   const screens = Grid.useBreakpoint()
   const run = useRun(runId)
   const download = useDownloadArchive()
-  const logRef = useRef<HTMLPreElement>(null)
   const data = run.data
-  const log = data?.log
-
-  useEffect(() => {
-    const box = logRef.current
-    if (box) box.scrollTop = box.scrollHeight
-  }, [log])
 
   return (
     <Drawer
@@ -52,30 +45,7 @@ export function RunDrawer({ runId, onClose }: { runId: number | undefined; onClo
               <Descriptions.Item label={t('runs.size')}>{formatBytes(data.size_bytes)}</Descriptions.Item>
             </Descriptions>
 
-            <div>
-              <Typography.Title level={5}>
-                {t('runs.log')} {isRunActive(data) && <Spin size="small" style={{ marginInlineStart: token.marginXS }} />}
-              </Typography.Title>
-              <pre
-                ref={logRef}
-                data-testid="run-log"
-                style={{
-                  margin: 0,
-                  maxHeight: 420,
-                  overflow: 'auto',
-                  padding: token.paddingSM,
-                  background: token.colorFillQuaternary,
-                  border: `1px solid ${token.colorBorderSecondary}`,
-                  borderRadius: token.borderRadius,
-                  fontFamily: token.fontFamilyCode,
-                  fontSize: token.fontSizeSM,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {data.log || t('runs.logEmpty')}
-              </pre>
-            </div>
+            <LogBox log={data.log} active={isRunActive(data)} testId="run-log" />
 
             <div>
               <Typography.Title level={5}>{t('runs.archives')}</Typography.Title>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button, Select, Space, Tooltip, Typography, theme } from 'antd'
-import { DownloadOutlined, FolderOpenOutlined } from '@ant-design/icons'
+import { DownloadOutlined, FolderOpenOutlined, RollbackOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -11,8 +11,8 @@ import { useDownloadArchive, usePlanArchives } from '../hooks'
 import { browseUrl, objectFolder, objectName } from '../source'
 import type { Archive, Plan } from '../types'
 
-/** The archives retention has kept, on every storage of the plan or one. */
-export function ArchivesTab({ plan }: { plan: Plan }) {
+/** The archives retention has kept, on every storage of the plan or one. Each can be restored. */
+export function ArchivesTab({ plan, onRestore }: { plan: Plan; onRestore: (archive: Archive) => void }) {
   const { t } = useTranslation()
   const { token } = theme.useToken()
   const paging = usePageParams()
@@ -49,6 +49,9 @@ export function ArchivesTab({ plan }: { plan: Plan }) {
       >
         {t('archives.download')}
       </Button>
+      <Button size="small" icon={<RollbackOutlined />} onClick={() => onRestore(archive)} data-testid={`archive-restore-button-${archive.id}`}>
+        {t('restores.restore')}
+      </Button>
       <Tooltip title={t('archives.browse')}>
         <Link
           to={browseUrl(archive.storage_id, objectFolder(archive.object_key))}
@@ -67,7 +70,7 @@ export function ArchivesTab({ plan }: { plan: Plan }) {
     { title: t('archives.size'), key: 'size', width: 100, align: 'right', render: (_, archive) => formatBytes(archive.size_bytes) },
     { title: t('archives.created'), key: 'created', width: 200, render: (_, archive) => formatUtcDateTime(archive.created_at) },
     { title: t('archives.sha256'), key: 'sha', width: 160, render: (_, archive) => sha(archive) },
-    { title: t('common.actions'), key: 'actions', width: 160, render: (_, archive) => actions(archive) },
+    { title: t('common.actions'), key: 'actions', width: 250, render: (_, archive) => actions(archive) },
   ]
 
   return (

@@ -105,7 +105,7 @@ type PlanResponse struct {
 	LastRun     *LastRunResponse      `json:"last_run" extensions:"x-nullable"`
 	LastSuccess *string               `json:"last_success_at" extensions:"x-nullable"`
 	LastSize    *int64                `json:"last_size_bytes" extensions:"x-nullable"`
-	Health      Health                `json:"health" enums:"running,failed,paused,overdue,never,ok"`
+	Health      Health                `json:"health" enums:"restoring,running,failed,paused,overdue,never,ok"`
 	Folder      string                `json:"folder"`
 	CreatedAt   string                `json:"created_at"`
 	UpdatedAt   string                `json:"updated_at"`
@@ -132,12 +132,13 @@ type DashboardPlanResponse struct {
 
 // HealthSummaryResponse is how many plans have each health
 type HealthSummaryResponse struct {
-	Running int `json:"running"`
-	Failed  int `json:"failed"`
-	Paused  int `json:"paused"`
-	Overdue int `json:"overdue"`
-	Never   int `json:"never"`
-	OK      int `json:"ok"`
+	Restoring int `json:"restoring"`
+	Running   int `json:"running"`
+	Failed    int `json:"failed"`
+	Paused    int `json:"paused"`
+	Overdue   int `json:"overdue"`
+	Never     int `json:"never"`
+	OK        int `json:"ok"`
 }
 
 // DashboardResponse is every plan, by name, and how many have each health

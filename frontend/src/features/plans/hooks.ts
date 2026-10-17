@@ -4,8 +4,8 @@ import type { ID, PageParams } from '@/api/types'
 import { startDownload } from '@/shared/utils/download'
 import { downloadUrl, plansApi, STORAGE_CHOICES } from './api'
 import { lastRunOf, withRunQueued } from './health'
-import { anyRunActive, dashboardPollMs, isRunActive, LOG_POLL_MS, RUN_POLL_MS } from './runStatus'
-import type { Dashboard, Plan, PlanRequest, SourceRequest } from './types'
+import { anyRunActive, dashboardPollMs, isPlanBusy, isRunActive, LOG_POLL_MS, RUN_POLL_MS } from './runStatus'
+import type { Dashboard, Plan, PlanRequest, RestoreDetail, RestoreRequest, SourceRequest } from './types'
 
 export function useDashboard() {
   return useQuery({
@@ -21,7 +21,7 @@ export function usePlan(id: ID | undefined) {
     queryFn: () => plansApi.get(id as ID),
     enabled: id != null,
     meta: { silent: true },
-    refetchInterval: (query) => (isRunActive(query.state.data?.last_run) ? RUN_POLL_MS : false),
+    refetchInterval: (query) => (isPlanBusy(query.state.data) ? RUN_POLL_MS : false),
   })
 }
 
@@ -88,6 +88,67 @@ export function useDownloadArchive() {
   return useMutation({
     mutationFn: (archiveId: ID) => plansApi.downloadLink(archiveId),
     onSuccess: (link) => startDownload(downloadUrl(link)),
+  })
+}
+
+/** Polls while a restore on the page is queued or running, so its row follows it. */
+export function usePlanRestores(id: ID, params: PageParams) {
+  return useQuery({
+    queryKey: qk.plans.restores(id, params),
+    queryFn: () => plansApi.restores(id, params),
+    placeholderData: keepPreviousData,
+    refetchInterval: (query) => (anyRunActive(query.state.data?.data) ? RUN_POLL_MS : false),
+  })
+}
+
+/**
+ * The restore with its log, followed every few seconds while it is queued or running. When it
+ * ends, the plan and its restores are read again, so the page behind turns at the same moment.
+ */
+export function useRestore(id: ID | undefined) {
+  const client = useQueryClient()
+  return useQuery({
+    queryKey: qk.plans.restore(id ?? 0),
+    queryFn: async () => {
+      const before = client.getQueryData<RestoreDetail>(qk.plans.restore(id as ID))
+      const restore = await plansApi.getRestore(id as ID)
+      if (isRunActive(before) && !isRunActive(restore)) {
+        client.invalidateQueries({ queryKey: qk.plans.detail(restore.plan_id) })
+        client.invalidateQueries({ queryKey: qk.plans.restoresOf(restore.plan_id) })
+        client.invalidateQueries({ queryKey: qk.plans.dashboard })
+      }
+      return restore
+    },
+    enabled: id != null,
+    refetchInterval: (query) => (isRunActive(query.state.data) ? LOG_POLL_MS : false),
+  })
+}
+
+/** The target a restore form starts from. Read fresh each time the form opens. */
+export function useRestoreTarget(archiveId: ID | undefined) {
+  return useQuery({
+    queryKey: qk.plans.restoreTarget(archiveId ?? 0),
+    queryFn: () => plansApi.restoreTarget(archiveId as ID),
+    enabled: archiveId != null,
+    gcTime: 0,
+  })
+}
+
+/**
+ * Field errors are shown in the form, so the global error toast is silenced. The plan turns
+ * restoring at once, on its page and the dashboard, which poll until the restore ends.
+ */
+export function useStartRestore() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ archiveId, body }: { archiveId: ID; body: RestoreRequest }) => plansApi.restore(archiveId, body),
+    onSuccess: (restore) => {
+      client.setQueryData(qk.plans.restore(restore.id), restore)
+      client.setQueryData<Plan>(qk.plans.detail(restore.plan_id), (plan) => plan && { ...plan, health: 'restoring' })
+      client.invalidateQueries({ queryKey: qk.plans.restoresOf(restore.plan_id) })
+      client.invalidateQueries({ queryKey: qk.plans.dashboard })
+    },
+    meta: { silent: true },
   })
 }
 

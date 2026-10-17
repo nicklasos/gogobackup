@@ -45,6 +45,22 @@ type RefreshToken struct {
 	IsRevoked sql.NullBool `db:"is_revoked" json:"is_revoked"`
 }
 
+type Restore struct {
+	ID           int64          `db:"id" json:"id"`
+	ArchiveID    sql.NullInt64  `db:"archive_id" json:"archive_id"`
+	PlanID       int64          `db:"plan_id" json:"plan_id"`
+	SourceKind   string         `db:"source_kind" json:"source_kind"`
+	TargetConfig string         `db:"target_config" json:"target_config"`
+	TargetSecret []byte         `db:"target_secret" json:"target_secret"`
+	Status       string         `db:"status" json:"status"`
+	Log          string         `db:"log" json:"log"`
+	Error        sql.NullString `db:"error" json:"error"`
+	CreatedBy    sql.NullInt64  `db:"created_by" json:"created_by"`
+	CreatedAt    sql.NullTime   `db:"created_at" json:"created_at"`
+	StartedAt    sql.NullTime   `db:"started_at" json:"started_at"`
+	FinishedAt   sql.NullTime   `db:"finished_at" json:"finished_at"`
+}
+
 type Run struct {
 	ID           int64          `db:"id" json:"id"`
 	PlanID       int64          `db:"plan_id" json:"plan_id"`

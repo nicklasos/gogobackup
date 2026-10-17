@@ -50,8 +50,9 @@ Import with the `@/` alias. A feature imports from `api`, `auth`, `layout` and `
 ## Plans and the dashboard
 - `/` is the dashboard (`features/plans/pages/DashboardPage`): every plan as a card from `GET /dashboard`. A plain user gets a greeting instead (`dashboard-no-access`). `/plans` redirects to `/`.
 - The API decides a plan's health. `features/plans/health.ts` maps each health to its tag colour, strip colour and icon (`HEALTH`); nothing else branches on it. `days.ts` colours the 30-day strip, `runChart.ts` lays out the runs chart (pure, tested in `dashboard.test.ts`).
-- Polling: the dashboard every 5 s while a plan runs and every 30 s otherwise, a plan or runs page every 3 s while a run is active, an open run's log every 2 s (`runStatus.ts`). Run now marks the plan running in the cache at once (`withRunQueued`) instead of refetching.
-- `/plans/:id` is the plan page: runs (chart, table, a drawer for one run's log at `?run=`), archives and storages tabs (`?tab=`). The editor returns there.
+- Polling: the dashboard every 5 s while a plan runs or is restored and every 30 s otherwise, a plan, runs or restores page every 3 s while one is active, an open run's or restore's log every 2 s (`runStatus.ts`). Run now marks the plan running in the cache at once (`withRunQueued`) instead of refetching.
+- `/plans/:id` is the plan page: runs (chart, table, a drawer for one run's log at `?run=`), archives, restores and storages tabs (`?tab=`). The editor returns there.
+- Restore: an archive's Restore button opens `RestoreDrawer` with the form, prefilled from `GET /archives/:id/restore-target`. Once started, the same drawer follows the restore at `?restore=` (log every 2 s, the plan refreshed when it ends). The form asks to type the confirmation phrase when the target is the plan's own source; `restore.ts` mirrors the API's rule and runs its cases (`backend/tests/unit/testdata/own_target.json`), the API enforces it. A plan with a restore queued or running has health `restoring`.
 - Archives download through a one-minute link (`POST /archives/:id/download-link`), which the browser follows itself, so a large archive goes straight to disk (`useDownloadArchive`, `shared/utils/download.ts`).
 - The storage browser opens at a folder from `?prefix=`.
 

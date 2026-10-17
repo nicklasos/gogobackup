@@ -1,5 +1,6 @@
 import { Button, Card, Descriptions, Grid, Switch, Tabs, Tooltip, Typography } from 'antd'
 import { EditOutlined } from '@ant-design/icons'
+import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/shared/components/PageHeader'
@@ -10,6 +11,8 @@ import { formatBytes, formatRelative, formatUtcDateTime } from '@/shared/utils/f
 import message from '@/shared/utils/message'
 import { ArchivesTab } from '../components/ArchivesTab'
 import { HealthTag } from '../components/HealthTag'
+import { RestoreDrawer } from '../components/RestoreDrawer'
+import { RestoresTab } from '../components/RestoresTab'
 import { RunDrawer } from '../components/RunDrawer'
 import { RunNowButton } from '../components/RunNowButton'
 import { RunsTab } from '../components/RunsTab'
@@ -18,26 +21,31 @@ import { usePlan, useSetPlanEnabled } from '../hooks'
 import { retentionSummary } from '../planForm'
 import { scheduleSummary } from '../schedule'
 import { SOURCE_ICON, sourceSummary } from '../source'
-import type { Plan } from '../types'
+import type { Archive, Plan } from '../types'
 
-const TABS = ['runs', 'archives', 'storages'] as const
+const TABS = ['runs', 'archives', 'restores', 'storages'] as const
 type Tab = (typeof TABS)[number]
 
-/** A plan: how it is doing, what it backs up, its runs with their logs, its archives and its storages. */
+/** A plan: how it is doing, what it backs up, its runs with their logs, its archives to restore, its restores and its storages. */
 export default function PlanPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const id = Number(useParams().id)
   const [search, setSearch] = useSearchParams()
   const plan = usePlan(id)
+  const [restoring, setRestoring] = useState<Archive>()
 
   const back = { label: t('navigation.dashboard'), onClick: () => navigate('/'), testId: 'plan-back-button' }
   if (plan.isLoading) return <PageLoading />
   if (plan.isError || !plan.data) return <PageError error={plan.error} back={back} onRetry={() => plan.refetch()} />
 
   const tab: Tab = TABS.find((key) => key === search.get('tab')) ?? 'runs'
-  const runParam = Number(search.get('run'))
-  const openRun = Number.isInteger(runParam) && runParam > 0 ? runParam : undefined
+  const idParam = (name: string) => {
+    const value = Number(search.get(name))
+    return Number.isInteger(value) && value > 0 ? value : undefined
+  }
+  const openRun = idParam('run')
+  const openRestore = idParam('restore')
   const update = (change: Record<string, string | null>) =>
     setSearch((current) => {
       const next = new URLSearchParams(current)
@@ -67,7 +75,12 @@ export default function PlanPage() {
             {
               key: 'archives',
               label: <span data-testid="plan-tab-archives">{t('plans.page.archives')}</span>,
-              children: <ArchivesTab plan={plan.data} />,
+              children: <ArchivesTab plan={plan.data} onRestore={setRestoring} />,
+            },
+            {
+              key: 'restores',
+              label: <span data-testid="plan-tab-restores">{t('plans.page.restores')}</span>,
+              children: <RestoresTab planId={plan.data.id} onOpen={(restore) => update({ restore: String(restore.id) })} />,
             },
             {
               key: 'storages',
@@ -78,6 +91,19 @@ export default function PlanPage() {
         />
       </Card>
       <RunDrawer runId={openRun} onClose={() => update({ run: null })} />
+      <RestoreDrawer
+        plan={plan.data}
+        archive={restoring}
+        restoreId={openRestore}
+        onStarted={(restore) => {
+          setRestoring(undefined)
+          update({ tab: 'restores', restore: String(restore.id) })
+        }}
+        onClose={() => {
+          setRestoring(undefined)
+          update({ restore: null })
+        }}
+      />
     </PageStack>
   )
 }

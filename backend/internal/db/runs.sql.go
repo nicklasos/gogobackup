@@ -18,6 +18,7 @@ SET status = 'running', started_at = ?1
 WHERE runs.id = ?2
   AND runs.status = 'queued'
   AND NOT EXISTS (SELECT 1 FROM runs AS other WHERE other.plan_id = runs.plan_id AND other.status = 'running')
+  AND NOT EXISTS (SELECT 1 FROM restores WHERE restores.plan_id = runs.plan_id AND restores.status = 'running')
 `
 
 type ClaimRunParams struct {
@@ -25,8 +26,8 @@ type ClaimRunParams struct {
 	ID        int64        `db:"id" json:"id"`
 }
 
-// A run is claimed only while queued and while no other run of its plan is running, in one
-// statement, so neither two workers nor two processes can start it twice.
+// A run is claimed only while queued and while its plan has no other run and no restore running,
+// in one statement, so neither two workers nor two processes can start it twice.
 func (q *Queries) ClaimRun(ctx context.Context, arg ClaimRunParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, claimRun, arg.StartedAt, arg.ID)
 	if err != nil {
@@ -526,36 +527,39 @@ func (q *Queries) ListArchivesOfRun(ctx context.Context, runID int64) ([]ListArc
 	return items, nil
 }
 
-const listClaimableRuns = `-- name: ListClaimableRuns :many
-SELECT id, plan_id, "trigger", scheduled_for, status, started_at, finished_at, size_bytes, log, error, created_at FROM runs
+const listClaimableJobs = `-- name: ListClaimableJobs :many
+SELECT CAST('run' AS TEXT) AS kind, runs.id, runs.created_at FROM runs
 WHERE runs.status = 'queued'
   AND NOT EXISTS (SELECT 1 FROM runs AS other WHERE other.plan_id = runs.plan_id AND other.status = 'running')
-ORDER BY runs.id
+  AND NOT EXISTS (SELECT 1 FROM restores WHERE restores.plan_id = runs.plan_id AND restores.status = 'running')
+UNION ALL
+SELECT CAST('restore' AS TEXT) AS kind, restores.id, restores.created_at FROM restores
+WHERE restores.status = 'queued'
+  AND NOT EXISTS (SELECT 1 FROM restores AS other WHERE other.plan_id = restores.plan_id AND other.status = 'running')
+  AND NOT EXISTS (SELECT 1 FROM runs WHERE runs.plan_id = restores.plan_id AND runs.status = 'running')
+ORDER BY created_at, kind, id
 LIMIT ?1
 `
 
-func (q *Queries) ListClaimableRuns(ctx context.Context, limit int64) ([]Run, error) {
-	rows, err := q.db.QueryContext(ctx, listClaimableRuns, limit)
+type ListClaimableJobsRow struct {
+	Kind      string       `db:"kind" json:"kind"`
+	ID        int64        `db:"id" json:"id"`
+	CreatedAt sql.NullTime `db:"created_at" json:"created_at"`
+}
+
+// The queue of the worker: queued runs and restores, oldest first, whose plan has neither a run
+// nor a restore running. A plan runs one job at a time, so a backup never reads a database that
+// is half restored.
+func (q *Queries) ListClaimableJobs(ctx context.Context, limit int64) ([]ListClaimableJobsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listClaimableJobs, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Run
+	var items []ListClaimableJobsRow
 	for rows.Next() {
-		var i Run
-		if err := rows.Scan(
-			&i.ID,
-			&i.PlanID,
-			&i.Trigger,
-			&i.ScheduledFor,
-			&i.Status,
-			&i.StartedAt,
-			&i.FinishedAt,
-			&i.SizeBytes,
-			&i.Log,
-			&i.Error,
-			&i.CreatedAt,
-		); err != nil {
+		var i ListClaimableJobsRow
+		if err := rows.Scan(&i.Kind, &i.ID, &i.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

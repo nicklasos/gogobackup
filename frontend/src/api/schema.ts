@@ -24,6 +24,96 @@ export interface AppInternalErrsValidationErrorResponse {
   message: string;
 }
 
+export interface AppInternalPlansFilesTarget {
+  directory: string;
+  original_locations: boolean;
+}
+
+export interface AppInternalPlansFilesTargetInput {
+  directory?: string;
+  original_locations?: boolean;
+}
+
+export interface AppInternalPlansMySQLTarget {
+  create_database: boolean;
+  database: string;
+  host: string;
+  port: number;
+  user: string;
+}
+
+export interface AppInternalPlansMySQLTargetInput {
+  create_database?: boolean;
+  /** @maxLength 255 */
+  database: string;
+  /** @maxLength 255 */
+  host?: string;
+  password?: string;
+  /**
+   * @min 1
+   * @max 65535
+   */
+  port?: number;
+  /** @maxLength 255 */
+  user?: string;
+}
+
+export interface AppInternalPlansPostgresTarget {
+  create_database: boolean;
+  database: string;
+  host: string;
+  port: number;
+  ssl_mode: "disable" | "require" | "verify-full";
+  user: string;
+}
+
+export interface AppInternalPlansPostgresTargetInput {
+  create_database?: boolean;
+  /** @maxLength 255 */
+  database: string;
+  /** @maxLength 255 */
+  host?: string;
+  password?: string;
+  /**
+   * @min 1
+   * @max 65535
+   */
+  port?: number;
+  ssl_mode?: "disable" | "require" | "verify-full";
+  /** @maxLength 255 */
+  user?: string;
+}
+
+export interface AppInternalPlansRestoreRequest {
+  confirm?: string;
+  files?: AppInternalPlansFilesTargetInput;
+  mysql?: AppInternalPlansMySQLTargetInput;
+  postgres?: AppInternalPlansPostgresTargetInput;
+  sqlite?: AppInternalPlansSQLiteTargetInput;
+}
+
+export interface AppInternalPlansRestoreTarget {
+  files?: AppInternalPlansFilesTarget;
+  mysql?: AppInternalPlansMySQLTarget;
+  postgres?: AppInternalPlansPostgresTarget;
+  source_kind: "postgres" | "mysql" | "sqlite" | "files";
+  sqlite?: AppInternalPlansSQLiteTarget;
+}
+
+export interface AppInternalPlansSQLiteTarget {
+  path: string;
+}
+
+export interface AppInternalPlansSQLiteTargetInput {
+  path: string;
+}
+
+export type AppInternalPlansSourceKind =
+  | "postgres"
+  | "mysql"
+  | "sqlite"
+  | "files";
+
 export type AppInternalStoragesKind = "local" | "s3" | "gcs";
 
 export interface InternalAuthForgotPasswordRequest {
@@ -133,7 +223,14 @@ export interface InternalPlansDashboardPlanResponse {
   enabled: boolean;
   files?: InternalPlansFilesConfig;
   folder: string;
-  health: "running" | "failed" | "paused" | "overdue" | "never" | "ok";
+  health:
+    | "restoring"
+    | "running"
+    | "failed"
+    | "paused"
+    | "overdue"
+    | "never"
+    | "ok";
   id: number;
   keep_monthly: number;
   keep_weekly: number;
@@ -177,6 +274,7 @@ export interface InternalPlansFilesInput {
 }
 
 export type InternalPlansHealth =
+  | "restoring"
   | "running"
   | "failed"
   | "paused"
@@ -190,6 +288,7 @@ export interface InternalPlansHealthSummaryResponse {
   ok: number;
   overdue: number;
   paused: number;
+  restoring: number;
   running: number;
 }
 
@@ -267,7 +366,14 @@ export interface InternalPlansPlanResponse {
   enabled: boolean;
   files?: InternalPlansFilesConfig;
   folder: string;
-  health: "running" | "failed" | "paused" | "overdue" | "never" | "ok";
+  health:
+    | "restoring"
+    | "running"
+    | "failed"
+    | "paused"
+    | "overdue"
+    | "never"
+    | "ok";
   id: number;
   keep_monthly: number;
   keep_weekly: number;
@@ -404,9 +510,68 @@ export interface InternalRunsPaginatedArchivesResponse {
   pagination: InternalPaginationMeta;
 }
 
+export interface InternalRunsPaginatedRestoresResponse {
+  data: InternalRunsRestoreResponse[];
+  pagination: InternalPaginationMeta;
+}
+
 export interface InternalRunsPaginatedRunsResponse {
   data: InternalRunsRunResponse[];
   pagination: InternalPaginationMeta;
+}
+
+export interface InternalRunsRestoreArchiveResponse {
+  created_at: string;
+  object_key: string;
+  size_bytes: number;
+  storage_name: string;
+}
+
+export interface InternalRunsRestoreDetailDataResponse {
+  data: InternalRunsRestoreDetailResponse;
+}
+
+export interface InternalRunsRestoreDetailResponse {
+  archive?: InternalRunsRestoreArchiveResponse | null;
+  archive_id?: number | null;
+  created_at: string;
+  created_by?: InternalRunsRestoreUserResponse | null;
+  duration_ms?: number | null;
+  error?: string | null;
+  finished_at?: string | null;
+  id: number;
+  log: string;
+  plan_id: number;
+  secret_set: boolean;
+  started_at?: string | null;
+  status: "queued" | "running" | "succeeded" | "failed";
+  target: AppInternalPlansRestoreTarget;
+}
+
+export interface InternalRunsRestoreResponse {
+  archive?: InternalRunsRestoreArchiveResponse | null;
+  archive_id?: number | null;
+  created_at: string;
+  created_by?: InternalRunsRestoreUserResponse | null;
+  duration_ms?: number | null;
+  error?: string | null;
+  finished_at?: string | null;
+  id: number;
+  plan_id: number;
+  secret_set: boolean;
+  started_at?: string | null;
+  status: "queued" | "running" | "succeeded" | "failed";
+  target: AppInternalPlansRestoreTarget;
+}
+
+export interface InternalRunsRestoreTargetDataResponse {
+  data: AppInternalPlansRestoreTarget;
+}
+
+export interface InternalRunsRestoreUserResponse {
+  email: string;
+  id: number;
+  name: string;
 }
 
 export interface InternalRunsRunDataResponse {
