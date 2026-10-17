@@ -119,9 +119,20 @@ export class DatabaseHelper {
     return plan
   }
 
+  /** A SQLite plan with no schedule, uploading to the given storage; the name should start with "E2E". */
+  async createSQLitePlan(name: string, storageId: number, databasePath: string): Promise<{ id: number; name: string }> {
+    const db = this.connection()
+    const plan = db
+      .prepare(`INSERT INTO plans (name, source_kind, source_config, schedules) VALUES (?, 'sqlite', ?, '[]') RETURNING id, name`)
+      .get(name, JSON.stringify({ path: databasePath })) as { id: number; name: string }
+    db.prepare('INSERT INTO plan_storages (plan_id, storage_id) VALUES (?, ?)').run(plan.id, storageId)
+    return plan
+  }
+
   /**
    * Refresh tokens and emailed tokens go with their user (ON DELETE CASCADE). Plans and storages
-   * are global: theirs start with "E2E". Plans go first, because a storage a plan uses cannot be deleted.
+   * are global: theirs start with "E2E", and their runs and archives go with them. Plans go first,
+   * because a storage a plan uses cannot be deleted.
    */
   async cleanupTestData(): Promise<void> {
     this.connection().exec(

@@ -1,7 +1,7 @@
 import { api } from '@/api/client'
 import type { InternalStoragesStorageResponse } from '@/api/schema'
 import type { ID, MessageResponse, PageParams } from '@/api/types'
-import type { Plan, PlanRequest, SourceRequest, SourceTestResult } from './types'
+import type { Plan, PlanRequest, Run, SourceRequest, SourceTestResult } from './types'
 
 /** The storages a plan can upload to: the first page of them, which is all of them in practice. */
 export const STORAGE_CHOICES: PageParams = { page: 1, page_size: 100 }
@@ -14,5 +14,7 @@ export const plansApi = {
   remove: (id: ID) => api.del<MessageResponse>(`/plans/${id}`),
   /** Tests a form's source; on an edit form `planId` lets a blank password mean the stored one. */
   test: (body: SourceRequest, planId?: ID) => api.post<SourceTestResult>('/plans/test', body, { query: { plan_id: planId } }),
+  /** Queues a backup now; a 409 `plans.run_in_progress` when one is queued or running already. */
+  run: (id: ID) => api.post<Run>(`/plans/${id}/run`),
   storages: () => api.getPage<InternalStoragesStorageResponse>('/storages', { query: STORAGE_CHOICES }),
 }

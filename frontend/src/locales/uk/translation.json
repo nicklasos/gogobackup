@@ -93,6 +93,16 @@
       "sqlite": "SQLite",
       "files": "Файли"
     },
+    "runStatus": {
+      "queued": "У черзі",
+      "running": "Виконується",
+      "succeeded": "Успішно",
+      "failed": "Помилка"
+    },
+    "runTrigger": {
+      "schedule": "За розкладом",
+      "manual": "Вручну"
+    },
     "sourceTestStep": {
       "connect": "Підключення",
       "tool": "Програма дампу",
@@ -134,6 +144,7 @@
     "nameRequired": "Дайте плану назву",
     "source": "Джерело",
     "schedules": "Розклад",
+    "lastRunColumn": "Останній запуск",
     "nextRunColumn": "Наступний запуск",
     "storagesColumn": "Сховища",
     "enabledColumn": "Увімкнено",
@@ -141,6 +152,10 @@
     "off": "Ні",
     "paused": "Призупинено",
     "manual": "Вручну",
+    "neverRun": "Ще не запускався",
+    "runNow": "Запустити",
+    "runBusy": "Виконується",
+    "runQueued": "Резервну копію поставлено в чергу",
     "sections": {
       "what": "Що копіювати",
       "when": "Коли",
@@ -259,7 +274,7 @@
     "saved": "Сховище збережено",
     "deleted": "Сховище видалено",
     "deleteConfirm": "Видалити це сховище?",
-    "deleteHint": "Файли, що вже в ньому, залишаться.",
+    "deleteHint": "Файли, що вже в ньому, залишаться. Gogobackup забуде записи про архіви в ньому, і ротація їх більше не видалятиме.",
     "empty": "Сховищ ще немає",
     "browse": "Переглянути",
     "local": {
@@ -399,6 +414,8 @@
     "plans.storage_not_found": "Одного з вибраних сховищ уже немає",
     "plans.duplicate_schedule": "Цей час і ці дні вже є у списку",
     "plans.keep_needs_max_age": "Спершу увімкніть видалення старих копій",
+    "plans.run_in_progress": "Цей план уже виконується",
+    "runs.not_found": "Запуск не знайдено",
     "storages.in_use": "У це сховище завантажують плани",
     "validation.sqlite.path.invalid": "Вкажіть абсолютний шлях, наприклад /var/lib/app/app.db",
     "validation.max_age_days.max": "Не більше 3650 днів",
