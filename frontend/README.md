@@ -71,7 +71,8 @@ The E2E run starts its own gogo API against the test database and its own Vite s
 - **Policies**: rules (`canManageUser(actor, target)`) that mirror the API's and decide what the UI offers
 - **Agent recipes**: step-by-step procedures in `docs/recipes/` for the common changes, also available as Claude Code skills
 - **Roles**: `super-admin`, `admin`, `user`, with route guards and role-filtered menus
-- **User management**: super admins and admins from a right-side admin menu that only super admins see; users from the main menu
+- **Navigation**: a top bar with the logo, the sections and a user menu (profile, user management, sign out); on phones the sections move into a drawer
+- **User management**: one page from the user menu, with a tab per role the signed-in user may manage
 - **Profile**: name, email, language and password
 - **Backup plans**: an editor with a source picker, a pasted connection URL filled into the fields, schedule rows with a live next-run line, retention switches and a connection test
 - **Storages**: a server-paginated list and an editor with a kind picker, a connection test and an unsaved-changes guard, as the pattern to copy

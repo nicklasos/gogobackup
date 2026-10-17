@@ -11,31 +11,32 @@ export class AppShell extends BasePage {
     return this.page.getByTestId('main-menu')
   }
 
-  get adminMenu(): Locator {
-    return this.page.getByTestId('admin-menu')
-  }
-
-  get adminMenuToggle(): Locator {
-    return this.page.getByTestId('admin-menu-toggle-button')
+  get mobileMenuToggle(): Locator {
+    return this.page.getByTestId('menu-toggle-button')
   }
 
   navItem(key: string): Locator {
     return this.page.getByTestId(`nav-${key}`)
   }
 
-  adminNavItem(key: string): Locator {
-    return this.page.getByTestId(`admin-menu-${key}`)
+  userMenuItem(key: string): Locator {
+    return this.page.getByTestId(`user-menu-${key}`)
+  }
+
+  async openUserMenu(): Promise<void> {
+    await this.userMenuTrigger.click()
+    await expect(this.userMenuItem('profile')).toBeVisible()
   }
 
   async openProfile(): Promise<void> {
-    await this.userMenuTrigger.click()
-    await this.page.getByTestId('user-menu-profile').click()
+    await this.openUserMenu()
+    await this.userMenuItem('profile').click()
     await expect(this.page.getByTestId('profile-page')).toBeVisible()
   }
 
   async logoutViaUI(): Promise<void> {
-    await this.userMenuTrigger.click()
-    await this.page.getByTestId('user-menu-logout').click()
+    await this.openUserMenu()
+    await this.userMenuItem('logout').click()
     await expect(this.loginEmailInput).toBeVisible({ timeout: 10000 })
   }
 

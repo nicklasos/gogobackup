@@ -27,7 +27,7 @@ export function ArchivesTab({ plan, onRestore }: { plan: Plan; onRestore: (archi
   }
 
   const name = (archive: Archive) => (
-    <span data-testid={`archive-name-${archive.id}`} title={archive.object_key} style={{ wordBreak: 'break-all' }}>
+    <span data-testid={`archive-name-${archive.id}`} title={archive.object_key} style={{ overflowWrap: 'anywhere' }}>
       {objectName(archive.object_key)}
     </span>
   )

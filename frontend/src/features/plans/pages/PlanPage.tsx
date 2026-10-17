@@ -147,7 +147,7 @@ function PlanFacts({ plan }: { plan: Plan }) {
   return (
     <Descriptions size="small" column={screens.lg ? 2 : 1} data-testid="plan-facts">
       <Descriptions.Item label={t('plans.source')}>
-        <span data-testid="plan-source-summary" style={{ wordBreak: 'break-all' }}>
+        <span data-testid="plan-source-summary" style={{ overflowWrap: 'anywhere' }}>
           <SourceIcon /> {enumLabel(t, 'sourceKind', plan.source_kind)}{' '}
           <Typography.Text code>{sourceSummary(plan)}</Typography.Text>
         </span>

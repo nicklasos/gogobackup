@@ -79,7 +79,7 @@ export function RunDrawer({ runId, onClose }: { runId: number | undefined; onClo
                     <List.Item.Meta
                       title={archive.storage_name}
                       description={
-                        <Typography.Text type="secondary" style={{ wordBreak: 'break-all' }}>
+                        <Typography.Text type="secondary" style={{ overflowWrap: 'anywhere' }}>
                           {archive.object_key} · {formatBytes(archive.size_bytes)}
                         </Typography.Text>
                       }

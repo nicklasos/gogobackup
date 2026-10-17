@@ -59,7 +59,7 @@ export default function StoragesPage() {
   }
 
   const location = (storage: Storage) => (
-    <Typography.Text code style={{ wordBreak: 'break-all' }}>
+    <Typography.Text code style={{ overflowWrap: 'anywhere' }}>
       {storageLocation(storage)}
     </Typography.Text>
   )

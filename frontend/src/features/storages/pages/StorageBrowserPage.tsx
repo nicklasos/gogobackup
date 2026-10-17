@@ -47,7 +47,7 @@ export default function StorageBrowserPage() {
         {row.name}
       </Button>
     ) : (
-      <span data-testid={`storage-file-${row.name}`} style={{ wordBreak: 'break-all' }}>
+      <span data-testid={`storage-file-${row.name}`} style={{ overflowWrap: 'anywhere' }}>
         <FileOutlined style={{ color: token.colorTextSecondary, marginRight: token.marginXS }} />
         {row.name}
       </span>
@@ -66,7 +66,7 @@ export default function StorageBrowserPage() {
       <Card>
         <PageHeader
           title={storage.data.name}
-          subtitle={<Typography.Text code style={{ wordBreak: 'break-all' }}>{storageLocation(storage.data)}</Typography.Text>}
+          subtitle={<Typography.Text code style={{ overflowWrap: 'anywhere' }}>{storageLocation(storage.data)}</Typography.Text>}
           back={back}
           extra={
             <Button icon={<ReloadOutlined />} onClick={() => objects.refetch()} loading={objects.isFetching} data-testid="storage-browser-refresh-button">
@@ -77,7 +77,7 @@ export default function StorageBrowserPage() {
 
         <Breadcrumb
           data-testid="storage-browser-breadcrumb"
-          style={{ marginBottom: token.marginMD, wordBreak: 'break-all' }}
+          style={{ marginBottom: token.marginMD, overflowWrap: 'anywhere' }}
           items={[
             { key: 'root', title: <a onClick={() => open('')} data-testid="storage-crumb-root">{t('storages.root')}</a> },
             ...prefixCrumbs(prefix).map((crumb) => ({

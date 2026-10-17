@@ -31,16 +31,3 @@ export function selectNavKey(items: readonly Target[], pathname: string): string
   }
   return best?.key
 }
-
-/** Only one of the two menus shows a selected item: the one with the longest match. */
-export function selectActiveNav(main: readonly Target[], admin: readonly Target[], pathname: string): { main?: string; admin?: string } {
-  const tagged = [
-    ...main.map((item) => ({ ...item, key: `main:${item.key}` })),
-    ...admin.map((item) => ({ ...item, key: `admin:${item.key}` })),
-  ]
-  const active = selectNavKey(tagged, pathname)
-  if (!active) return {}
-  const split = active.indexOf(':')
-  const key = active.slice(split + 1)
-  return active.slice(0, split) === 'main' ? { main: key } : { admin: key }
-}

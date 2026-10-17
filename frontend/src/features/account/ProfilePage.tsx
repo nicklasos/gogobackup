@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
-import { Alert, Card, Form, Input, Button } from 'antd'
+import { Alert, Card, Form, Input, Button, Segmented } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/auth/authStore'
-import { LanguageSwitcher } from '@/shared/components/LanguageSwitcher'
+import { LANGUAGES } from '@/shared/utils/languages'
 import { PageHeader } from '@/shared/components/PageHeader'
 import message from '@/shared/utils/message'
 import { useChangePassword, useResendVerification, useUpdateProfile } from './hooks'
@@ -16,7 +16,7 @@ interface PasswordValues {
 }
 
 export default function ProfilePage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const user = useCurrentUser()
   const updateProfile = useUpdateProfile()
   const changePassword = useChangePassword()
@@ -102,7 +102,15 @@ export default function ProfilePage() {
       </Card>
 
       <Card data-testid="profile-language-card" title={t('profile.language')}>
-        <LanguageSwitcher />
+        <Segmented
+          data-testid="profile-language-picker"
+          value={i18n.resolvedLanguage}
+          onChange={(lng) => void i18n.changeLanguage(lng)}
+          options={LANGUAGES.map(({ code, name }) => ({
+            value: code,
+            label: <span data-testid={`language-option-${code}`} lang={code}>{name}</span>,
+          }))}
+        />
       </Card>
 
       <Card data-testid="profile-password-card" title={t('profile.changePassword')}>
