@@ -28,8 +28,8 @@ A server that already runs other applications gets `install.yml` instead: see [O
 /etc/nginx/sites-available/<app>.conf
 ```
 
-- **Processes**: supervisor runs `<app>-api` as the unprivileged `deploy` user. The API runs the scheduled jobs and the backups itself. Set `scheduler_in_api: false` to run them in a separate `<app>-cron` program. `runner_concurrency` (default 2) is how many backups run at once.
-- **Dump tools**: `sqlite3`, `pg_dump` (`postgresql-client`) and `mysqldump` (`default-mysql-client`) from the distribution. `install_postgres_client: false` or `install_mysql_client: false` leaves one out. See [Dump tools](#dump-tools).
+- **Processes**: supervisor runs `<app>-api` as the unprivileged `deploy` user. The API runs the scheduled jobs and the backups itself. Set `scheduler_in_api: false` to run them in a separate `<app>-cron` program. `runner_concurrency` (default 2) is how many backups and restores run at once.
+- **Dump tools**: `sqlite3`, `pg_dump` and `pg_restore` (`postgresql-client`), `mysqldump` and `mysql` (`default-mysql-client`) from the distribution. `install_postgres_client: false` or `install_mysql_client: false` leaves one out. See [Dump tools](#dump-tools).
 - **nginx**: `domain` serves the admin panel and proxies `/api/` and `/health` to the API on `127.0.0.1:8181`. An optional `api_domain` proxies everything to the API.
 - **SQLite** is a file the API opens directly; there is no database server. The firewall allows SSH, 80 and 443.
 - **Its own backup**: every deploy runs `gogo-cli self-backup`, which makes sure the plan "Gogobackup itself" backs up the database to `shared/backups/`. See [Backing up Gogobackup itself](#backing-up-gogobackup-itself).
@@ -131,6 +131,23 @@ sudo supervisorctl start <app>-api
 
 Put the same `encryption_key` in `secrets.yml` (or `ENCRYPTION_KEY` in `backend/.env`) as the server the archive came from.
 
+### Restores
+
+A restore runs on this server too, with the restore program of its source: `pg_restore`, `mysql`, or none
+for SQLite and files. It works in `work_dir` (`WORK_DIR`, default `<app_root>/shared/work`), one directory per
+restore, removed after it ends.
+
+- **Disk space.** A PostgreSQL restore downloads the whole archive into `work_dir` first, because
+  `pg_restore --jobs` reads it in parallel from a file, so `work_dir` needs room for the largest PostgreSQL
+  archive. A files restore downloads its archive there too, to check it before writing anything, and
+  extracts into `work_dir/restores/` unless the admin names another directory. A SQLite restore writes
+  next to the target file and keeps the replaced one as `<file>.before-restore-<time>`. MySQL streams.
+- **Speed.** `restore_jobs` (`RESTORE_JOBS`, default 4) is how many parallel jobs `pg_restore` runs; up
+  to the number of cores helps a large database.
+- `pg_restore` must be at least as new as the `pg_dump` that made the archive, and the target server at
+  least as new as the one dumped; the restore fails saying which. The PGDG client below covers both.
+- A restore and a backup of the same plan never run at once: whichever is queued second waits.
+
 ### Dump tools
 
 Backups of a PostgreSQL or MySQL plan run `pg_dump` or `mysqldump` on this server, as the API user,
@@ -178,7 +195,7 @@ ansible-playbook install.yml                                # or, from the proje
 ```
 
 - The API runs as `www-data` (`install_user`) and runs the scheduled jobs and the backups itself (`scheduler_in_api: true`, the default).
-- `install.yml` installs no packages, so the dump tools the plans need (`sqlite3`, `pg_dump`, `mysqldump`) must already be on the server: see [Dump tools](#dump-tools).
+- `install.yml` installs no packages, so the dump tools the plans need (`sqlite3`, `pg_dump`, `mysqldump`, and `pg_restore`, `mysql` for restores) must already be on the server: see [Dump tools](#dump-tools).
 - `tls_mode` is `cloudflare` or `none`: the site listens on port 80 and certificates are not handled.
 - `install_nginx: print` shows the nginx site instead of writing it, to paste into a file nginx already loads, such as `sites-enabled/default`. Add `cloudflare_real_ip: false` when that file already has the `set_real_ip_from` lines.
 - root clones the repository, so root on the server needs access to it.

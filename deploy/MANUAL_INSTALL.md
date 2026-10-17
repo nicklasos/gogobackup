@@ -55,4 +55,5 @@ The API runs the scheduled jobs and the backups itself (`ENABLE_SCHEDULER=true`)
 
 Backups run the dump programs of their sources on this server: `sqlite3`, `pg_dump` (`apt install postgresql-client`)
 and `mysqldump` (`apt install default-mysql-client`). `pg_dump` must be at least the major version of the
-PostgreSQL server it dumps; [README.md](README.md#dump-tools) shows how to get a newer one.
+PostgreSQL server it dumps; [README.md](README.md#dump-tools) shows how to get a newer one. Restores use `pg_restore` and `mysql` from the same packages, and
+`WORK_DIR` (default `./data/work`, see [Restores](README.md#restores)), which needs room for the largest PostgreSQL archive.

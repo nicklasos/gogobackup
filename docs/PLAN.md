@@ -35,7 +35,7 @@ Every row below is a table in SQLite. Kinds are closed sets, and each kind has i
 
 **Archive.** `id`, `run_id`, `plan_id`, `storage_id`, `object_key`, `size_bytes`, `sha256`, `created_at`, `deleted_at`. One row per storage that stored a run's archive. The retention rule reads this table, not the bucket listing, so pruning never touches objects Gogobackup did not create. Deleting a storage forgets its rows and leaves its objects.
 
-**Restore.** `id`, `archive_id`, `target_config` (the plan's source by default, editable, for example to restore into `myproject_copy`), `status`, `log`.
+**Restore.** `id`, `archive_id`, `plan_id`, `target_config` (the plan's source by default, editable, for example to restore into `myproject_copy`), `target_secret`, `status`, `log`, `created_by`. Status is the same state machine as a run's. A plan runs one job at a time: a run waits while a restore of its plan runs, and the other way round, so a backup never reads a half restored database. Restoring over the plan's own source needs the admin to type its name.
 
 ## Code shape
 
@@ -48,7 +48,7 @@ Every row below is a table in SQLite. Kinds are closed sets, and each kind has i
 
 ## Restore speed
 
-A Postgres archive is restored with `pg_restore --jobs N`, which needs a seekable file. The restore therefore downloads the archive to a temp file first, then restores in parallel. MySQL and file restores stream.
+A Postgres archive is restored with `pg_restore --jobs N`, which needs a seekable file. The restore therefore downloads the archive to a temp file first, then restores in parallel. MySQL restores stream. A files restore downloads first too, so a corrupt archive fails before anything is written; SQLite writes next to its target and swaps the file in with one rename.
 
 ## Open decisions
 
