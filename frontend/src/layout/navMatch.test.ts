@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { selectActiveNav, selectNavKey, visibleNav, type NavItem } from './navMatch'
+import { TOP_NAV, USER_MENU } from './nav'
+import { selectNavKey, visibleNav, type NavItem } from './navMatch'
 
 const items: NavItem[] = [
   { key: 'home', labelKey: '', icon: null, testId: '', roles: 'all', path: '/' },
@@ -37,7 +38,7 @@ describe('selectNavKey', () => {
     const withPlans = [{ key: 'home', path: '/', alsoPaths: ['/plans'] }, { key: 'reports', path: '/reports' }]
     assert.equal(selectNavKey(withPlans, '/plans/7'), 'home')
     assert.equal(selectNavKey(withPlans, '/plans-old'), undefined)
-    assert.deepEqual(selectActiveNav(withPlans, [], '/plans/7/edit'), { main: 'home' })
+    assert.equal(selectNavKey(withPlans, '/plans/7/edit'), 'home')
   })
 
   it('does not match a path that only shares a prefix', () => {
@@ -46,22 +47,27 @@ describe('selectNavKey', () => {
 
   it('picks the longest matching prefix', () => {
     const nested = [
-      { key: 'admin', path: '/admin' },
-      { key: 'admins', path: '/admin/admins' },
+      { key: 'storages', path: '/storages' },
+      { key: 'browser', path: '/storages/browse' },
     ]
-    assert.equal(selectNavKey(nested, '/admin/admins'), 'admins')
+    assert.equal(selectNavKey(nested, '/storages/browse/3'), 'browser')
+    assert.equal(selectNavKey(nested, '/storages/3'), 'storages')
   })
 })
 
-describe('selectActiveNav', () => {
-  const admin = [{ key: 'admins', path: '/admin/admins' }]
-
-  it('selects in one menu only', () => {
-    assert.deepEqual(selectActiveNav(items, admin, '/users'), { main: 'users' })
-    assert.deepEqual(selectActiveNav(items, admin, '/admin/admins'), { admin: 'admins' })
+describe('the top bar', () => {
+  it('highlights nothing on a page from the user menu', () => {
+    for (const path of ['/profile', '/users']) assert.equal(selectNavKey(TOP_NAV, path), undefined)
   })
 
-  it('selects nothing for an unknown path', () => {
-    assert.deepEqual(selectActiveNav(items, admin, '/profile'), {})
+  it('keeps the dashboard selected on a plan', () => {
+    assert.equal(selectNavKey(TOP_NAV, '/plans/4/edit'), 'dashboard')
+  })
+
+  it('offers user management only to admins', () => {
+    const keys = (roles: string[]) => visibleNav(USER_MENU, { roles }).map((item) => item.key)
+    assert.deepEqual(keys(['user']), ['profile'])
+    assert.deepEqual(keys(['admin']), ['profile', 'users'])
+    assert.deepEqual(keys(['super-admin']), ['profile', 'users'])
   })
 })

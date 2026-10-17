@@ -2,11 +2,6 @@ import { expect, type Locator } from '@playwright/test'
 import type { TestRole } from '../helpers/db-helper'
 import { BasePage } from './BasePage'
 
-const PATHS: Record<TestRole, string> = {
-  'super-admin': '/admin/super-admins',
-  admin: '/admin/admins',
-  user: '/users',
-}
 
 export class UserManagementPage extends BasePage {
   root(role: TestRole): Locator {
@@ -21,12 +16,16 @@ export class UserManagementPage extends BasePage {
     return this.page.getByTestId('forbidden-result')
   }
 
+  tab(role: TestRole): Locator {
+    return this.page.getByTestId(`users-tab-${role}`)
+  }
+
   row(email: string): Locator {
     return this.table.locator('tr[data-row-key]').filter({ hasText: email })
   }
 
   async open(role: TestRole): Promise<void> {
-    await this.goto(PATHS[role])
+    await this.goto(role === 'user' ? '/users' : `/users?role=${role}`)
     await expect(this.root(role)).toBeVisible()
   }
 

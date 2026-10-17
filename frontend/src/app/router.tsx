@@ -1,7 +1,7 @@
 import { lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthCard } from '@/auth/AuthCard'
-import { RequireRole, RequireSuperAdmin } from '@/auth/guards'
+import { RequireRole } from '@/auth/guards'
 import LoginPage from '@/auth/LoginPage'
 import { ROLE_ADMIN } from '@/auth/roles'
 import { AppShell } from '@/layout/AppShell'
@@ -18,8 +18,6 @@ const DashboardPage = lazy(() => import('@/features/plans/pages/DashboardPage'))
 const StorageBrowserPage = lazy(() => import('@/features/storages/pages/StorageBrowserPage'))
 const StorageEditorPage = lazy(() => import('@/features/storages/pages/StorageEditorPage'))
 const StoragesPage = lazy(() => import('@/features/storages/pages/StoragesPage'))
-const AdminsPage = lazy(() => import('@/features/users/pages/AdminsPage'))
-const SuperAdminsPage = lazy(() => import('@/features/users/pages/SuperAdminsPage'))
 const UsersPage = lazy(() => import('@/features/users/pages/UsersPage'))
 const NotFoundPage = lazy(() => import('@/shared/components/NotFoundPage'))
 
@@ -115,22 +113,9 @@ export function AppRoutes() {
             </RequireRole>
           }
         />
-        <Route
-          path="admin/super-admins"
-          element={
-            <RequireSuperAdmin>
-              <SuperAdminsPage />
-            </RequireSuperAdmin>
-          }
-        />
-        <Route
-          path="admin/admins"
-          element={
-            <RequireSuperAdmin>
-              <AdminsPage />
-            </RequireSuperAdmin>
-          }
-        />
+        {/* The admin and super admin lists used to have pages of their own */}
+        <Route path="admin/super-admins" element={<Navigate to="/users?role=super-admin" replace />} />
+        <Route path="admin/admins" element={<Navigate to="/users?role=admin" replace />} />
         {/* Signed-out pages make no sense once signed in */}
         <Route path="forgot-password" element={<Navigate to="/" replace />} />
         <Route path="reset-password" element={<Navigate to="/" replace />} />

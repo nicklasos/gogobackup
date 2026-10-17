@@ -9,9 +9,6 @@
     "create": "Create",
     "actions": "Actions",
     "back": "Back",
-    "english": "English",
-    "ukrainian": "Ukrainian",
-    "languageChanged": "Language changed",
     "required": "Required",
     "createdAt": "Created",
     "yes": "Yes",
@@ -60,10 +57,7 @@
     "dashboard": "Dashboard",
     "storages": "Storages",
     "users": "Users",
-    "profile": "Profile",
-    "adminMenu": "Admin menu",
-    "superAdmins": "Super admins",
-    "admins": "Admins"
+    "profile": "Profile"
   },
   "enums": {
     "role": {

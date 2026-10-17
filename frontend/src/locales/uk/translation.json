@@ -9,9 +9,6 @@
     "create": "Створити",
     "actions": "Дії",
     "back": "Назад",
-    "english": "English",
-    "ukrainian": "Українська",
-    "languageChanged": "Мову змінено",
     "required": "Обовʼязкове поле",
     "createdAt": "Створено",
     "yes": "Так",
@@ -64,10 +61,7 @@
     "dashboard": "Дашборд",
     "storages": "Сховища",
     "users": "Користувачі",
-    "profile": "Профіль",
-    "adminMenu": "Адмін-меню",
-    "superAdmins": "Супер-адміни",
-    "admins": "Адміни"
+    "profile": "Профіль"
   },
   "enums": {
     "role": {

@@ -2,6 +2,7 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { setFormatLanguage } from '@/shared/utils/format'
+import { LANGUAGES } from '@/shared/utils/languages'
 
 import enTranslation from '../locales/en/translation.json'
 import ukTranslation from '../locales/uk/translation.json'
@@ -12,8 +13,7 @@ const resources = {
 }
 
 const savedLanguage = localStorage.getItem('i18nextLng')
-const initialLanguage =
-  savedLanguage && ['en', 'uk'].includes(savedLanguage) ? savedLanguage : 'en'
+const initialLanguage = LANGUAGES.find((language) => language.code === savedLanguage)?.code ?? 'en'
 
 i18n
   .use(LanguageDetector)
@@ -32,7 +32,12 @@ i18n
     react: { useSuspense: false },
   })
 
-setFormatLanguage(i18n.language)
-i18n.on('languageChanged', setFormatLanguage)
+function applyLanguage(lng: string) {
+  setFormatLanguage(lng)
+  document.documentElement.lang = lng
+}
+
+applyLanguage(i18n.language)
+i18n.on('languageChanged', applyLanguage)
 
 export default i18n

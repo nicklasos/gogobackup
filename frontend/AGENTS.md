@@ -42,7 +42,7 @@ Import with the `@/` alias. A feature imports from `api`, `auth`, `layout` and `
 3. `features/<module>/hooks.ts` — `useX` queries, `useSaveX({ id?, body })`, `useDeleteX`. Mutations invalidate a key prefix from `qk`.
 4. Add the keys to `api/queryKeys.ts`.
 5. `features/<module>/pages/*.tsx` — pages call hooks only, never `api` directly.
-6. Add the route to `app/router.tsx` as a `lazy(() => import(...))` page (default export) and the menu entry to `layout/nav.tsx`.
+6. Add the route to `app/router.tsx` as a `lazy(() => import(...))` page (default export) and the menu entry to `TOP_NAV` or `USER_MENU` in `layout/nav.tsx`.
 7. Add locale keys to both `en` and `uk`; a unit test fails when the two files have different keys.
 
 `features/storages` is the reference for a paginated list plus a full-page editor; `features/users` for a table with modal forms.
@@ -73,10 +73,11 @@ Import with the `@/` alias. A feature imports from `api`, `auth`, `layout` and `
 
 ## Roles
 - `super-admin`, `admin`, `user` (`auth/roles.ts`). `hasAnyRole` lets a super admin through everything, the same as the backend.
-- Routes: wrap in `<RequireRole roles={[...]}>` or `<RequireSuperAdmin>`; both render `<Forbidden />`.
-- Menus: `MAIN_NAV` (left) and `ADMIN_NAV` (right, super admins only) in `layout/nav.tsx`, each item with `roles`.
+- Routes: wrap in `<RequireRole roles={[...]}>`, which renders `<Forbidden />`.
+- Menus: `TOP_NAV` (the top bar) and `USER_MENU` (under the user's name, above Sign out) in `layout/nav.tsx`, each item with `roles`. The top bar highlights the item with the longest matching path; a page from the user menu highlights nothing there. On phones the top bar's items move into a drawer behind a menu button.
 - Guards only hide UI. The backend enforces access.
-- User pages: `/admin/super-admins` and `/admin/admins` (super admins), `/users` (admins and super admins). All three use `features/users/components/UserManagement.tsx`.
+- User management: `/users` (`features/users/pages/UsersPage.tsx`), reached from the user menu. One tab per role in `?role=` (none means plain users); a tab shows when `canManageUser` allows that role, so admins see only Users and super admins also see Admins and Super admins. Any other `role` renders `<Forbidden />`. The old `/admin/admins` and `/admin/super-admins` redirect to their tabs.
+- Language: the Profile page's picker (`shared/utils/languages.ts` lists the languages). i18next saves the choice in `localStorage` and `app/i18n.ts` mirrors it on `<html lang>`.
 
 ## Policies
 - Who may do what to a record lives in `features/<module>/policy.ts` as pure functions: `canManageUser(actor, target)`, or `canManageStorages(user)` for an area that is admins only.

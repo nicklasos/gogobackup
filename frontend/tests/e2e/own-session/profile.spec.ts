@@ -52,4 +52,26 @@ test.describe('Profile', () => {
     await expect(page.getByTestId('profile-page')).toBeVisible()
     await expect(shell.loginEmailInput).toHaveCount(0)
   })
+
+  test('switches the panel to Ukrainian and back, across a reload', async ({ page }) => {
+    await loginAs(page, 'user')
+    const shell = new AppShell(page)
+    const html = page.locator('html')
+
+    await shell.goto('/')
+    await shell.openProfile()
+    await expect(html).toHaveAttribute('lang', 'en')
+    await page.getByTestId('language-option-uk').click()
+    await expect(html).toHaveAttribute('lang', 'uk')
+
+    await page.reload()
+    await expect(page.getByTestId('profile-page')).toBeVisible()
+    await expect(html).toHaveAttribute('lang', 'uk')
+
+    await page.getByTestId('language-option-en').click()
+    await expect(html).toHaveAttribute('lang', 'en')
+    await page.reload()
+    await expect(page.getByTestId('profile-page')).toBeVisible()
+    await expect(html).toHaveAttribute('lang', 'en')
+  })
 })
