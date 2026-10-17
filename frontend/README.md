@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="public/favicon.svg" alt="Gogo Front" width="72">
+  <img src="public/favicon.svg" alt="Gogobackup" width="72">
 </p>
 
-<h1 align="center">Gogo Front</h1>
+<h1 align="center">Gogobackup admin panel</h1>
 
 <p align="center">
-  A React admin starter kit for the <a href="https://github.com/nicklasos/gogo">gogo</a> Go API.<br>
-  Sign-in, roles, user management and a reference CRUD module, typed end to end and covered by tests.
+  The React admin panel of Gogobackup, for the Go API in <a href="../backend">../backend</a>.<br>
+  Dashboard, backup plans, storages, runs, restores and users, typed end to end and covered by tests.
 </p>
 
 <p align="center">
@@ -26,11 +26,11 @@
   <a href="ROADMAP.md">Roadmap</a>
 </p>
 
-![User management with the admin menu](docs/screenshots/admins.png)
+![The dashboard: one card per backup plan](../docs/images/dashboard.png)
 
 ---
 
-Gogo Front is a skeleton, not a framework: copy it, rename it, and add feature folders. It ships the parts every admin panel needs so a new project starts at its first real screen.
+The [root README](../README.md) covers running and deploying the whole service. This file is about working on the panel.
 
 ## Quick start
 
@@ -85,13 +85,15 @@ The E2E run starts its own gogo API against the test database and its own Vite s
 
 ## Screenshots
 
-| Sign in | Create an admin |
+| A plan's runs | The plan editor |
 |---|---|
-| ![Sign in](docs/screenshots/login.png) | ![Create an admin](docs/screenshots/add-admin.png) |
+| ![A plan's runs](../docs/images/plan-runs.png) | ![The plan editor](../docs/images/plan-editor.png) |
 
-| Admins | Profile |
+| A restore | On a phone |
 |---|---|
-| ![Admins](docs/screenshots/admins.png) | ![Profile](docs/screenshots/profile.png) |
+| ![A restore](../docs/images/restore.png) | ![The dashboard on a phone](../docs/images/mobile-dashboard.png) |
+
+`node ../scripts/screenshots/shoot.mjs` regenerates them.
 
 ## Make targets
 

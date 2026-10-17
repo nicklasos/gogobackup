@@ -19,6 +19,7 @@
 gogo/
 ├── cmd/api/main.go              # Main application entry (--port, --test-db)
 ├── cmd/cli/main.go              # CLI (migrate, create-user, self-backup, seed, mail, smoke test); global --test flag
+├── cmd/screenshots-seed/        # Demo data for the README screenshots; scripts/screenshots/shoot.mjs runs it
 ├── config/
 │   ├── config.go                # Env → Config
 │   └── testdb.go                # Test-database safety guard

@@ -61,7 +61,7 @@ function ArchiveFacts({ archive }: { archive: { object_key: string; created_at: 
   return (
     <Descriptions size="small" column={screens.md ? 2 : 1} data-testid="restore-archive">
       <Descriptions.Item label={t('archives.file')}>
-        <span style={{ wordBreak: 'break-all' }}>{objectName(archive.object_key)}</span>
+        <span style={{ overflowWrap: 'anywhere' }}>{objectName(archive.object_key)}</span>
       </Descriptions.Item>
       <Descriptions.Item label={t('archives.created')}>{formatUtcDateTime(archive.created_at)}</Descriptions.Item>
       <Descriptions.Item label={t('archives.size')}>{formatBytes(archive.size_bytes)}</Descriptions.Item>
@@ -305,7 +305,7 @@ function RestoreLog({ restore }: { restore: RestoreDetail | undefined }) {
       {restore.archive ? <ArchiveFacts archive={restore.archive} /> : <Typography.Text type="secondary">{t('restores.archiveGone')}</Typography.Text>}
       <Descriptions size="small" column={screens.md ? 2 : 1}>
         <Descriptions.Item label={t('restores.target')} span={screens.md ? 2 : 1}>
-          <Typography.Text code data-testid="restore-target-summary" style={{ wordBreak: 'break-all' }}>
+          <Typography.Text code data-testid="restore-target-summary" style={{ overflowWrap: 'anywhere' }}>
             {summary ?? t('restores.originalLocationsShort')}
           </Typography.Text>
         </Descriptions.Item>

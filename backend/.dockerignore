@@ -5,7 +5,6 @@
 bin
 tmp
 logs
-docs/screenshots
 *.md
 data
 *.db

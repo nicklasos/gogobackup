@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="logo.jpg" alt="Gogo" width="160">
+  <img src="../docs/images/logo.svg" alt="Gogobackup" width="120">
 </p>
 
-<h1 align="center">Gogo</h1>
+<h1 align="center">Gogobackup API</h1>
 
 <p align="center">
-  A lightweight Go API starter kit: the parts every project needs, wired together and tested.<br>
+  The Go API behind Gogobackup: storages, backup plans, the runner and restores.<br>
   Gin, SQLite, sqlc, Goose, JWT auth with roles.
 </p>
 
@@ -15,7 +15,7 @@
   <img alt="SQLite" src="https://img.shields.io/badge/SQLite-pure%20Go-003B57?logo=sqlite&logoColor=white">
   <img alt="sqlc" src="https://img.shields.io/badge/sqlc-type--safe%20SQL-2F7D95">
   <img alt="Swagger" src="https://img.shields.io/badge/docs-Swagger-85EA2D?logo=swagger&logoColor=black">
-  <a href="LICENSE.md"><img alt="License" src="https://img.shields.io/badge/license-WTFPL-lightgrey"></a>
+  <a href="../LICENSE"><img alt="License" src="https://img.shields.io/badge/license-WTFPL-lightgrey"></a>
 </p>
 
 <p align="center">
@@ -28,13 +28,9 @@
 
 ---
 
-Gogo is a skeleton, not a framework: copy it, rename it, and start writing modules. There is no ORM and no repository layer — services call type-safe sqlc queries directly, and every test runs against its own freshly migrated SQLite file.
+There is no ORM and no repository layer. Services call type-safe sqlc queries directly, and every test runs against its own freshly migrated SQLite file. The admin panel is in [../frontend](../frontend), and the [root README](../README.md) covers running and deploying the whole service.
 
-It pairs with **[gogo-front](https://github.com/nicklasos/gogo-front)**, a React + Ant Design admin UI built for this API.
-
-| Swagger UI | Admin UI (gogo-front) |
-|---|---|
-| ![Swagger UI](docs/screenshots/swagger.png) | ![Admin UI](docs/screenshots/admin-ui.png) |
+![The dashboard of the admin panel](../docs/images/dashboard.png)
 
 ## Quick Start
 
