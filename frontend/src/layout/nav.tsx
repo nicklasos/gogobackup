@@ -17,6 +17,7 @@ export const MAIN_NAV: NavItem[] = [
     testId: 'nav-dashboard',
     roles: 'all',
     path: '/',
+    alsoPaths: ['/plans'],
   },
   {
     key: 'storages',
