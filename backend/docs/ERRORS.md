@@ -73,7 +73,7 @@ const (
 )
 ```
 
-Keys are grouped by module (`auth.*`, `users.*`, `storages.*`, `validation.*`). Clients translate them, so treat a key as part of the API contract.
+Keys are grouped by module (`auth.*`, `users.*`, `storages.*`, `plans.*`, `validation.*`). Clients translate them, so treat a key as part of the API contract.
 
 | Key | Status | When |
 |---|---|---|
@@ -81,6 +81,12 @@ Keys are grouped by module (`auth.*`, `users.*`, `storages.*`, `validation.*`). 
 | `storages.name_taken` | 400, as a field error on `name` | Another storage has this name (case-insensitive) |
 | `storages.invalid_prefix` | 400 | `?prefix=` of a listing climbs out with `..` or is absolute |
 | `storages.unreachable` | 502 | Listing a storage failed; `details.reason` says why |
+| `storages.in_use` | 409 | Deleting a storage that plans upload to; `details.plans` lists them as `{id, name}` |
+| `plans.not_found` | 404 | No plan with this ID |
+| `plans.name_taken` | 400, as a field error on `name` | Another plan has this name (case-insensitive) |
+| `plans.storage_not_found` | 400, as a field error on `storage_ids` | One of the storage IDs does not exist |
+| `plans.duplicate_schedule` | 400, as a field error on `schedules.N` | Row N repeats an earlier time and set of days |
+| `plans.keep_needs_max_age` | 400, as a field error on `keep_weekly` / `keep_monthly` | Keeping weekly or monthly archives needs `max_age_days` |
 
 Validation failures have their own shape and always return 400:
 

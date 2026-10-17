@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -80,12 +81,20 @@ func FieldError(field, rule string) Fields {
 }
 
 // fieldPath is the field's JSON path in the request: "email", or "s3.bucket" inside a nested block.
+// An embedded struct has no JSON name, so the namespace carries its Go name ("SourceRequest");
+// JSON flattens it into the outer object, and so does the path.
 func fieldPath(fieldError validator.FieldError) string {
-	namespace := fieldError.Namespace()
-	if i := strings.Index(namespace, "."); i >= 0 {
-		return namespace[i+1:]
+	segments := strings.Split(fieldError.Namespace(), ".")[1:]
+	path := segments[:0]
+	for _, segment := range segments {
+		if segment != "" && !unicode.IsUpper(rune(segment[0])) {
+			path = append(path, segment)
+		}
 	}
-	return fieldError.Field()
+	if len(path) == 0 {
+		return fieldError.Field()
+	}
+	return strings.Join(path, ".")
 }
 
 // handleNonValidationError handles errors that are not validator.ValidationErrors

@@ -99,9 +99,34 @@ export class DatabaseHelper {
     return token
   }
 
-  /** Refresh tokens and emailed tokens go with their user (ON DELETE CASCADE). Storages are global: theirs start with "E2E". */
+  /** A local storage; the name should start with "E2E" so cleanup finds it. */
+  async createStorage(name: string, dir: string): Promise<{ id: number; name: string }> {
+    return this.connection()
+      .prepare(`INSERT INTO storages (name, kind, config) VALUES (?, 'local', ?) RETURNING id, name`)
+      .get(name, JSON.stringify({ path: dir })) as { id: number; name: string }
+  }
+
+  /** A files plan, 03:00 every day, uploading to the given storage; the name should start with "E2E". */
+  async createPlan(name: string, storageId: number, paths: string[] = ['/tmp']): Promise<{ id: number; name: string }> {
+    const db = this.connection()
+    const plan = db
+      .prepare(
+        `INSERT INTO plans (name, source_kind, source_config, schedules, max_age_days)
+         VALUES (?, 'files', ?, '[{"time":"03:00","days":[]}]', 30) RETURNING id, name`
+      )
+      .get(name, JSON.stringify({ paths, excludes: [] })) as { id: number; name: string }
+    db.prepare('INSERT INTO plan_storages (plan_id, storage_id) VALUES (?, ?)').run(plan.id, storageId)
+    return plan
+  }
+
+  /**
+   * Refresh tokens and emailed tokens go with their user (ON DELETE CASCADE). Plans and storages
+   * are global: theirs start with "E2E". Plans go first, because a storage a plan uses cannot be deleted.
+   */
   async cleanupTestData(): Promise<void> {
-    this.connection().exec(`DELETE FROM users WHERE email LIKE 'e2e-%@example.com'; DELETE FROM storages WHERE name LIKE 'E2E%'`)
+    this.connection().exec(
+      `DELETE FROM users WHERE email LIKE 'e2e-%@example.com'; DELETE FROM plans WHERE name LIKE 'E2E%'; DELETE FROM storages WHERE name LIKE 'E2E%'`
+    )
   }
 }
 

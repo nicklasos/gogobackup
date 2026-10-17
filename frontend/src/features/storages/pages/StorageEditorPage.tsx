@@ -10,7 +10,9 @@ import { useGuardedNavigate, useUnsavedChangesContext, useUnsavedChangesGuard } 
 import { enumLabel } from '@/shared/utils/enums'
 import message from '@/shared/utils/message'
 import { applyFormErrors } from '@/shared/utils/formErrors'
+import { errorMessage } from '@/shared/utils/serverErrors'
 import { useDeleteStorage, useSaveStorage, useStorage, useTestStorage } from '../hooks'
+import { plansUsingStorage } from '../inUse'
 import { emptyStorageForm, formToRequest, hasStoredSecret, STORAGE_FORM_FIELDS, storageToForm, type StorageFormValues } from '../storageForm'
 import { STORAGE_KINDS, type StorageKind, type StorageTestResult } from '../types'
 
@@ -93,10 +95,15 @@ export default function StorageEditorPage() {
 
   const onDelete = () => {
     if (id == null) return
+    setServerError(null)
     remove.mutate(id, {
       onSuccess: () => {
         message.success(t('storages.deleted'))
         leave()
+      },
+      onError: (error) => {
+        const plans = plansUsingStorage(error)
+        setServerError(plans ? t('storages.inUse', { plans: plans.map((plan) => plan.name).join(', ') }) : errorMessage(t, error))
       },
     })
   }

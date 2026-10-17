@@ -7,8 +7,8 @@ import { applyFormErrors } from './formErrors'
 const t = (key: string, options?: Record<string, unknown>) => (options?.defaultValue as string | undefined) ?? key
 
 function fakeForm() {
-  const calls: { name: string | string[]; errors: string[] }[][] = []
-  const form = { setFields: (fields: { name: string | string[]; errors: string[] }[]) => calls.push(fields) } as unknown as FormInstance
+  const calls: { name: string | (string | number)[]; errors: string[] }[][] = []
+  const form = { setFields: (fields: { name: string | (string | number)[]; errors: string[] }[]) => calls.push(fields) } as unknown as FormInstance
   return { form, calls }
 }
 
@@ -28,6 +28,14 @@ describe('applyFormErrors', () => {
 
     assert.equal(applyFormErrors(form, t, error, ['s3.bucket']), null)
     assert.deepEqual(calls[0].map((f) => f.name), [['s3', 'bucket']])
+  })
+
+  it('names a row of a list by its index', () => {
+    const { form, calls } = fakeForm()
+    const error = new ApiError(400, 'validation.failed', 'invalid', { 'schedules.1.time': ['validation.schedules.1.time.invalid'] })
+
+    assert.equal(applyFormErrors(form, t, error, ['schedules.1.time']), null)
+    assert.deepEqual(calls[0].map((f) => f.name), [['schedules', 1, 'time']])
   })
 
   it('returns the errors of fields the form does not have', () => {

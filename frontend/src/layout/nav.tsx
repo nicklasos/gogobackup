@@ -3,6 +3,7 @@ import {
   CrownOutlined,
   DashboardOutlined,
   SafetyCertificateOutlined,
+  ScheduleOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
 import { ROLE_ADMIN, ROLE_SUPER_ADMIN } from '@/auth/roles'
@@ -10,6 +11,14 @@ import type { NavItem } from './navMatch'
 
 /** Left menu. An item is shown to the listed roles; a super admin sees all of them. */
 export const MAIN_NAV: NavItem[] = [
+  {
+    key: 'plans',
+    labelKey: 'navigation.plans',
+    icon: <ScheduleOutlined />,
+    testId: 'nav-plans',
+    roles: [ROLE_ADMIN],
+    path: '/plans',
+  },
   {
     key: 'dashboard',
     labelKey: 'navigation.dashboard',

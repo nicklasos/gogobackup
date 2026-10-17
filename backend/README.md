@@ -83,6 +83,7 @@ Run the tests with `make test`. They need no database setup: each test gets its 
 - **Safe defaults**: registration closed unless `ALLOW_REGISTRATION=true`, and a weak `JWT_SECRET` is refused in production
 - **Roles**: `super-admin`, `admin`, `user` with `RequireRole` middleware; roles are read from the database on every request
 - **User management**: super admins manage super admins and admins, admins manage users
+- **Backup plans**: what to back up (Postgres, MySQL, SQLite or files), when (UTC times on chosen weekdays), where to (storages) and how long to keep it, with a source test that also checks the dump program on PATH
 - **Storages**: where backups go (a local directory, S3-compatible or Google Cloud Storage), with a connection test and a browser. Credentials are encrypted with `ENCRYPTION_KEY` and never returned
 - **Mail**: SMTP service (`app.Mail`), logged instead of sent in debug mode, with an in-memory sender for tests
 - **Policies**: who may do what to a record, one small `policy.go` per module
@@ -118,6 +119,8 @@ gogo/
 │   ├── server/                  # Engine middleware + the list of modules
 │   ├── auth/                    # Authentication module
 │   ├── users/                   # User management
+│   ├── plans/                   # Backup plans: sources registry, schedules, source tests
+│   ├── tools/                   # Dump programs on PATH, and a fake for tests
 │   ├── storages/                # Storages: kinds registry, service, handlers
 │   │   └── driver/              # Local, S3 and GCS drivers: Put, Open, List, Delete, Probe
 │   ├── secretbox/               # AES-256-GCM for credentials at rest
@@ -173,6 +176,15 @@ make swagger          # Generate API docs
 - `DELETE /api/v1/users/:id` - Delete a user (not yourself)
 
 Admins can only manage accounts whose role is `user`; anything else returns 403 `users.forbidden_role`.
+
+### Backup plans (admins)
+- `GET /api/v1/plans` - List plans, without source passwords, with their storages and `next_run_at`
+- `POST /api/v1/plans` - Create a plan: `{name, source_kind, postgres|mysql|sqlite|files: {...}, schedules, max_age_days, keep_weekly, keep_monthly, storage_ids, enabled}`
+- `GET /api/v1/plans/:id` - Get a plan (`secret_set` says whether a password is stored)
+- `PUT /api/v1/plans/:id` - Update; a blank password keeps the stored one
+- `DELETE /api/v1/plans/:id` - Delete a plan; its storages and archives stay
+- `POST /api/v1/plans/test` - Test an unsaved source (`?plan_id=` reuses that plan's password)
+- `POST /api/v1/plans/:id/test` - Test a saved plan's source: connect, and find the dump program on PATH
 
 ### Storages (admins)
 - `GET /api/v1/storages` - List storages, without credentials

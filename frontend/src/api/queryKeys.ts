@@ -5,6 +5,11 @@ import type { ID, PageParams } from './types'
  * invalidates every list and detail under it.
  */
 export const qk = {
+  plans: {
+    all: ['plans'] as const,
+    list: (params: PageParams) => ['plans', 'list', params] as const,
+    detail: (id: ID) => ['plans', 'detail', id] as const,
+  },
   storages: {
     all: ['storages'] as const,
     list: (params: PageParams) => ['storages', 'list', params] as const,

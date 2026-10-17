@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { EMPTY, formatBytes, formatDateTime, formatNumber, setFormatLanguage } from './format'
+import { EMPTY, formatBytes, formatDateTime, formatNumber, formatUtcDateTime, setFormatLanguage } from './format'
 
 const plain = (s: string) => s.replace(/[\u00a0\u202f]/g, ' ')
 
@@ -23,6 +23,12 @@ describe('format', () => {
   it('formats a local timestamp', () => {
     assert.equal(formatDateTime('2026-09-11T14:05:00'), '11.09.2026 14:05')
     assert.equal(formatDateTime('not a date'), 'not a date')
+  })
+
+  it('formats a moment in UTC, whatever the offset it was written with', () => {
+    assert.equal(formatUtcDateTime('2026-10-19T21:00:00+03:00'), 'Mon 19.10.2026 18:00 UTC')
+    assert.equal(formatUtcDateTime(new Date(Date.UTC(2027, 0, 1, 0, 0))), 'Fri 01.01.2027 00:00 UTC')
+    assert.equal(formatUtcDateTime(null), EMPTY)
   })
 
   it('formats byte counts in binary units', () => {

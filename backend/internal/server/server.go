@@ -7,6 +7,7 @@ import (
 	"app/internal/health"
 	"app/internal/logger"
 	"app/internal/middleware"
+	"app/internal/plans"
 	"app/internal/storages"
 	"app/internal/users"
 
@@ -38,5 +39,6 @@ func RegisterRoutes(r *gin.Engine, app *internal.App) {
 	auth.RegisterRoutes(app)
 	users.RegisterRoutes(app)
 	storages.RegisterRoutes(app)
+	plans.RegisterRoutes(app)
 	health.RegisterRoutes(r, app)
 }

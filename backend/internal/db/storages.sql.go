@@ -86,6 +86,42 @@ func (q *Queries) GetStorageByID(ctx context.Context, id int64) (Storage, error)
 	return i, err
 }
 
+const listPlansUsingStorage = `-- name: ListPlansUsingStorage :many
+SELECT plans.id, plans.name
+FROM plans
+JOIN plan_storages ON plan_storages.plan_id = plans.id
+WHERE plan_storages.storage_id = ?1
+ORDER BY plans.name COLLATE NOCASE, plans.id
+`
+
+type ListPlansUsingStorageRow struct {
+	ID   int64  `db:"id" json:"id"`
+	Name string `db:"name" json:"name"`
+}
+
+func (q *Queries) ListPlansUsingStorage(ctx context.Context, storageID int64) ([]ListPlansUsingStorageRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPlansUsingStorage, storageID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPlansUsingStorageRow
+	for rows.Next() {
+		var i ListPlansUsingStorageRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStoragesPaginated = `-- name: ListStoragesPaginated :many
 SELECT id, name, kind, config, secret, created_at, updated_at FROM storages
 ORDER BY name COLLATE NOCASE, id

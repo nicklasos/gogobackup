@@ -205,7 +205,7 @@ func (h *Handler) UpdateStorage(c *gin.Context) {
 // DeleteStorage deletes a storage
 //
 //	@Summary		Delete storage
-//	@Description	Removes the storage from Gogobackup. The files in it are not touched. Admins only.
+//	@Description	Removes the storage from Gogobackup. The files in it are not touched. A storage that backup plans use is a 409 storages.in_use whose details.plans lists them. Admins only.
 //	@Tags			storages
 //	@Accept			json
 //	@Produce		json
@@ -216,6 +216,7 @@ func (h *Handler) UpdateStorage(c *gin.Context) {
 //	@Failure		401	{object}	errs.ErrorResponse
 //	@Failure		403	{object}	errs.ErrorResponse
 //	@Failure		404	{object}	errs.ErrorResponse
+//	@Failure		409	{object}	errs.ErrorResponse
 //	@Failure		500	{object}	errs.ErrorResponse
 //	@Router			/api/v1/storages/{id} [delete]
 func (h *Handler) DeleteStorage(c *gin.Context) {

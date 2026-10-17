@@ -36,6 +36,16 @@ const (
 	ErrKeyStoragesNameTaken     = "storages.name_taken"
 	ErrKeyStoragesInvalidPrefix = "storages.invalid_prefix"
 	ErrKeyStoragesUnreachable   = "storages.unreachable"
+	ErrKeyStoragesInUse         = "storages.in_use"
+)
+
+// Plans error keys
+const (
+	ErrKeyPlansNotFound          = "plans.not_found"
+	ErrKeyPlansNameTaken         = "plans.name_taken"
+	ErrKeyPlansStorageNotFound   = "plans.storage_not_found"
+	ErrKeyPlansDuplicateSchedule = "plans.duplicate_schedule"
+	ErrKeyPlansKeepNeedsMaxAge   = "plans.keep_needs_max_age"
 )
 
 // Validation error keys

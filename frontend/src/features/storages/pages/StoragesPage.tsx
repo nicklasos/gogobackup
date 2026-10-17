@@ -1,4 +1,5 @@
-import { Button, Card, Tag, Tooltip, Typography, theme } from 'antd'
+import { useState } from 'react'
+import { Alert, Button, Card, Tag, Tooltip, Typography, theme } from 'antd'
 import { CloudServerOutlined, FolderOpenOutlined, PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useNavigate } from 'react-router-dom'
@@ -10,7 +11,9 @@ import { RowActions } from '@/shared/components/RowActions'
 import { usePageParams, useTablePagination } from '@/shared/hooks/usePageParams'
 import { enumLabel } from '@/shared/utils/enums'
 import message from '@/shared/utils/message'
+import { errorMessage } from '@/shared/utils/serverErrors'
 import { useDeleteStorage, useStorages } from '../hooks'
+import { plansUsingStorage, type PlanUsingStorage } from '../inUse'
 import { storageLocation } from '../storageForm'
 import type { Storage } from '../types'
 
@@ -22,8 +25,19 @@ export default function StoragesPage() {
   const storages = useStorages(paging.params)
   const remove = useDeleteStorage()
   const pagination = useTablePagination(paging, storages.data)
+  const [inUse, setInUse] = useState<PlanUsingStorage[] | null>(null)
 
-  const onDelete = (storage: Storage) => remove.mutate(storage.id, { onSuccess: () => message.success(t('storages.deleted')) })
+  const onDelete = (storage: Storage) => {
+    setInUse(null)
+    remove.mutate(storage.id, {
+      onSuccess: () => message.success(t('storages.deleted')),
+      onError: (error) => {
+        const plans = plansUsingStorage(error)
+        if (plans) setInUse(plans)
+        else message.error(errorMessage(t, error))
+      },
+    })
+  }
 
   const kindTag = (storage: Storage) => (
     <Tag bordered={false} color="processing" data-testid={`storage-kind-${storage.id}`}>
@@ -103,6 +117,17 @@ export default function StoragesPage() {
             </Button>
           }
         />
+        {inUse && (
+          <Alert
+            data-testid="storage-in-use-alert"
+            type="warning"
+            showIcon
+            closable
+            onClose={() => setInUse(null)}
+            message={t('storages.inUse', { plans: inUse.map((plan) => plan.name).join(', ') })}
+            style={{ marginBottom: token.marginMD }}
+          />
+        )}
         <ResponsiveTable
           testId="storages-table"
           items={storages.data?.data}

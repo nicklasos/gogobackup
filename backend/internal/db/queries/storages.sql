@@ -32,3 +32,10 @@ LIMIT ?1 OFFSET ?2;
 
 -- name: CountStorages :one
 SELECT COUNT(*) FROM storages;
+
+-- name: ListPlansUsingStorage :many
+SELECT plans.id, plans.name
+FROM plans
+JOIN plan_storages ON plan_storages.plan_id = plans.id
+WHERE plan_storages.storage_id = ?1
+ORDER BY plans.name COLLATE NOCASE, plans.id;

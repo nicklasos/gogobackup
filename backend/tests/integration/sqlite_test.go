@@ -10,6 +10,7 @@ import (
 
 	"app/internal/db"
 	"app/internal/errs"
+	"app/internal/factory"
 	"app/tests/testkit"
 
 	"github.com/stretchr/testify/assert"
@@ -98,23 +99,20 @@ func TestSQLite_TimestampsCompareTheSameWhoeverWroteThem(t *testing.T) {
 
 // SQLite only enforces foreign keys on a connection that turned them on, so this fails if
 // any connection the pool opens misses the pragma.
-func TestSQLite_DeletingAUserCascadesToTheirRows(t *testing.T) {
+func TestSQLite_ForeignKeysHoldOnEveryConnection(t *testing.T) {
 	app := testkit.New(t)
-	owner := app.Create.User()
-	other := app.Create.User()
-	for userID, raw := range map[int64]string{owner.ID: "owned", other.ID: "other"} {
-		_, err := app.Queries.CreateRefreshToken(app.Ctx, db.CreateRefreshTokenParams{
-			UserID: userID, Token: sha256Hex(raw), ExpiresAt: time.Now().Add(time.Hour),
-		})
-		require.NoError(t, err)
-	}
+	storage := app.Create.Storage()
+	kept := app.Create.Plan(factory.WithStorages(storage))
+	removed := app.Create.Plan(factory.WithStorages(storage, app.Create.Storage()))
 
 	app.DB.SetMaxIdleConns(0)
-	require.NoError(t, app.Queries.DeleteUser(app.Ctx, owner.ID))
+	require.NoError(t, app.Queries.DeletePlan(app.Ctx, removed.ID))
+	app.AssertDatabaseCount("plan_storages", 0, testkit.Row{"plan_id": removed.ID})
+	app.AssertDatabaseCount("plan_storages", 1, testkit.Row{"plan_id": kept.ID})
 
-	app.AssertDatabaseCount("refresh_tokens", 0, testkit.Row{"user_id": owner.ID})
-	app.AssertDatabaseCount("refresh_tokens", 1, testkit.Row{"user_id": other.ID})
+	err := app.Queries.DeleteStorage(app.Ctx, storage.ID)
+	assert.True(t, errs.IsForeignKeyViolation(err), "a storage a plan uses is kept: %v", err)
 
-	_, err := app.DB.ExecContext(app.Ctx, "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, 'orphan', datetime('now'))", owner.ID)
-	assert.Error(t, err, "a row pointing at a missing user is refused")
+	_, err = app.DB.ExecContext(app.Ctx, "INSERT INTO plan_storages (plan_id, storage_id) VALUES (?, ?)", removed.ID, storage.ID)
+	assert.Error(t, err, "a link to a missing plan is refused")
 }

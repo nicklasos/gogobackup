@@ -11,6 +11,7 @@ import (
 	"app/cmd/cli/internal"
 	"app/internal/factory"
 	"app/internal/middleware"
+	"app/internal/plans"
 	"app/internal/secretbox"
 )
 
@@ -63,7 +64,20 @@ func RunSeed(app *internal.CLIApp, args []string) {
 		fmt.Fprintf(os.Stderr, "Seeding failed: %v\n", err)
 		os.Exit(1)
 	}
-	create.Storage(factory.WithStorageName("Local backups"), factory.LocalStorage(backups))
+	storage := create.Storage(factory.WithStorageName("Local backups"), factory.LocalStorage(backups))
+
+	database, err := filepath.Abs(app.Config.DatabasePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Seeding failed: %v\n", err)
+		os.Exit(1)
+	}
+	create.Plan(
+		factory.WithPlanName("Gogobackup database"),
+		factory.SQLiteSource(database),
+		factory.WithSchedules(plans.Schedule{Time: 3 * 60, Days: []plans.Weekday{}}),
+		factory.WithRetention(30, 8, 12),
+		factory.WithStorages(storage),
+	)
 
 	fmt.Println("Seeded. Every account has the password:", factory.DefaultPassword)
 	fmt.Println("  super admin  ", seedAdminEmail)
@@ -71,4 +85,5 @@ func RunSeed(app *internal.CLIApp, args []string) {
 	fmt.Println("  user          user@example.com")
 	fmt.Println("  user          unverified@example.com (email not confirmed)")
 	fmt.Println("Storage \"Local backups\" points at", backups)
+	fmt.Println("Plan \"Gogobackup database\" backs up", database, "at 03:00 UTC every day")
 }

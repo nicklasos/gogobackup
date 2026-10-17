@@ -10,6 +10,7 @@ import (
 	"app/internal/logger"
 	"app/internal/mail"
 	"app/internal/secretbox"
+	"app/internal/tools"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,6 +24,7 @@ type App struct {
 	Logger  *logger.Logger
 	Mail    mail.Sender
 	Secrets *secretbox.Box
+	Tools   tools.Finder
 	Api     *gin.RouterGroup
 
 	// AuthMiddleware is set by auth.RegisterRoutes; modules registered after it use it to protect routes

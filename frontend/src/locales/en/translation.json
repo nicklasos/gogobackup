@@ -58,6 +58,7 @@
   },
   "navigation": {
     "dashboard": "Dashboard",
+    "plans": "Backup plans",
     "storages": "Storages",
     "users": "Users",
     "profile": "Profile",
@@ -81,12 +82,148 @@
       "write": "Write",
       "read": "Read back",
       "delete": "Delete"
+    },
+    "sourceKind": {
+      "postgres": "PostgreSQL",
+      "mysql": "MySQL",
+      "sqlite": "SQLite",
+      "files": "Files"
+    },
+    "sourceTestStep": {
+      "connect": "Connect",
+      "tool": "Dump program",
+      "path": "Path"
+    },
+    "sslMode": {
+      "disable": "Off",
+      "require": "Required, no certificate check",
+      "verify-full": "Required, verify the certificate"
+    },
+    "weekdayShort": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
     }
   },
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome, {{name}}",
     "subtitle": "Use the menu to get to your pages."
+  },
+  "plans": {
+    "title": "Backup plans",
+    "subtitle": "What to back up, when, where to, and how long to keep it.",
+    "add": "Add backup plan",
+    "create": "New backup plan",
+    "edit": "Edit backup plan",
+    "empty": "No backup plans yet",
+    "saved": "Backup plan saved",
+    "deleted": "Backup plan deleted",
+    "deleteConfirm": "Delete this backup plan?",
+    "deleteHint": "The archives it made stay in their storages.",
+    "nameField": "Name",
+    "namePlaceholder": "myproject-prod",
+    "nameRequired": "Give the plan a name",
+    "source": "Source",
+    "schedules": "Schedule",
+    "nextRunColumn": "Next run",
+    "storagesColumn": "Storages",
+    "enabledColumn": "Enabled",
+    "on": "On",
+    "off": "Off",
+    "paused": "Paused",
+    "manual": "Manual",
+    "sections": {
+      "what": "What to back up",
+      "when": "When",
+      "where": "Where",
+      "keep": "Keep"
+    },
+    "kindHint": {
+      "postgres": "A PostgreSQL database, dumped with pg_dump on this server.",
+      "mysql": "A MySQL or MariaDB database, dumped with mysqldump on this server.",
+      "sqlite": "A SQLite database file on this server, copied with sqlite3.",
+      "files": "Directories and files on this server, packed into one archive."
+    },
+    "url": {
+      "label": "Paste connection URL",
+      "hint": "Fills in the fields below. The URL itself is not saved.",
+      "filled": "Filled in from the URL. Check the fields below.",
+      "invalid": "This is not a postgres:// or mysql:// URL"
+    },
+    "fields": {
+      "host": "Host",
+      "port": "Port",
+      "user": "User",
+      "database": "Database",
+      "sslMode": "SSL",
+      "password": "Password",
+      "passwordKeep": "Stored. Leave blank to keep it",
+      "sqlitePath": "Database file",
+      "sqlitePathHint": "The absolute path of the database file on this server.",
+      "paths": "Paths",
+      "pathsHint": "Absolute paths of directories or files on this server.",
+      "addPath": "Add path",
+      "excludes": "Leave out",
+      "excludesHint": "Optional glob patterns, such as *.log or cache/*.",
+      "addExclude": "Add pattern",
+      "remove": "Remove",
+      "absolutePath": "Use an absolute path, starting with /"
+    },
+    "test": {
+      "button": "Test connection",
+      "ok": "Ready to back up",
+      "failed": "Failed at: {{step}}",
+      "server": "Server",
+      "notFound": "not found"
+    },
+    "schedule": {
+      "time": "Time",
+      "utc": "UTC",
+      "everyDay": "Every day",
+      "daily": "Daily",
+      "add": "Add time",
+      "remove": "Remove time",
+      "manualOnly": "Manual runs only",
+      "manualHint": "No times: the plan runs only when started by hand.",
+      "nextRun": "Next run: {{when}}",
+      "duplicate": "This time and these days are already listed",
+      "hint": "Times are in UTC. Each line runs on the days chosen, or every day."
+    },
+    "where": {
+      "field": "Upload to",
+      "placeholder": "Choose storages",
+      "required": "Choose at least one storage",
+      "none": "There are no storages yet.",
+      "add": "Add a storage"
+    },
+    "keep": {
+      "prune": "Delete old backups",
+      "olderThan": "Older than",
+      "days": "days",
+      "weekly": "Also keep one backup per week for",
+      "weeks": "weeks",
+      "monthly": "Also keep one backup per month for",
+      "months": "months"
+    },
+    "retention": {
+      "forever": "Every backup is kept forever.",
+      "olderThan_one": "backups older than {{count}} day",
+      "olderThan_other": "backups older than {{count}} days",
+      "weekly_one": "the first backup of the last week",
+      "weekly_other": "the first backup of each of the last {{count}} weeks",
+      "monthly_one": "the first backup of the last month",
+      "monthly_other": "the first backup of each of the last {{count}} months",
+      "and": " and ",
+      "sentence": "Delete {{rule}}.",
+      "sentenceExcept": "Delete {{rule}}, but keep {{keeps}}."
+    },
+    "enabled": "Run on schedule",
+    "enabledHint": "When off, the plan keeps its settings but does not run on its schedule."
   },
   "storages": {
     "title": "Storages",
@@ -145,7 +282,8 @@
     "objectModified": "Modified",
     "refresh": "Refresh",
     "root": "Top",
-    "folderEmpty": "This folder is empty"
+    "folderEmpty": "This folder is empty",
+    "inUse": "Backup plans upload to this storage: {{plans}}. Remove it from those plans first."
   },
   "userManagement": {
     "byRole": {
@@ -245,7 +383,19 @@
     "validation.s3.endpoint.invalid": "Use a URL such as https://s3.example.com, with no path",
     "validation.s3.prefix.invalid": "The folder cannot contain ..",
     "validation.gcs.prefix.invalid": "The folder cannot contain ..",
-    "validation.gcs.credentials_json.invalid": "Paste a service-account key file: JSON with \"type\": \"service_account\""
+    "validation.gcs.credentials_json.invalid": "Paste a service-account key file: JSON with \"type\": \"service_account\"",
+    "plans.not_found": "Backup plan not found",
+    "plans.name_taken": "A backup plan with this name already exists",
+    "plans.storage_not_found": "One of the chosen storages no longer exists",
+    "plans.duplicate_schedule": "This time and these days are already listed",
+    "plans.keep_needs_max_age": "Turn on deleting old backups first",
+    "storages.in_use": "Backup plans upload to this storage",
+    "validation.sqlite.path.invalid": "Use an absolute path, such as /var/lib/app/app.db",
+    "validation.max_age_days.max": "At most 3650 days",
+    "validation.keep_weekly.max": "At most 520 weeks",
+    "validation.keep_monthly.max": "At most 240 months",
+    "validation.storage_ids.min": "Choose at least one storage",
+    "validation.storage_ids.required": "Choose at least one storage"
   },
   "editor": {
     "placeholder": "Enter content",

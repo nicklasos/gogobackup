@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import type { User } from '@/auth/types'
+import { canManagePlans } from './plans/policy'
 import { canManageStorages } from './storages/policy'
 import { canDeleteUser, canManageUser } from './users/policy'
 
@@ -35,5 +36,14 @@ describe('storages policy', () => {
     assert.equal(canManageStorages(admin), true)
     assert.equal(canManageStorages(owner), false)
     assert.equal(canManageStorages(null), false)
+  })
+})
+
+describe('plans policy', () => {
+  it('is for admins and super admins, as the API route group', () => {
+    assert.equal(canManagePlans(superAdmin), true)
+    assert.equal(canManagePlans(admin), true)
+    assert.equal(canManagePlans(owner), false)
+    assert.equal(canManagePlans(null), false)
   })
 })
