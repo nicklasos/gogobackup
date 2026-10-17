@@ -65,7 +65,8 @@ func TestStorageService_GetStorage(t *testing.T) {
 - `app.Ctx`, `app.Queries`, `app.DB` (`*sql.DB`, for raw SQL with `?` placeholders), `app.TxRunner`, `app.Config`, `app.Logger`, `app.Cache` — what a service constructor asks for
 - `app.Mail.Sent()` — every email the application sent during the test
 - `app.Secrets` — seals and opens stored credentials with the test key; `testkit.NewFakeS3(t)` and `testkit.NewFakeGCS(t)` are offline storage servers
-- `app.Tools` — the dump programs the API finds on PATH: all of `testkit.FakeToolVersions` until `app.Tools.Remove("sqlite3")`
+- `app.Tools` — the dump programs the API finds on PATH: all of `testkit.FakeToolVersions` until `app.Tools.Remove("sqlite3")`. They do not exist; for a run that dumps, `app.UseRealTool("sqlite3")` puts in the real one and `app.Tools.Install(name, scriptPath, version)` a script
+- `app.Worker()` — the backup runner on the test's database, not started: `app.Worker().Drain(app.Ctx)` runs everything queued, synchronously
 - `app.Token(user)`, `testkit.Actor(user)`
 
 ### Requests (`tests/testkit/request.go`)
@@ -99,7 +100,9 @@ Every `Assert` stops the test on failure, prints the response body, and returns 
 |---|---|
 | `app.Create.User()` | `WithEmail`, `WithName`, `WithPassword`, `WithRoles`, `Admin()`, `SuperAdmin()`, `Unverified()` |
 | `app.Create.Storage()` | `WithStorageName`, `LocalStorage(path)`, `S3Storage(config, keyID, secret)`, `GCSStorage(config, credentialsJSON)` |
-| `app.Create.Plan()` | `WithPlanName`, `FilesSource(paths...)`, `SQLiteSource(path)`, `PostgresSource(config, password)`, `MySQLSource(config, password)`, `WithSchedules(...)`, `WithRetention(days, weeks, months)`, `WithStorages(...)`, `Disabled()` |
+| `app.Create.Plan()` | `WithPlanName`, `FilesSource(paths...)`, `FilesSourceExcluding(paths, excludes)`, `SQLiteSource(path)`, `PostgresSource(config, password)`, `MySQLSource(config, password)`, `WithSchedules(...)`, `WithRetention(days, weeks, months)`, `WithStorages(...)`, `CreatedAt(t)`, `Disabled()` |
+| `app.Create.Run(plan)` | `WithRunStatus(runs.StatusRunning)`, `ScheduledFor(slot)` |
+| `app.Create.Archive(run, storage)` | `ArchiveKey(key)`, `ArchiveContent(bytes)`, `ArchiveCreatedAt(t)` |
 
 A user has the password `factory.DefaultPassword`. Tests never write `INSERT` by hand: a new table gets a factory.
 

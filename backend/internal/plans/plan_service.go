@@ -21,10 +21,13 @@ var (
 	errSecretMissing   = errors.New("the stored password is missing")
 )
 
-// Plan is a plan with the storages it uploads to.
+// Plan is a plan with the storages it uploads to, its latest run (nil before the first) and
+// when it last succeeded.
 type Plan struct {
 	db.Plan
-	Storages []db.ListStoragesOfPlansRow
+	Storages      []db.ListStoragesOfPlansRow
+	LastRun       *db.Run
+	LastSuccessAt sql.NullTime
 }
 
 // PaginatedPlansResult is one page of plans
@@ -71,7 +74,7 @@ func (s *PlanService) ListPlans(ctx context.Context, page, pageSize int32) (*Pag
 	if err != nil {
 		return nil, errs.WrapDatabaseError(err)
 	}
-	plans, err := s.withStorages(ctx, rows)
+	plans, err := s.withRelations(ctx, rows)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +86,7 @@ func (s *PlanService) GetPlan(ctx context.Context, id int64) (*Plan, error) {
 	if err != nil {
 		return nil, notFoundOr(err)
 	}
-	plans, err := s.withStorages(ctx, []db.Plan{row})
+	plans, err := s.withRelations(ctx, []db.Plan{row})
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +228,7 @@ func (s *PlanService) TestPlan(ctx context.Context, id int64) (*TestResult, erro
 	return &result, nil
 }
 
-func (s *PlanService) withStorages(ctx context.Context, rows []db.Plan) ([]Plan, error) {
+func (s *PlanService) withRelations(ctx context.Context, rows []db.Plan) ([]Plan, error) {
 	plans := make([]Plan, len(rows))
 	if len(rows) == 0 {
 		return plans, nil
@@ -244,6 +247,22 @@ func (s *PlanService) withStorages(ctx context.Context, rows []db.Plan) ([]Plan,
 	for _, link := range links {
 		plan := &plans[index[link.PlanID]]
 		plan.Storages = append(plan.Storages, link)
+	}
+
+	latest, err := s.queries.LatestRunsOfPlans(ctx, ids)
+	if err != nil {
+		return nil, errs.WrapDatabaseError(err)
+	}
+	for _, row := range latest {
+		run := db.Run(row)
+		plans[index[row.PlanID]].LastRun = &run
+	}
+	successes, err := s.queries.LatestSuccessesOfPlans(ctx, ids)
+	if err != nil {
+		return nil, errs.WrapDatabaseError(err)
+	}
+	for _, row := range successes {
+		plans[index[row.PlanID]].LastSuccessAt = row.FinishedAt
 	}
 	return plans, nil
 }

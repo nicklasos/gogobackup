@@ -73,7 +73,7 @@ const (
 )
 ```
 
-Keys are grouped by module (`auth.*`, `users.*`, `storages.*`, `plans.*`, `validation.*`). Clients translate them, so treat a key as part of the API contract.
+Keys are grouped by module (`auth.*`, `users.*`, `storages.*`, `plans.*`, `runs.*`, `validation.*`). Clients translate them, so treat a key as part of the API contract.
 
 | Key | Status | When |
 |---|---|---|
@@ -87,6 +87,8 @@ Keys are grouped by module (`auth.*`, `users.*`, `storages.*`, `plans.*`, `valid
 | `plans.storage_not_found` | 400, as a field error on `storage_ids` | One of the storage IDs does not exist |
 | `plans.duplicate_schedule` | 400, as a field error on `schedules.N` | Row N repeats an earlier time and set of days |
 | `plans.keep_needs_max_age` | 400, as a field error on `keep_weekly` / `keep_monthly` | Keeping weekly or monthly archives needs `max_age_days` |
+| `plans.run_in_progress` | 409 | Run now while the plan already has a queued or running run |
+| `runs.not_found` | 404 | No run with this ID |
 
 Validation failures have their own shape and always return 400:
 

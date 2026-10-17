@@ -11,6 +11,8 @@ import { usePageParams, useTablePagination } from '@/shared/hooks/usePageParams'
 import { enumLabel } from '@/shared/utils/enums'
 import { formatUtcDateTime } from '@/shared/utils/format'
 import message from '@/shared/utils/message'
+import { RunNowButton } from '../components/RunNowButton'
+import { RunStatusTag } from '../components/RunStatusTag'
 import { useDeletePlan, usePlans } from '../hooks'
 import { scheduleSummary } from '../schedule'
 import type { Plan } from '../types'
@@ -66,17 +68,20 @@ export default function PlansPage() {
       onDelete={() => onDelete(plan)}
       deleteTitle={t('plans.deleteConfirm')}
       deleteDescription={t('plans.deleteHint')}
-    />
+    >
+      <RunNowButton plan={plan} compact />
+    </RowActions>
   )
 
   const columns: ColumnsType<Plan> = [
     { title: t('plans.nameField'), dataIndex: 'name', key: 'name' },
     { title: t('plans.source'), key: 'source', render: (_, plan) => kindTag(plan) },
     { title: t('plans.schedules'), key: 'schedule', render: (_, plan) => schedule(plan) },
+    { title: t('plans.lastRunColumn'), key: 'lastRun', render: (_, plan) => <RunStatusTag plan={plan} /> },
     { title: t('plans.nextRunColumn'), key: 'next', render: (_, plan) => nextRun(plan) },
     { title: t('plans.storagesColumn'), key: 'storages', width: 240, render: (_, plan) => storages(plan) },
     { title: t('plans.enabledColumn'), key: 'enabled', render: (_, plan) => enabled(plan) },
-    { title: t('common.actions'), key: 'actions', width: 110, fixed: 'right', render: (_, plan) => actions(plan) },
+    { title: t('common.actions'), key: 'actions', width: 130, fixed: 'right', render: (_, plan) => actions(plan) },
   ]
 
   return (
@@ -95,7 +100,7 @@ export default function PlansPage() {
         <ResponsiveTable
           testId="plans-table"
           items={plans.data?.data}
-          loading={plans.isFetching || remove.isPending}
+          loading={plans.isLoading || plans.isPlaceholderData || remove.isPending}
           columns={columns}
           emptyText={t('plans.empty')}
           pagination={pagination}
@@ -104,6 +109,9 @@ export default function PlansPage() {
           cardTestId={(plan) => `plan-card-${plan.id}`}
           renderCard={(plan) => (
             <>
+              <div>
+                <RunStatusTag plan={plan} />
+              </div>
               <div>{schedule(plan)}</div>
               <div>
                 {nextRun(plan)} {enabled(plan)}

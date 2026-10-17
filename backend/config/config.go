@@ -60,6 +60,8 @@ type Config struct {
 	CORSAllowedOrigins []string
 
 	EnableScheduler bool
+	// RunnerConcurrency is how many backups run at once. Runs of one plan never overlap.
+	RunnerConcurrency int
 }
 
 // Load loads configuration from environment
@@ -108,7 +110,8 @@ func Load() (*Config, error) {
 
 		CORSAllowedOrigins: getEnvList("CORS_ALLOWED_ORIGINS"),
 
-		EnableScheduler: getEnvBool("ENABLE_SCHEDULER", true),
+		EnableScheduler:   getEnvBool("ENABLE_SCHEDULER", true),
+		RunnerConcurrency: max(getEnvInt("RUNNER_CONCURRENCY", 2), 1),
 	}, nil
 }
 

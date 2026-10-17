@@ -43,4 +43,8 @@ cd /var/www/gogobackup && make deploy
 ```
 
 It pulls, builds the API and the CLI, applies new migrations, builds the panel and restarts `gogobackup-api`.
-The API runs the scheduled jobs itself (`ENABLE_SCHEDULER=true`). To run them as their own process, set it to false, build `bin/gogo-cron` and add a second supervisor program for it.
+The API runs the scheduled jobs and the backups itself (`ENABLE_SCHEDULER=true`). To run them as their own process, set it to false, build `bin/gogo-cron` and add a second supervisor program for it.
+
+Backups run the dump programs of their sources on this server: `sqlite3`, `pg_dump` (`apt install postgresql-client`)
+and `mysqldump` (`apt install default-mysql-client`). `pg_dump` must be at least the major version of the
+PostgreSQL server it dumps; [README.md](README.md#dump-tools) shows how to get a newer one.

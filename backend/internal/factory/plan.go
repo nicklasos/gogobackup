@@ -3,6 +3,7 @@ package factory
 import (
 	"encoding/json"
 	"os"
+	"time"
 
 	"app/internal/db"
 	"app/internal/plans"
@@ -19,6 +20,7 @@ type planAttrs struct {
 	keepMonthly int64
 	storageIDs  []int64
 	enabled     bool
+	createdAt   *time.Time
 }
 
 type PlanOption func(*planAttrs)
@@ -29,6 +31,13 @@ func WithPlanName(name string) PlanOption { return func(a *planAttrs) { a.name =
 func FilesSource(paths ...string) PlanOption {
 	return func(a *planAttrs) {
 		a.kind, a.config, a.secret = plans.SourceFiles, plans.FilesConfig{Paths: paths, Excludes: []string{}}, nil
+	}
+}
+
+// FilesSourceExcluding backs up paths, leaving out what matches a pattern.
+func FilesSourceExcluding(paths, excludes []string) PlanOption {
+	return func(a *planAttrs) {
+		a.kind, a.config, a.secret = plans.SourceFiles, plans.FilesConfig{Paths: paths, Excludes: excludes}, nil
 	}
 }
 
@@ -67,6 +76,12 @@ func WithStorages(storages ...*db.Storage) PlanOption {
 			a.storageIDs = append(a.storageIDs, storage.ID)
 		}
 	}
+}
+
+// CreatedAt backdates the plan, its creation and its last save. The scheduler runs no slot from
+// before the plan was last saved.
+func CreatedAt(at time.Time) PlanOption {
+	return func(a *planAttrs) { utc := at.UTC(); a.createdAt = &utc }
 }
 
 func Disabled() PlanOption { return func(a *planAttrs) { a.enabled = false } }
@@ -112,11 +127,11 @@ func (f *Factory) Plan(opts ...PlanOption) *db.Plan {
 
 	var plan db.Plan
 	err = f.conn.QueryRowContext(ctx,
-		`INSERT INTO plans (name, source_kind, source_config, source_secret, schedules, max_age_days, keep_weekly, keep_monthly, enabled)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO plans (name, source_kind, source_config, source_secret, schedules, max_age_days, keep_weekly, keep_monthly, enabled, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?10, CURRENT_TIMESTAMP), COALESCE(?10, CURRENT_TIMESTAMP))
 		 RETURNING id, name, source_kind, source_config, source_secret, schedules, max_age_days, keep_weekly, keep_monthly, enabled, created_at, updated_at`,
 		attrs.name, string(attrs.kind), string(config), secret, string(schedules),
-		attrs.maxAgeDays, attrs.keepWeekly, attrs.keepMonthly, attrs.enabled,
+		attrs.maxAgeDays, attrs.keepWeekly, attrs.keepMonthly, attrs.enabled, attrs.createdAt,
 	).Scan(&plan.ID, &plan.Name, &plan.SourceKind, &plan.SourceConfig, &plan.SourceSecret, &plan.Schedules,
 		&plan.MaxAgeDays, &plan.KeepWeekly, &plan.KeepMonthly, &plan.Enabled, &plan.CreatedAt, &plan.UpdatedAt)
 	if err != nil {

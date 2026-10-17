@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Alert, Button, Card, Divider, Form, Grid, Input, Popconfirm, Segmented, Select, Space, Switch, Tag, Typography, theme } from 'antd'
 import { ApiOutlined, DatabaseOutlined, FileOutlined, FolderOutlined, PlusOutlined } from '@ant-design/icons'
 import { useParams } from 'react-router-dom'
@@ -14,6 +14,8 @@ import { RetentionFields } from '../components/RetentionFields'
 import { ScheduleRows } from '../components/ScheduleRows'
 import { SourceFields } from '../components/SourceFields'
 import { SourceTestResult } from '../components/SourceTestResult'
+import { RunNowButton } from '../components/RunNowButton'
+import { RunStatusTag } from '../components/RunStatusTag'
 import { useDeletePlan, usePlan, usePlanStorageChoices, useSavePlan, useTestPlanSource } from '../hooks'
 import { emptyPlanForm, formToRequest, formToSource, hasStoredSecret, planFormFields, planToForm, sourceFieldPaths, type PlanFormValues } from '../planForm'
 import { duplicateSchedules } from '../schedule'
@@ -48,8 +50,14 @@ export default function PlanEditorPage() {
 
   useUnsavedChangesGuard(dirty)
 
+  // Once per plan: the plan is fetched again while a run is in progress, and that must not
+  // overwrite what is being edited.
+  const filledFor = useRef<number | null>(null)
   useEffect(() => {
-    if (plan.data) form.setFieldsValue(planToForm(plan.data))
+    if (plan.data && filledFor.current !== plan.data.id) {
+      form.setFieldsValue(planToForm(plan.data))
+      filledFor.current = plan.data.id
+    }
   }, [plan.data, form])
 
   const edited = () => {
@@ -135,7 +143,12 @@ export default function PlanEditorPage() {
   return (
     <PageStack testId="plan-editor-page">
       <Card>
-        <PageHeader title={id == null ? t('plans.create') : t('plans.edit')} back={back} />
+        <PageHeader
+          title={id == null ? t('plans.create') : t('plans.edit')}
+          back={back}
+          tags={plan.data && <RunStatusTag plan={plan.data} />}
+          extra={plan.data && <RunNowButton plan={plan.data} />}
+        />
 
         {serverError && <Alert data-testid="plan-editor-error" type="error" showIcon message={serverError} style={{ marginBottom: token.marginMD }} />}
 

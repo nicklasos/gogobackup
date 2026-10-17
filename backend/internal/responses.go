@@ -15,6 +15,15 @@ func FormatTime(t sql.NullTime) string {
 	return t.Time.Format(timeFormat)
 }
 
+// FormatOptionalTime is FormatTime for a nullable column: nil when it is NULL.
+func FormatOptionalTime(t sql.NullTime) *string {
+	if !t.Valid {
+		return nil
+	}
+	formatted := FormatTime(t)
+	return &formatted
+}
+
 // MessageResponse is the body of an action that has nothing else to return
 type MessageResponse struct {
 	Data MessageData `json:"data"`

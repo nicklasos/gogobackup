@@ -31,7 +31,8 @@ Sign in at http://localhost:5173 with `admin@example.com` / `password123`.
 
 The seed adds a local storage, `Local backups`, at `backend/data/backups`. Under **Storages** an admin adds
 local directories, S3-compatible buckets (AWS, MinIO, R2, B2) and Google Cloud Storage buckets, tests the
-connection and browses what is in them. Their credentials are encrypted with `ENCRYPTION_KEY` from
+connection and browses what is in them. Under **Backup plans** an admin says what to back up and when; the
+service runs each plan on its schedule, or at once with **Run now**, and the list shows how the last run went. Their credentials are encrypted with `ENCRYPTION_KEY` from
 `backend/.env` (`openssl rand -base64 32`); left empty in development, a public key is used with a warning.
 
 | | |
@@ -55,7 +56,7 @@ $EDITOR group_vars/all/main.yml                          # app name, domain, rep
 ansible-playbook provision.yml
 ```
 
-That installs Go, Node.js, nginx, supervisor and the sqlite3 CLI, creates the directories
+That installs Go, Node.js, nginx, supervisor and the dump programs (sqlite3, pg_dump, mysqldump), creates the directories
 (the SQLite database lives in `shared/database/`), builds the API and the admin panel, obtains a
 certificate, and schedules the backups. To release new code afterwards:
 

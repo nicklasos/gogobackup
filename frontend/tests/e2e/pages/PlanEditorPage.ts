@@ -81,6 +81,15 @@ export class PlanEditorPage extends BasePage {
     return this.page.getByTestId('plan-retention-summary')
   }
 
+  get runButton(): Locator {
+    return this.page.getByTestId('plan-run-button')
+  }
+
+  /** The status tag of the latest run, as on the list. */
+  get runStatus(): Locator {
+    return this.root.locator('[data-testid^="plan-run-status-"]')
+  }
+
   get saveButton(): Locator {
     return this.page.getByTestId('plan-save-button')
   }

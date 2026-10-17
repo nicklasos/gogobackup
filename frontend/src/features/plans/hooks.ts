@@ -2,13 +2,16 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { qk } from '@/api/queryKeys'
 import type { ID, PageParams } from '@/api/types'
 import { plansApi, STORAGE_CHOICES } from './api'
+import { anyRunActive, isRunActive, RUN_POLL_MS } from './runStatus'
 import type { PlanRequest, SourceRequest } from './types'
 
+/** Polls while a run on the page is queued or running, so its status tag follows it. */
 export function usePlans(params: PageParams) {
   return useQuery({
     queryKey: qk.plans.list(params),
     queryFn: () => plansApi.list(params),
     placeholderData: keepPreviousData,
+    refetchInterval: (query) => (anyRunActive(query.state.data?.data) ? RUN_POLL_MS : false),
   })
 }
 
@@ -18,6 +21,16 @@ export function usePlan(id: ID | undefined) {
     queryFn: () => plansApi.get(id as ID),
     enabled: id != null,
     meta: { silent: true },
+    refetchInterval: (query) => (isRunActive(query.state.data?.last_run) ? RUN_POLL_MS : false),
+  })
+}
+
+/** A 409 (a run already queued or running) shows the global error toast. */
+export function useRunPlan() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: ID) => plansApi.run(id),
+    onSuccess: () => client.invalidateQueries({ queryKey: qk.plans.all }),
   })
 }
 

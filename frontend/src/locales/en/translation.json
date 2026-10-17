@@ -89,6 +89,16 @@
       "sqlite": "SQLite",
       "files": "Files"
     },
+    "runStatus": {
+      "queued": "Queued",
+      "running": "Running",
+      "succeeded": "Succeeded",
+      "failed": "Failed"
+    },
+    "runTrigger": {
+      "schedule": "On schedule",
+      "manual": "By hand"
+    },
     "sourceTestStep": {
       "connect": "Connect",
       "tool": "Dump program",
@@ -130,6 +140,7 @@
     "nameRequired": "Give the plan a name",
     "source": "Source",
     "schedules": "Schedule",
+    "lastRunColumn": "Last run",
     "nextRunColumn": "Next run",
     "storagesColumn": "Storages",
     "enabledColumn": "Enabled",
@@ -137,6 +148,10 @@
     "off": "Off",
     "paused": "Paused",
     "manual": "Manual",
+    "neverRun": "Never run",
+    "runNow": "Run now",
+    "runBusy": "Running",
+    "runQueued": "Backup queued",
     "sections": {
       "what": "What to back up",
       "when": "When",
@@ -249,7 +264,7 @@
     "saved": "Storage saved",
     "deleted": "Storage deleted",
     "deleteConfirm": "Delete this storage?",
-    "deleteHint": "Files already in it are not touched.",
+    "deleteHint": "Files already in it stay. Gogobackup forgets its record of the archives there, and retention no longer deletes them.",
     "empty": "No storages yet",
     "browse": "Browse",
     "local": {
@@ -389,6 +404,8 @@
     "plans.storage_not_found": "One of the chosen storages no longer exists",
     "plans.duplicate_schedule": "This time and these days are already listed",
     "plans.keep_needs_max_age": "Turn on deleting old backups first",
+    "plans.run_in_progress": "This plan is already running",
+    "runs.not_found": "Run not found",
     "storages.in_use": "Backup plans upload to this storage",
     "validation.sqlite.path.invalid": "Use an absolute path, such as /var/lib/app/app.db",
     "validation.max_age_days.max": "At most 3650 days",

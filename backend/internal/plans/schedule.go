@@ -93,6 +93,27 @@ func NextRun(schedules []Schedule, after time.Time) (time.Time, bool) {
 	return time.Time{}, false
 }
 
+// PrevRun is the latest time at or before `at` that one of the schedules was due, in UTC. False
+// when there are no schedules. The scheduler runs this slot when it has not run it yet.
+func PrevRun(schedules []Schedule, at time.Time) (time.Time, bool) {
+	at = at.UTC()
+	midnight := time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, time.UTC)
+	var prev time.Time
+	for offset := 0; offset <= 7; offset++ {
+		day := midnight.AddDate(0, 0, -offset)
+		for _, s := range schedules {
+			slot := day.Add(time.Duration(s.Time) * time.Minute)
+			if s.runsOn(day.Weekday()) && !slot.After(at) && slot.After(prev) {
+				prev = slot
+			}
+		}
+		if !prev.IsZero() {
+			return prev, true
+		}
+	}
+	return time.Time{}, false
+}
+
 // parseSchedules checks a request's schedules and puts them in their stored form. Failures are
 // keyed by position: "schedules.1.time".
 func parseSchedules(inputs []ScheduleInput) ([]Schedule, error) {

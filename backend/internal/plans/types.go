@@ -71,9 +71,20 @@ type PlanStorageResponse struct {
 	Kind storages.Kind `json:"kind" enums:"local,s3,gcs"`
 }
 
+// LastRunResponse is the latest run of a plan, enough for a status at a glance
+type LastRunResponse struct {
+	ID         int64   `json:"id"`
+	Status     string  `json:"status" enums:"queued,running,succeeded,failed"`
+	Trigger    string  `json:"trigger" enums:"schedule,manual"`
+	StartedAt  *string `json:"started_at" extensions:"x-nullable"`
+	FinishedAt *string `json:"finished_at" extensions:"x-nullable"`
+	SizeBytes  *int64  `json:"size_bytes" extensions:"x-nullable"`
+}
+
 // PlanResponse is a plan without its source password: secret_set says whether one is stored.
 // Exactly the source block named by source_kind is present. next_run_at is null for a plan
-// that is disabled or has no schedules.
+// that is disabled or has no schedules. last_run is null before the first run, and
+// last_success_at before the first that succeeded.
 type PlanResponse struct {
 	ID          int64                 `json:"id"`
 	Name        string                `json:"name"`
@@ -90,6 +101,8 @@ type PlanResponse struct {
 	Storages    []PlanStorageResponse `json:"storages"`
 	Enabled     bool                  `json:"enabled"`
 	NextRunAt   *string               `json:"next_run_at" extensions:"x-nullable"`
+	LastRun     *LastRunResponse      `json:"last_run" extensions:"x-nullable"`
+	LastSuccess *string               `json:"last_success_at" extensions:"x-nullable"`
 	CreatedAt   string                `json:"created_at"`
 	UpdatedAt   string                `json:"updated_at"`
 }

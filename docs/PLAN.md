@@ -31,19 +31,19 @@ Every row below is a table in SQLite. Kinds are closed sets, and each kind has i
 - `retention`: `max_age_days` (delete archives older than this), `keep_weekly` and `keep_monthly` (beyond `max_age_days`, keep the first archive of each of the last N weeks or months). Zero turns a rule off.
 - `storages`: one or more storage ids. An archive is uploaded to each.
 
-**Run.** `id`, `plan_id`, `trigger` (`schedule` or `manual`), `scheduled_for`, `status`, `started_at`, `finished_at`, `size_bytes`, `log`, `error`. Status is a state machine: `queued` to `running` to `succeeded` or `failed`. A unique key on `(plan_id, scheduled_for)` stops a restart from running the same slot twice.
+**Run.** `id`, `plan_id`, `trigger` (`schedule` or `manual`), `scheduled_for`, `status`, `started_at`, `finished_at`, `size_bytes`, `log`, `error`. Status is a state machine: `queued` to `running` to `succeeded` or `failed`, each step one conditional UPDATE. A unique key on `(plan_id, scheduled_for)` for scheduled runs stops a restart, or a second process, from queueing the same slot twice.
 
-**Archive.** `id`, `run_id`, `storage_id`, `object_key`, `size_bytes`, `sha256`, `created_at`, `deleted_at`. The retention rule reads this table, not the bucket listing, so pruning never touches objects Gogobackup did not create.
+**Archive.** `id`, `run_id`, `plan_id`, `storage_id`, `object_key`, `size_bytes`, `sha256`, `created_at`, `deleted_at`. One row per storage that stored a run's archive. The retention rule reads this table, not the bucket listing, so pruning never touches objects Gogobackup did not create. Deleting a storage forgets its rows and leaves its objects.
 
 **Restore.** `id`, `archive_id`, `target_config` (the plan's source by default, editable, for example to restore into `myproject_copy`), `status`, `log`.
 
 ## Code shape
 
-- Sources are a registry: `map[SourceKind]Source`, where a source can `Dump(ctx, cfg, w io.Writer)` and `Restore(ctx, cfg, r io.Reader)`. Postgres uses `pg_dump -Fc` and `pg_restore`, MySQL uses `mysqldump` and `mysql`, SQLite uses `sqlite3 .backup`, files use tar. Adding a database type is one new entry.
-- Storages are a registry too: `Put`, `Get`, `List`, `Delete` per kind.
-- A dump streams from the tool through gzip and sha256 straight to storage, with no temp file, when there is one storage. With several storages it writes one temp file and uploads it to each.
-- Retention is a pure function: `Prune(archives, policy, now) (keep, remove)`. It has table tests for the weekly and monthly rules, across month and year boundaries.
-- The scheduler ticks once a minute, in the API process or in `cmd/cron`, finds due slots, and inserts a `queued` run. One worker per plan runs them, so a plan never overlaps itself.
+- Sources are a registry: `map[SourceKind]source`, where a source can dump to an `io.Writer` and, from phase 7, restore from an `io.Reader`. Postgres uses `pg_dump -Fc` and `pg_restore`, MySQL uses `mysqldump` and `mysql`, SQLite uses `sqlite3 .backup`, files use tar. Adding a database type is one new entry.
+- Storages are a registry too: `Put`, `Open`, `List`, `Delete` per kind.
+- A dump streams from the tool through gzip and sha256 straight to every storage of the plan at once, one pipe per storage, with no temp file. A storage that fails is dropped and the others finish.
+- Retention is a pure function: `Prune(archives, policy, now) (remove)`. It never removes the newest archive. It has table tests for the weekly and monthly rules, across month and year boundaries.
+- The scheduler ticks once a minute, in the API process or in `cmd/cron`, finds the latest due slot of each plan, and inserts a `queued` run. A worker in the same process runs them, a few at once, and never two runs of one plan at once.
 - A plan card is green when its last run succeeded, red when it failed, grey when it never ran, and amber when the last success is older than its schedule allows.
 
 ## Restore speed

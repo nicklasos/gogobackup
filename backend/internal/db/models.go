@@ -9,6 +9,18 @@ import (
 	"time"
 )
 
+type Archive struct {
+	ID        int64        `db:"id" json:"id"`
+	RunID     int64        `db:"run_id" json:"run_id"`
+	PlanID    int64        `db:"plan_id" json:"plan_id"`
+	StorageID int64        `db:"storage_id" json:"storage_id"`
+	ObjectKey string       `db:"object_key" json:"object_key"`
+	SizeBytes int64        `db:"size_bytes" json:"size_bytes"`
+	Sha256    string       `db:"sha256" json:"sha256"`
+	CreatedAt time.Time    `db:"created_at" json:"created_at"`
+	DeletedAt sql.NullTime `db:"deleted_at" json:"deleted_at"`
+}
+
 type Plan struct {
 	ID           int64        `db:"id" json:"id"`
 	Name         string       `db:"name" json:"name"`
@@ -31,6 +43,20 @@ type RefreshToken struct {
 	ExpiresAt time.Time    `db:"expires_at" json:"expires_at"`
 	CreatedAt sql.NullTime `db:"created_at" json:"created_at"`
 	IsRevoked sql.NullBool `db:"is_revoked" json:"is_revoked"`
+}
+
+type Run struct {
+	ID           int64          `db:"id" json:"id"`
+	PlanID       int64          `db:"plan_id" json:"plan_id"`
+	Trigger      string         `db:"trigger" json:"trigger"`
+	ScheduledFor sql.NullTime   `db:"scheduled_for" json:"scheduled_for"`
+	Status       string         `db:"status" json:"status"`
+	StartedAt    sql.NullTime   `db:"started_at" json:"started_at"`
+	FinishedAt   sql.NullTime   `db:"finished_at" json:"finished_at"`
+	SizeBytes    sql.NullInt64  `db:"size_bytes" json:"size_bytes"`
+	Log          string         `db:"log" json:"log"`
+	Error        sql.NullString `db:"error" json:"error"`
+	CreatedAt    sql.NullTime   `db:"created_at" json:"created_at"`
 }
 
 type Storage struct {

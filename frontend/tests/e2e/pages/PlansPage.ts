@@ -30,6 +30,15 @@ export class PlansPage extends BasePage {
     return this.row(name).locator('[data-testid^="plan-next-run-"]')
   }
 
+  /** The status tag of the latest run; its `data-status` is queued, running, succeeded, failed or none. */
+  runStatus(name: string): Locator {
+    return this.row(name).locator('[data-testid^="plan-run-status-"]')
+  }
+
+  async runNow(name: string): Promise<void> {
+    await this.row(name).locator('[data-testid^="run-plan-button-"]').click()
+  }
+
   async gotoList(): Promise<void> {
     await this.goto('/plans')
     await expect(this.root).toBeVisible()
