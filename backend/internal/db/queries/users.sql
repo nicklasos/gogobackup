@@ -1,37 +1,37 @@
 -- name: GetUserByID :one
-SELECT * FROM users 
-WHERE id = $1 LIMIT 1;
+SELECT * FROM users
+WHERE id = ? LIMIT 1;
 
 -- name: GetUserByEmail :one
 SELECT * FROM users
-WHERE LOWER(email) = LOWER($1) LIMIT 1;
+WHERE LOWER(email) = LOWER(sqlc.arg(email)) LIMIT 1;
 
 -- name: CreateUser :one
 INSERT INTO users (
     email, name, password, roles, email_verified_at
 ) VALUES (
     sqlc.arg(email), sqlc.arg(name), sqlc.arg(password), sqlc.arg(roles),
-    CASE WHEN sqlc.arg(email_verified)::bool THEN CURRENT_TIMESTAMP END
+    CASE WHEN CAST(sqlc.arg(email_verified) AS BOOLEAN) THEN CURRENT_TIMESTAMP END
 )
 RETURNING *;
 
 -- Newest first, so an account that was just created is on the first page.
 -- name: ListUsersByRole :many
 SELECT * FROM users
-WHERE sqlc.arg(role)::text = ANY(roles)
+WHERE EXISTS (SELECT 1 FROM json_each(users.roles) WHERE json_each.value = CAST(sqlc.arg(role) AS TEXT))
 ORDER BY id DESC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
 -- name: CountUsersByRole :one
 SELECT count(*) FROM users
-WHERE sqlc.arg(role)::text = ANY(roles);
+WHERE EXISTS (SELECT 1 FROM json_each(users.roles) WHERE json_each.value = CAST(sqlc.arg(role) AS TEXT));
 
 -- A changed email is unverified again unless keep_verified is set (an admin vouches for it).
 -- name: UpdateUserProfile :one
 UPDATE users
 SET
     email_verified_at = CASE
-        WHEN email = sqlc.arg(email) OR sqlc.arg(keep_verified)::bool THEN email_verified_at
+        WHEN email = sqlc.arg(email) OR CAST(sqlc.arg(keep_verified) AS BOOLEAN) THEN email_verified_at
     END,
     email = sqlc.arg(email),
     name = sqlc.arg(name),
@@ -42,46 +42,48 @@ RETURNING *;
 -- name: MarkUserEmailVerified :exec
 UPDATE users
 SET email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP)
-WHERE id = $1;
+WHERE id = ?;
 
 -- name: UpdateUserPassword :exec
 UPDATE users
 SET
-    password = $2,
+    password = ?,
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $1;
+WHERE id = ?;
 
 -- name: DeleteUser :exec
 DELETE FROM users
-WHERE id = $1;
+WHERE id = ?;
 
 -- Refresh Token Queries. The token column holds a SHA-256 hash, never the token itself.
 -- name: CreateRefreshToken :one
 INSERT INTO refresh_tokens (
     user_id, token, expires_at
 ) VALUES (
-    $1, $2, $3
+    ?, ?, ?
 )
 RETURNING *;
 
+-- datetime() reads both the format Go writes and the one CURRENT_TIMESTAMP writes;
+-- comparing the stored text directly would not.
 -- name: GetRefreshToken :one
 SELECT * FROM refresh_tokens
-WHERE token = $1 AND expires_at > NOW() AND is_revoked = FALSE
+WHERE token = ? AND datetime(expires_at) > datetime('now') AND is_revoked = FALSE
 LIMIT 1;
 
 -- name: RevokeRefreshToken :exec
 UPDATE refresh_tokens
 SET is_revoked = TRUE
-WHERE token = $1;
+WHERE token = ?;
 
 -- name: RevokeAllUserRefreshTokens :exec
 UPDATE refresh_tokens
 SET is_revoked = TRUE
-WHERE user_id = $1;
+WHERE user_id = ?;
 
 -- name: DeleteExpiredRefreshTokens :exec
 DELETE FROM refresh_tokens
-WHERE expires_at < NOW();
+WHERE datetime(expires_at) < datetime('now');
 
 -- Auth Token Queries (password reset, email verification)
 -- name: CreateAuthToken :exec
@@ -89,7 +91,7 @@ INSERT INTO auth_tokens (
     user_id, purpose, token_hash, expires_at
 ) VALUES (
     sqlc.arg(user_id), sqlc.arg(purpose), sqlc.arg(token_hash),
-    CURRENT_TIMESTAMP + sqlc.arg(ttl_seconds)::int * INTERVAL '1 second'
+    datetime('now', CAST(sqlc.arg(ttl_seconds) AS INTEGER) || ' seconds')
 );
 
 -- Marks the token used and returns its owner in one statement, so a link works exactly once.
@@ -99,7 +101,7 @@ SET used_at = CURRENT_TIMESTAMP
 WHERE token_hash = sqlc.arg(token_hash)
   AND purpose = sqlc.arg(purpose)
   AND used_at IS NULL
-  AND expires_at > CURRENT_TIMESTAMP
+  AND datetime(expires_at) > datetime('now')
 RETURNING user_id;
 
 -- name: DeleteUserAuthTokens :exec
@@ -108,4 +110,4 @@ WHERE user_id = sqlc.arg(user_id) AND purpose = sqlc.arg(purpose);
 
 -- name: DeleteExpiredAuthTokens :exec
 DELETE FROM auth_tokens
-WHERE expires_at < CURRENT_TIMESTAMP OR used_at IS NOT NULL;
+WHERE datetime(expires_at) < datetime('now') OR used_at IS NOT NULL;

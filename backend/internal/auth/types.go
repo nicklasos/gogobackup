@@ -15,7 +15,7 @@ type LoginRequest struct {
 
 // UserResponse represents user information
 type UserResponse struct {
-	ID            int32    `json:"id"`
+	ID            int64    `json:"id"`
 	Email         string   `json:"email"`
 	Name          string   `json:"name"`
 	Roles         []string `json:"roles"`

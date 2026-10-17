@@ -225,7 +225,7 @@ func TestUsersAPI_RoleRevocationIsImmediate(t *testing.T) {
 	admin := app.Create.User(factory.Admin())
 	app.As(admin).GET("/api/v1/users").AssertOK()
 
-	_, err := app.Tx.Exec(app.Ctx, "UPDATE users SET roles = ARRAY['user'] WHERE id = $1", admin.ID)
+	_, err := app.DB.ExecContext(app.Ctx, `UPDATE users SET roles = '["user"]' WHERE id = ?`, admin.ID)
 	require.NoError(t, err)
 
 	app.As(admin).GET("/api/v1/users").AssertForbidden()

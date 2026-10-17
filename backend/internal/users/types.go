@@ -23,7 +23,7 @@ type SetPasswordRequest struct {
 
 // UserResponse is a user without the password
 type UserResponse struct {
-	ID            int32    `json:"id"`
+	ID            int64    `json:"id"`
 	Email         string   `json:"email"`
 	Name          string   `json:"name"`
 	Roles         []string `json:"roles"`

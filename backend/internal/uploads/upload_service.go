@@ -3,6 +3,7 @@ package uploads
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -16,8 +17,6 @@ import (
 
 	"app/internal/db"
 	"app/internal/errs"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // UploadConfig holds configuration for file uploads
@@ -26,7 +25,7 @@ type UploadConfig struct {
 	BaseURL      string
 	MaxFileSize  int64
 	AllowedTypes []string
-	GetFolderID  func(ctx context.Context, userID int32) (int32, error)
+	GetFolderID  func(ctx context.Context, userID int64) (int64, error)
 	// Storage holds the file bytes. Nil means LocalStorage on UploadFolder and BaseURL.
 	Storage Storage
 }
@@ -43,7 +42,7 @@ func DefaultUploadConfig(uploadFolder, baseURL string) *UploadConfig {
 			".mp4", ".avi", ".mov",
 			".mp3", ".wav", ".ogg",
 		},
-		GetFolderID: func(ctx context.Context, userID int32) (int32, error) {
+		GetFolderID: func(ctx context.Context, userID int64) (int64, error) {
 			return userID, nil
 		},
 	}
@@ -134,7 +133,7 @@ func (s *UploadService) GenerateRandomName(originalName string) (string, error) 
 }
 
 // UploadFile validates a file, stores it and records it in the database
-func (s *UploadService) UploadFile(ctx context.Context, file *multipart.FileHeader, userID int32) (*db.Upload, error) {
+func (s *UploadService) UploadFile(ctx context.Context, file *multipart.FileHeader, userID int64) (*db.Upload, error) {
 	if !s.IsValidFileType(file.Filename) {
 		return nil, errs.WrapBadRequest(
 			errs.ErrKeyUploadTypeNotAllowed,
@@ -202,7 +201,7 @@ func (s *UploadService) UploadFile(ctx context.Context, file *multipart.FileHead
 		RelativePath:     relativePath,
 		OriginalFilename: filepath.Base(file.Filename),
 		FileSize:         file.Size,
-		MimeType:         pgtype.Text{String: mimeType, Valid: true},
+		MimeType:         sql.NullString{String: mimeType, Valid: true},
 	})
 	if err != nil {
 		_ = s.storage.Delete(ctx, relativePath)
@@ -215,7 +214,7 @@ func (s *UploadService) UploadFile(ctx context.Context, file *multipart.FileHead
 // GetUpload retrieves an upload by ID and user ID.
 // Returns ErrUploadNotFound if the upload doesn't exist or doesn't belong to the user.
 // This method can be used internally by other services to retrieve upload information.
-func (s *UploadService) GetUpload(ctx context.Context, uploadID, userID int32) (*db.Upload, error) {
+func (s *UploadService) GetUpload(ctx context.Context, uploadID, userID int64) (*db.Upload, error) {
 	upload, err := s.queries.GetUploadByIDAndUserID(ctx, db.GetUploadByIDAndUserIDParams{
 		ID:     uploadID,
 		UserID: userID,
@@ -227,7 +226,7 @@ func (s *UploadService) GetUpload(ctx context.Context, uploadID, userID int32) (
 }
 
 // ListUploadsPaginated returns one page of a user's uploads, newest first.
-func (s *UploadService) ListUploadsPaginated(ctx context.Context, userID, page, pageSize int32) (*PaginatedUploads, error) {
+func (s *UploadService) ListUploadsPaginated(ctx context.Context, userID int64, page, pageSize int32) (*PaginatedUploads, error) {
 	total, err := s.queries.CountUploadsByUserID(ctx, userID)
 	if err != nil {
 		return nil, errs.WrapDatabaseError(err)
@@ -235,8 +234,8 @@ func (s *UploadService) ListUploadsPaginated(ctx context.Context, userID, page, 
 
 	uploads, err := s.queries.ListUploadsByUserIDPaginated(ctx, db.ListUploadsByUserIDPaginatedParams{
 		UserID: userID,
-		Limit:  pageSize,
-		Offset: (page - 1) * pageSize,
+		Limit:  int64(pageSize),
+		Offset: int64(page-1) * int64(pageSize),
 	})
 	if err != nil {
 		return nil, errs.WrapDatabaseError(err)
@@ -253,7 +252,7 @@ func (s *UploadService) ListUploadsPaginated(ctx context.Context, userID, page, 
 //
 // Returns ErrUploadNotFound if the upload doesn't exist or doesn't belong to the user.
 // This method can be used internally by other services to delete uploads.
-func (s *UploadService) DeleteUpload(ctx context.Context, uploadID, userID int32) error {
+func (s *UploadService) DeleteUpload(ctx context.Context, uploadID, userID int64) error {
 	upload, err := s.GetUpload(ctx, uploadID, userID)
 	if err != nil {
 		return err

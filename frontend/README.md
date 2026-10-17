@@ -62,7 +62,7 @@ make playwright-browsers   # once
 make test                  # typecheck, lint, unit tests, Playwright
 ```
 
-The E2E run starts its own gogo API against the test database and its own Vite server, so it needs the gogo repo next to this one (`../backend`) and `TEST_DATABASE_URL` in `.env`.
+The E2E run starts its own gogo API against the test database and its own Vite server, so it needs the gogo repo next to this one (`../backend`) and `TEST_DATABASE_PATH` in `../backend/.env`.
 
 ## Features
 
@@ -122,7 +122,7 @@ make playwright-browsers
 | `TEST_FRONTEND_PORT` | E2E Vite port (default `5175`) |
 | `TEST_BACKEND_PORT` | E2E gogo port (default `8184`) |
 | `VITE_E2E_API_BASE_URL` | API base used by E2E helpers (default `http://localhost:8184/api/v1`) |
-| `TEST_DATABASE_URL` | gogo test database for E2E seeding; the name must end in `_test` |
+| `TEST_DATABASE_PATH` | gogo's SQLite test database for E2E seeding, relative to `../backend`; the file name must end in `_test.db`. Read from `../backend/.env` unless set here |
 
 The E2E ports are specific to this project so Playwright never attaches to another project's servers. Change them when you copy the skeleton.
 
@@ -161,7 +161,7 @@ The image is the production build behind nginx. With `VITE_API_BASE_URL` left em
 
 ## CI
 
-`.github/workflows/ci.yml` checks out this repository and the backend side by side, starts Postgres and Redis, and runs `make api-types-check`, `make test` and the build. The backend repository is named in the workflow; change it when you copy the skeleton.
+`.github/workflows/ci.yml` checks out this repository and the backend side by side, starts Redis, and runs `make api-types-check`, `make test` and the build. The backend repository is named in the workflow; change it when you copy the skeleton.
 
 ## Roadmap
 

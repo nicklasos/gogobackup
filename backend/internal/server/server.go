@@ -12,13 +12,10 @@ import (
 	"app/internal/users"
 
 	"github.com/gin-gonic/gin"
-	pulse "github.com/nicklasos/gopulse"
-	"github.com/nicklasos/gopulse/pulsegin"
 )
 
 // NewEngine builds the Gin engine with the middleware shared by the API binary and the test server.
-// p is the monitoring recorder; nil leaves the dashboard and its middleware out.
-func NewEngine(cfg *config.Config, log *logger.Logger, p *pulse.Pulse) *gin.Engine {
+func NewEngine(cfg *config.Config, log *logger.Logger) *gin.Engine {
 	r := gin.New()
 	r.RedirectTrailingSlash = false
 
@@ -30,11 +27,6 @@ func NewEngine(cfg *config.Config, log *logger.Logger, p *pulse.Pulse) *gin.Engi
 
 	r.Use(middleware.RequestID())
 	r.Use(middleware.Recovery(log))
-	if p != nil {
-		// After Recovery: a panic is recorded with its stack and re-raised for Recovery to answer
-		r.Use(pulsegin.Middleware(p))
-		pulsegin.Mount(r, p)
-	}
 	// r.Use(middleware.RequestLogging(log))
 	r.Use(middleware.ErrorHandler(log))
 	r.Use(middleware.CORS(cfg.CORSAllowedOrigins))

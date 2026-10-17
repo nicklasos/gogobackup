@@ -14,24 +14,31 @@
 
    -- +goose Down
    -- +goose StatementBegin
-   ALTER TABLE orders DROP COLUMN IF EXISTS note;
+   ALTER TABLE orders DROP COLUMN note;
    -- +goose StatementEnd
    ```
 
-3. A column added to a table with rows needs a default or a backfill in the same migration before `SET NOT NULL`.
-4. Apply and regenerate:
+3. Write SQLite: `INTEGER PRIMARY KEY` for IDs, `TEXT` for strings, `TIMESTAMP DEFAULT CURRENT_TIMESTAMP`
+   for times, `BOOLEAN` for flags, `REFERENCES users(id) ON DELETE CASCADE` for owners.
+   `ALTER TABLE` can add, rename and drop a column but cannot change one: to change a type or add
+   `NOT NULL` to an existing column, create the new table, `INSERT INTO new SELECT ... FROM old`,
+   drop the old table and rename the new one, all in the same migration.
+4. A `NOT NULL` column added to a table with rows needs a `DEFAULT`.
+5. Apply and regenerate:
 
    ```bash
    make migrate-up   # development database
    make sqlc         # sqlc reads the schema from migrations/
    ```
 
-   `make test` applies migrations to the test database by itself.
+   `make test` needs nothing more: each test starts from a database migrated from `migrations/`.
 
 ## A new or changed query
 
 1. Edit `internal/db/queries/<module>.sql`. One `-- name: VerbNoun :one|:many|:exec` per query.
-   Name parameters with `sqlc.arg(name)` when there are more than two or their meaning is not obvious.
+   Use `?` for parameters, and `sqlc.arg(name)` when there are more than two or their meaning is not obvious.
+   Cast a parameter whose type sqlc cannot infer: `CAST(sqlc.arg(flag) AS BOOLEAN)`.
+   Compare a stored timestamp with now as `datetime(expires_at) > datetime('now')`, never as raw text.
 2. `make sqlc`. Never edit `internal/db/*.sql.go` by hand.
 3. Fix the callers the compiler points at.
 
@@ -43,5 +50,5 @@
 ## Check
 
 - `go build ./...` is clean and `make test` passes.
-- `make cli -- --test migrate status` shows the new migration applied.
+- `make migrate-status` shows the new migration applied.
 - The `Down` section really undoes the `Up` section.

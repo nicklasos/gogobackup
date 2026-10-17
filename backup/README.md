@@ -11,7 +11,7 @@ Local staging files are created in this directory (`backupit/`), then copied/upl
 
 | Script | What it does |
 |--------|----------------|
-| `backup_db.sh` | dump Postgres or MySQL → zip → upload → prune |
+| `backup_db.sh` | dump Postgres or MySQL, or snapshot SQLite → zip → upload → prune |
 | `backup_images.sh` | zip images dir → upload → prune |
 
 Shared helpers:
@@ -20,6 +20,7 @@ Shared helpers:
 - `lib/db_url.sh` — `DATABASE_URL` parsing and `DB_ENGINE` normalization
 - `lib/db_postgres.sh` — `pg_dump` + strip `\restrict`
 - `lib/db_mysql.sh` — `mysqldump`
+- `lib/db_sqlite.sh` — `sqlite3 .backup` snapshot
 - `lib/storage.sh` — parses `STORAGE_TYPE` (one or more backends) and dispatches upload/prune
 - `lib/gcs.sh` — GCS via `gcloud storage`
 - `lib/local.sh` — copy to a directory on local (or mounted) disk
@@ -32,6 +33,7 @@ On the backup host:
 - `bash`, `zip`, `unzip`, `sed`
 - **PostgreSQL backups:** `pg_dump` (and `psql` for restore)
 - **MySQL backups:** `mysqldump` (and `mysql` client for restore)
+- **SQLite backups:** `sqlite3`
 - For **GCS**: [Google Cloud SDK](https://cloud.google.com/sdk) (`gcloud`) with `gcloud storage` working, plus a bucket and a service account with `storage.objects.create` / `list` / `delete`
 - For **local disk**: a writable directory (external HDD/SSD, NAS mount, etc.)
 
@@ -56,8 +58,8 @@ STORAGE_TYPE=local /var/www/smartcity/backupit/backup_db.sh
 | Variable | Meaning |
 |----------|---------|
 | `STORAGE_TYPE` | One or more backends, comma-separated: `gcs`, `local` (alias `disk`), `s3` (stub). Example: `local,gcs` |
-| `DB_ENGINE` | Required: `postgres` or `mysql` |
-| `DATABASE_URL` | DB URL for `backup_db.sh` — e.g. `postgres://…` or `mysql://user:pass@host:3306/dbname` |
+| `DB_ENGINE` | Required: `postgres`, `mysql` or `sqlite` |
+| `DATABASE_URL` | DB URL for `backup_db.sh` — e.g. `postgres://…`, `mysql://user:pass@host:3306/dbname`, or the SQLite file path |
 | `IMAGES_DIR` | Source images directory for `backup_images.sh` |
 | `GCS_BUCKET` | Bucket name (GCS) |
 | `GCS_CREDENTIALS` | Path to this project's service account JSON. Required for the `gcs` backend. |
@@ -69,13 +71,13 @@ STORAGE_TYPE=local /var/www/smartcity/backupit/backup_db.sh
 
 ### Database engines
 
-`backup_db.sh` supports **PostgreSQL** and **MySQL** (one engine per run). Set the engine explicitly in `.env`:
+`backup_db.sh` supports **PostgreSQL**, **MySQL** and **SQLite** (one engine per run). Set the engine explicitly in `.env`:
 
 ```bash
-DB_ENGINE=postgres   # or mysql
+DB_ENGINE=postgres   # or mysql, sqlite
 ```
 
-Aliases accepted: `postgresql`, `pg` → postgres; `mariadb` → mysql.
+Aliases accepted: `postgresql`, `pg` → postgres; `mariadb` → mysql; `sqlite3` → sqlite.
 
 **PostgreSQL**
 
@@ -105,6 +107,25 @@ Restore:
 
 ```bash
 mysql -h host -P 3306 -u user -p dbname < db_20260817_020000.sql
+```
+
+**SQLite**
+
+```bash
+DB_ENGINE=sqlite
+DATABASE_URL=/var/www/project/shared/database/project.db   # or sqlite:///var/www/...
+```
+
+The backup is a copy of the database file taken with `sqlite3 .backup`, which is consistent while the
+application keeps writing. Never `cp` a live database: in WAL mode the latest writes are still in the
+`-wal` file. The archive holds `db_YYYYMMDD_HHMMSS.db`.
+
+Restore: stop the application, then replace the file and drop its old WAL files:
+
+```bash
+unzip db_20260817_020000.db.zip
+cp db_20260817_020000.db /var/www/project/shared/database/project.db
+rm -f /var/www/project/shared/database/project.db-wal /var/www/project/shared/database/project.db-shm
 ```
 
 ### Multiple storages
@@ -194,7 +215,7 @@ crontab -e   # paste the cron lines above
 
 ## Object naming
 
-- DB: `db_YYYYMMDD_HHMMSS.sql.zip`
+- DB: `db_YYYYMMDD_HHMMSS.sql.zip` (SQLite: `db_YYYYMMDD_HHMMSS.db.zip`)
 - Images: `images_YYYYMMDD_HHMMSS.zip`
 
 Stored under:
@@ -223,6 +244,8 @@ psql "postgres://user:pass@localhost:5432/dbname" -f db_20260817_020000.sql
 
 # MySQL
 # mysql -h host -P 3306 -u user -p dbname < db_20260817_020000.sql
+
+# SQLite: the archive is db_20260817_020000.db.zip; see "SQLite" above
 ```
 
 Postgres dumps from `backup_db.sh` already have `\restrict` / `\unrestrict` removed so older `psql` and GUI clients work.

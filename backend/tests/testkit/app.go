@@ -10,13 +10,14 @@
 //			AssertJSONPath("data.0.title", "Hello")
 //	}
 //
-// New opens a transaction that is rolled back when the test ends, so tests never see each
-// other's rows. Everything hangs off the returned App: factories (app.Create), requests
+// New gives each test its own freshly migrated SQLite file, so tests never see each other's
+// rows. Everything hangs off the returned App: factories (app.Create), requests
 // (app.GET, app.As(user).POST, ...), database assertions and the fakes (app.Mail).
 package testkit
 
 import (
 	"context"
+	"database/sql"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -34,8 +35,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/jackc/pgx/v5"
-	pulse "github.com/nicklasos/gopulse"
 )
 
 const JWTSecret = "test-secret-key"
@@ -45,11 +44,11 @@ type App struct {
 	*Client
 
 	Ctx     context.Context
-	Tx      pgx.Tx
+	DB      *sql.DB
 	Queries *db.Queries
 	Create  *factory.Factory
 
-	// TxRunner is for a service that opens transactions: inside the test they are savepoints
+	// TxRunner is for a service that opens transactions
 	TxRunner *db.TxRunner
 
 	Config *config.Config
@@ -58,9 +57,6 @@ type App struct {
 
 	// Mail collects every message the application sent during the test
 	Mail *mail.MemorySender
-
-	// Pulse turns monitoring on when it is set before the first request
-	Pulse *pulse.Pulse
 
 	t      *testing.T
 	server *httptest.Server
@@ -72,12 +68,7 @@ type App struct {
 func New(t *testing.T, configure ...func(*config.Config)) *App {
 	t.Helper()
 
-	ctx := context.Background()
-	tx, err := tests.GetTestDBPool().Begin(ctx)
-	if err != nil {
-		t.Fatalf("testkit: begin transaction: %v", err)
-	}
-	t.Cleanup(func() { _ = tx.Rollback(ctx) })
+	conn := tests.NewTestDB(t)
 
 	log, err := logger.New(logger.Config{Level: "debug", Format: "text", Output: "stdout"})
 	if err != nil {
@@ -99,13 +90,12 @@ func New(t *testing.T, configure ...func(*config.Config)) *App {
 		fn(cfg)
 	}
 
-	queries := db.New(tx)
 	app := &App{
-		Ctx:      ctx,
-		Tx:       tx,
-		Queries:  queries,
-		Create:   factory.New(t, tx),
-		TxRunner: db.NewTxRunner(tx, queries),
+		Ctx:      context.Background(),
+		DB:       conn,
+		Queries:  db.New(conn),
+		Create:   factory.New(t, conn),
+		TxRunner: db.NewTxRunner(conn),
 		Config:   cfg,
 		Logger:   log,
 		Cache:    cache.NewMemoryCache(),
@@ -151,22 +141,22 @@ func (a *App) URL(path string) string {
 }
 
 // baseURL starts the server on first use, so a test that makes no requests never builds one.
-// It runs the same engine and routes as production, on top of the test transaction.
+// It runs the same engine and routes as production, on the test's database.
 func (a *App) baseURL() string {
 	if a.server != nil {
 		return a.server.URL
 	}
 
 	gin.SetMode(gin.TestMode)
-	router := server.NewEngine(a.Config, a.Logger, a.Pulse)
+	router := server.NewEngine(a.Config, a.Logger)
 	server.RegisterRoutes(router, &internal.App{
 		Config:  a.Config,
+		DB:      a.DB,
 		Queries: a.Queries,
 		Tx:      a.TxRunner,
 		Cache:   a.Cache,
 		Logger:  a.Logger,
 		Mail:    a.Mail,
-		Pulse:   a.Pulse,
 		Api:     router.Group("/api/v1"),
 	})
 

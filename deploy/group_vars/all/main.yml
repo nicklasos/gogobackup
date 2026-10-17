@@ -1,7 +1,7 @@
 # Every setting of a deployment. Secrets live in secrets.yml next to this file.
 
 # --- The application --------------------------------------------------------
-# Short name: used for the database, the system user's files, log and config names.
+# Short name: used for the database file, log and config names.
 # Lower-case letters, digits and dashes.
 app_name: gogobackup
 
@@ -36,7 +36,6 @@ timezone: Etc/UTC
 swap_size_mb: 2048
 
 go_version: "1.25.4"
-goose_version: v3.24.1
 node_major: 22
 
 # --- API --------------------------------------------------------------------
@@ -79,9 +78,8 @@ backup_gcs_bucket: ""
 backup_gcs_credentials_file: ""
 
 # --- Derived (no need to change) --------------------------------------------
-db_name: "{{ app_name | replace('-', '_') }}"
-db_user: "{{ app_name | replace('-', '_') }}"
-database_url: "postgres://{{ db_user }}:{{ db_password }}@127.0.0.1:5432/{{ db_name }}?sslmode=disable"
+# Outside the checkout, in a folder of its own: SQLite writes -wal and -shm files next to the database
+database_path: "{{ app_root }}/shared/database/{{ app_name }}.db"
 site_scheme: "{{ 'http' if tls_mode == 'none' else 'https' }}"
 site_url: "{{ site_scheme }}://{{ domain }}"
 uploads_dir: "{{ app_root }}/shared/uploads"

@@ -19,7 +19,7 @@ func WithDescription(description string) ExampleOption {
 }
 
 // Example creates an example owned by the given user.
-func (f *Factory) Example(userID int32, opts ...ExampleOption) *db.Example {
+func (f *Factory) Example(userID int64, opts ...ExampleOption) *db.Example {
 	f.t.Helper()
 
 	attrs := exampleAttrs{
@@ -31,8 +31,8 @@ func (f *Factory) Example(userID int32, opts ...ExampleOption) *db.Example {
 	}
 
 	var example db.Example
-	err := f.conn.QueryRow(ctx,
-		`INSERT INTO examples (user_id, title, description) VALUES ($1, $2, $3)
+	err := f.conn.QueryRowContext(ctx,
+		`INSERT INTO examples (user_id, title, description) VALUES (?, ?, ?)
 		 RETURNING id, user_id, title, description, created_at, updated_at`,
 		userID, attrs.title, attrs.description,
 	).Scan(&example.ID, &example.UserID, &example.Title, &example.Description, &example.CreatedAt, &example.UpdatedAt)
@@ -43,7 +43,7 @@ func (f *Factory) Example(userID int32, opts ...ExampleOption) *db.Example {
 }
 
 // Examples creates count examples for the user, titled "<prefix> 001", "<prefix> 002", ...
-func (f *Factory) Examples(userID int32, count int, prefix string) []*db.Example {
+func (f *Factory) Examples(userID int64, count int, prefix string) []*db.Example {
 	f.t.Helper()
 
 	examples := make([]*db.Example, count)

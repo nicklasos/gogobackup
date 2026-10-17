@@ -10,14 +10,13 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -110,7 +109,7 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) (*Token
 		s.sendEmailVerification(ctx, user)
 	}
 	if err != nil {
-		if domainErr := errs.DomainErrorFromPostgresUniqueViolation(err); domainErr != nil {
+		if domainErr := errs.DomainErrorFromUniqueViolation(err); domainErr != nil {
 			return nil, nil, ErrUserAlreadyExists
 		}
 		return nil, nil, errs.WrapDatabaseError(err)
@@ -205,7 +204,7 @@ func (s *AuthService) generateTokenPair(ctx context.Context, queries *db.Queries
 	_, err = queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
 		UserID:    user.ID,
 		Token:     hashToken(refreshTokenString),
-		ExpiresAt: pgtype.Timestamp{Time: expiresAt, Valid: true},
+		ExpiresAt: expiresAt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to store refresh token: %w", err)
@@ -235,7 +234,7 @@ func (s *AuthService) VerifyJWT(tokenString string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func (s *AuthService) GetUserFromContext(ctx context.Context, userID int32) (*db.User, error) {
+func (s *AuthService) GetUserFromContext(ctx context.Context, userID int64) (*db.User, error) {
 	user, err := s.queries.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, ErrUserNotFound
@@ -245,9 +244,9 @@ func (s *AuthService) GetUserFromContext(ctx context.Context, userID int32) (*db
 
 // GetUserRoles is called on every authenticated request. A token whose user no longer
 // exists is an invalid token (401), so clients sign out instead of showing "not found".
-func (s *AuthService) GetUserRoles(ctx context.Context, userID int32) ([]string, error) {
+func (s *AuthService) GetUserRoles(ctx context.Context, userID int64) ([]string, error) {
 	user, err := s.queries.GetUserByID(ctx, userID)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalidToken
 	}
 	if err != nil {
@@ -257,14 +256,14 @@ func (s *AuthService) GetUserRoles(ctx context.Context, userID int32) ([]string,
 }
 
 // UpdateProfile changes name and email. A new email is unverified until its link is opened.
-func (s *AuthService) UpdateProfile(ctx context.Context, userID int32, email, name string) (*db.User, error) {
+func (s *AuthService) UpdateProfile(ctx context.Context, userID int64, email, name string) (*db.User, error) {
 	user, err := s.queries.UpdateUserProfile(ctx, db.UpdateUserProfileParams{
 		ID:    userID,
 		Email: internal.NormalizeEmail(email),
 		Name:  name,
 	})
 	if err != nil {
-		if domainErr := errs.DomainErrorFromPostgresUniqueViolation(err); domainErr != nil {
+		if domainErr := errs.DomainErrorFromUniqueViolation(err); domainErr != nil {
 			return nil, ErrUserAlreadyExists
 		}
 		return nil, errs.WrapDatabaseError(err)
@@ -328,7 +327,7 @@ func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
 }
 
 // ResendEmailVerification sends a fresh link to the current user.
-func (s *AuthService) ResendEmailVerification(ctx context.Context, userID int32) error {
+func (s *AuthService) ResendEmailVerification(ctx context.Context, userID int64) error {
 	user, err := s.queries.GetUserByID(ctx, userID)
 	if err != nil {
 		return ErrUserNotFound
@@ -361,7 +360,7 @@ func (s *AuthService) sendEmailVerification(ctx context.Context, user db.User) {
 }
 
 // issueEmailToken replaces any earlier token of the same purpose, so only the newest link works.
-func (s *AuthService) issueEmailToken(ctx context.Context, userID int32, purpose string, ttl time.Duration) (string, error) {
+func (s *AuthService) issueEmailToken(ctx context.Context, userID int64, purpose string, ttl time.Duration) (string, error) {
 	raw := make([]byte, 32)
 	if _, err := rand.Read(raw); err != nil {
 		return "", fmt.Errorf("failed to generate token: %w", err)
@@ -376,7 +375,7 @@ func (s *AuthService) issueEmailToken(ctx context.Context, userID int32, purpose
 			UserID:     userID,
 			Purpose:    purpose,
 			TokenHash:  hashToken(token),
-			TtlSeconds: int32(ttl.Seconds()),
+			TtlSeconds: int64(ttl.Seconds()),
 		}))
 	})
 	if err != nil {
@@ -385,9 +384,9 @@ func (s *AuthService) issueEmailToken(ctx context.Context, userID int32, purpose
 	return token, nil
 }
 
-func consumeEmailToken(ctx context.Context, q *db.Queries, token, purpose string) (int32, error) {
+func consumeEmailToken(ctx context.Context, q *db.Queries, token, purpose string) (int64, error) {
 	userID, err := q.ConsumeAuthToken(ctx, db.ConsumeAuthTokenParams{TokenHash: hashToken(token), Purpose: purpose})
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) {
 		return 0, ErrInvalidEmailToken
 	}
 	if err != nil {
@@ -404,7 +403,7 @@ func hashToken(token string) string {
 
 // UpdatePassword changes the password and revokes every refresh token, so other sessions
 // cannot be renewed with the old credentials.
-func (s *AuthService) UpdatePassword(ctx context.Context, userID int32, currentPassword, newPassword string) error {
+func (s *AuthService) UpdatePassword(ctx context.Context, userID int64, currentPassword, newPassword string) error {
 	user, err := s.queries.GetUserByID(ctx, userID)
 	if err != nil {
 		return ErrUserNotFound
@@ -431,7 +430,7 @@ func (s *AuthService) UpdatePassword(ctx context.Context, userID int32, currentP
 }
 
 // Logout revokes all refresh tokens for the user
-func (s *AuthService) Logout(ctx context.Context, userID int32) error {
+func (s *AuthService) Logout(ctx context.Context, userID int64) error {
 	if err := s.queries.RevokeAllUserRefreshTokens(ctx, userID); err != nil {
 		return errs.WrapDatabaseError(err)
 	}

@@ -19,7 +19,7 @@ var Roles = []string{RoleSuperAdmin, RoleAdmin, RoleUser}
 
 // UserRolesLookup loads the current roles of the authenticated user.
 type UserRolesLookup interface {
-	GetUserRoles(ctx context.Context, userID int32) ([]string, error)
+	GetUserRoles(ctx context.Context, userID int64) ([]string, error)
 }
 
 // UserAuth is JWT verification plus roles lookup. AuthService implements this.

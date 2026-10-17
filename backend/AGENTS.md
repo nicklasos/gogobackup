@@ -4,7 +4,7 @@
 - **Recipes**: `docs/recipes/` has step-by-step procedures for the common changes: add a module, add an endpoint, change the schema, add a scheduled job. Use the matching one instead of improvising.
 - **Reference module**: `internal/example`. Copy its shape.
 - **Finish every task with `make test`** and fix what fails. Do not start the API; the owner runs it.
-- **The kit**: this repo is the API. [gogo-front](https://github.com/nicklasos/gogo-front) is its admin UI and generates its TypeScript types from `docs/swagger.json`, so run `make swagger` after changing request or response types. [gopulse](https://github.com/nicklasos/gopulse) is the monitoring dashboard mounted at `/_pulse`.
+- **The kit**: this repo is the API. [gogo-front](https://github.com/nicklasos/gogo-front) is its admin UI and generates its TypeScript types from `docs/swagger.json`, so run `make swagger` after changing request or response types.
 
 ## Architecture
 
@@ -47,11 +47,10 @@ gogo/
 │   │   └── pagination.go        # ?page / ?page_size parsing
 │   ├── cache/                   # RedisCache + MemoryCache
 │   ├── mail/                    # SMTP Service + MemorySender (tests)
-│   ├── monitoring/              # gopulse dashboard wiring (nil-safe helpers)
 │   ├── errs/                    # Domain errors + WrapDatabaseError
 │   ├── scheduler/               # Cron (cleanup refresh tokens)
 │   └── responses.go             # PaginationMeta helper
-├── migrations/                  # Goose database migrations
+├── migrations/                  # Goose migrations (SQLite), embedded in the binaries
 └── Makefile                     # Development commands (make help)
 ```
 
@@ -64,8 +63,7 @@ gogo/
 ## Technology Stack
 - Go 1.25+
 - Gin
-- PostgreSQL 15
-- pgx/v5
+- SQLite (modernc.org/sqlite, pure Go: no cgo)
 - Redis
 - go-redis/v9 - Redis client
 - sqlc - Type-safe SQL code generation
@@ -93,7 +91,7 @@ When adding new modules:
 - **Registration**: every module is listed once in `internal/server/server.go` `RegisterRoutes`. The API binary and the test server both call it, so a new module is one line there.
 
 ## Roles
-- Roles live in `users.roles` (`TEXT[]`): `super-admin`, `admin`, `user` (constants in `middleware/require_role.go`).
+- Roles live in `users.roles`, a JSON array in a TEXT column read as `db.Roles` (a `[]string`): `super-admin`, `admin`, `user` (constants in `middleware/require_role.go`).
 - `UserAuthMiddleware` loads roles from the database on every request; never read roles from JWT claims.
 - Guard routes with `middleware.RequireRole(middleware.RoleAdmin)` or `RequireAnyRole(...)`. A super admin passes every role check.
 - In handlers use `middleware.GetUserRolesFromContext(c)`.
@@ -121,7 +119,7 @@ err := s.tx.WithTx(ctx, func(q *db.Queries) error {
     // use q, not s.queries; return an error to roll back
 })
 ```
-In tests the runner is built on the test transaction, so `WithTx` becomes a savepoint.
+Transactions take SQLite's write lock when they begin (`_txlock=immediate`), so inside `fn` use only `q`: a write through `s.queries` waits for that lock and fails after the busy timeout.
 
 ## Auth
 - Settings come from `config` and reach the module as `auth.Options` in `auth/routes.go`.
@@ -138,11 +136,11 @@ In tests the runner is built on the test transaction, so `WithTx` becomes a save
 - Go through `UploadService`; file bytes go through the `Storage` interface (`LocalStorage` by default). Never build disk paths from request data yourself: `LocalStorage.Resolve` is the traversal guard.
 - New allowed extensions go in `DefaultUploadConfig`; `matchesContent` decides what content an extension must have.
 
-## Monitoring
-- gopulse (`github.com/nicklasos/gopulse`) is wired in `cmd/api/main.go` through `internal/monitoring`. `app.Pulse` is nil when `PULSE_PASSWORD` is unset, and it is nil in tests.
-- Never call `app.Pulse` methods without a nil check; `monitoring.Record(app.Pulse, metric, key, value)` does the check for custom metrics.
-- Queries and logs are linked to their request only when they are given the request context: `c.Request.Context()` into services, `logger.InfoContext(ctx, ...)` for logs.
-- When something is slow or failing locally, the dashboard at `/_pulse` shows which route, which query and which log lines.
+## Database
+- One SQLite file at `DATABASE_PATH` (default `./data/gogobackup.db`). Every connection turns on foreign keys, WAL and a 5 s busy timeout (`internal/db/connection.go`).
+- Timestamps are TEXT in UTC. Compare a stored timestamp with now through `datetime()` on both sides (`datetime(expires_at) > datetime('now')`): Go and `CURRENT_TIMESTAMP` write different formats.
+- Nullable columns are `sql.NullString`, `sql.NullTime`, `sql.NullBool`; IDs are `int64`; a missing row is `sql.ErrNoRows`.
+- Pass the request context into services so queries are cancelled with the request.
 
 ## Mail
 - Services take a `mail.Sender` (from `app.Mail`) and call `Send(ctx, mail.Message{To, Subject, Text, HTML})`.
@@ -204,16 +202,16 @@ make sqlc
 ```bash
 make help             # List targets
 make run              # Start server
-make run-test-db      # Start against TEST_DATABASE_URL
+make run-test-db      # Start against TEST_DATABASE_PATH
 make build            # Build binary
-make test             # Run all tests (auto-migrates test DB)
+make test             # Run all tests (each test gets its own SQLite file)
 make seed             # Accounts and sample data for an empty development database
 make cli migrate up   # Any console command; flags go after -- (make cli -- create-user --email a@b.c --password secret123)
 make cli-create-user EMAIL=a@b.c PASSWORD=secret123   # Create a user (default role super-admin)
 make migrate-up       # Apply migrations
 make sqlc             # Generate sqlc code
 make swagger          # Generate API docs (then run `make api-types` in `../frontend`)
-make up / make down   # Postgres, Redis and Mailpit in Docker
+make up / make down   # Redis and Mailpit in Docker
 ```
 
 ## Code Conventions
@@ -237,11 +235,9 @@ make up / make down   # Postgres, Redis and Mailpit in Docker
 ## Testing Framework
 
 ### Laravel-Style Database Testing
-- **Transaction Rollback Pattern** - Each test runs in isolation with automatic rollback
-- **Real Database Testing** - Uses actual PostgreSQL (no mocking)
-- **Test Database Separation** - Uses `TEST_DATABASE_URL` environment variable
-- **Test Database Guard** - `config.AssertTestDatabaseURL` refuses any database whose name does not end in `_test`, or a non-local host unless `ALLOW_REMOTE_TEST_DB=1`. It also guards `--test-db` and `--test`.
-- **One transaction per test** - a failed statement (for example a unique violation) aborts it, so make that request the last one in the test
+- **A database per test** - `testkit.New` copies a migrated SQLite file into `t.TempDir()`; the schema is migrated once per test binary. Nothing to set up and nothing shared between tests.
+- **Real Database Testing** - Uses actual SQLite (no mocking)
+- **Test Database Guard** - `config.AssertTestDatabasePath` refuses a `TEST_DATABASE_PATH` whose file name does not end in `_test.db`. It guards `--test-db` (api, cron) and `--test` (cli), which the frontend E2E suite uses.
 - **Same wiring as production** - the test server uses `server.NewEngine` and `server.RegisterRoutes`, and starts on the first request
 - **MemoryCache** - Tests use in-memory cache (no Redis required)
 - **MemorySender** - Tests collect mail in memory (`app.Mail.Sent()`)

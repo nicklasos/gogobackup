@@ -2,53 +2,44 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
-	"time"
+	"os"
+	"path/filepath"
 
 	"app/config"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	_ "modernc.org/sqlite"
 )
 
-// NewConnection opens the pool. A tracer, when given, sees every query (used for monitoring).
-func NewConnection(cfg *config.Config, tracers ...pgx.QueryTracer) (*pgxpool.Pool, error) {
-	if cfg.DatabaseURL == "" {
-		return nil, fmt.Errorf("DATABASE_URL is required")
+// dsnOptions apply to every connection the pool opens. Times are written in UTC in a format
+// SQLite's date functions read, so SQL can compare them with datetime('now').
+const dsnOptions = "_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)" +
+	"&_txlock=immediate&_time_format=sqlite&_timezone=UTC"
+
+// NewConnection opens the database at cfg.DatabasePath, creating its directory if needed.
+func NewConnection(cfg *config.Config) (*sql.DB, error) {
+	return Open(cfg.DatabasePath)
+}
+
+// Open opens the SQLite file at path with the application's connection settings.
+func Open(path string) (*sql.DB, error) {
+	if path == "" {
+		return nil, fmt.Errorf("DATABASE_PATH is required")
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return nil, fmt.Errorf("create database directory: %w", err)
 	}
 
-	poolConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	conn, err := sql.Open("sqlite", "file:"+path+"?"+dsnOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse database URL: %w", err)
+		return nil, fmt.Errorf("open database: %w", err)
 	}
 
-	configureConnectionPool(poolConfig)
-	if len(tracers) > 0 && tracers[0] != nil {
-		poolConfig.ConnConfig.Tracer = tracers[0]
-	}
-
-	pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create connection pool: %w", err)
-	}
-
-	if err := pool.Ping(context.Background()); err != nil {
-		pool.Close()
+	if err := conn.PingContext(context.Background()); err != nil {
+		conn.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	return pool, nil
-}
-
-// configureConnectionPool sets up production-ready connection pool settings
-func configureConnectionPool(config *pgxpool.Config) {
-	config.MaxConns = 25
-
-	config.MinConns = 5
-
-	config.MaxConnLifetime = 5 * time.Minute
-
-	config.MaxConnIdleTime = 5 * time.Minute
-
-	config.HealthCheckPeriod = 1 * time.Minute
+	return conn, nil
 }

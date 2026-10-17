@@ -32,7 +32,7 @@ func RunTest(app *internal.CLIApp, args []string) {
 
 	// Test database connection
 	fmt.Println("Testing database connection...")
-	if err := app.Database.Ping(ctx); err != nil {
+	if err := app.Database.PingContext(ctx); err != nil {
 		app.Logger.Error("Database ping failed", "error", err)
 		fmt.Printf("Database connection failed: %v\n", err)
 		return
@@ -47,7 +47,7 @@ func RunTest(app *internal.CLIApp, args []string) {
 	// Test basic query
 	fmt.Println("Testing basic database query...")
 	var dbVersion string
-	err := app.Database.QueryRow(ctx, "SELECT version()").Scan(&dbVersion)
+	err := app.Database.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&dbVersion)
 	if err != nil {
 		app.Logger.Error("Failed to get database version", "error", err)
 		fmt.Printf("Database query failed: %v\n", err)

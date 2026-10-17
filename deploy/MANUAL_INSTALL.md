@@ -1,11 +1,11 @@
 # Manual install
 
-Installing by hand on a server that already has Go, Node.js, nginx, PostgreSQL, Redis and supervisor,
+Installing by hand on a server that already has Go, Node.js, nginx, Redis and supervisor,
 and usually other applications too. `ansible-playbook install.yml` does exactly this for you (see
 [README.md](README.md)); this page is for doing it, or checking it, without Ansible.
 
 The files to copy are in [`examples/`](examples): `backend.env`, `supervisor.conf` and `nginx.conf`.
-Create the database first.
+The migrations create the SQLite database in `shared/database/`.
 
 Once, as root:
 
@@ -13,8 +13,8 @@ Once, as root:
 git clone git@github.com:nicklasos/gogobackup.git /var/www/gogobackup
 cd /var/www/gogobackup
 
-mkdir -p shared/uploads /var/log/gogobackup
-chown www-data: shared/uploads
+mkdir -p shared/uploads shared/database /var/log/gogobackup
+chown www-data: shared/uploads shared/database
 
 cp backend/.env.example backend/.env        # then apply deploy/examples/backend.env
 chgrp www-data backend/.env && chmod 640 backend/.env

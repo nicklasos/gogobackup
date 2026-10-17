@@ -7,17 +7,16 @@ package db
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
 )
 
 const countUploadsByUserID = `-- name: CountUploadsByUserID :one
 SELECT count(*) FROM uploads
-WHERE user_id = $1
+WHERE user_id = ?1
 `
 
-func (q *Queries) CountUploadsByUserID(ctx context.Context, userID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, countUploadsByUserID, userID)
+func (q *Queries) CountUploadsByUserID(ctx context.Context, userID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUploadsByUserID, userID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -27,23 +26,23 @@ const createUpload = `-- name: CreateUpload :one
 INSERT INTO uploads (
     user_id, folder_id, type, relative_path, original_filename, file_size, mime_type
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    ?1, ?2, ?3, ?4, ?5, ?6, ?7
 )
 RETURNING id, user_id, folder_id, type, relative_path, original_filename, file_size, mime_type, created_at, updated_at
 `
 
 type CreateUploadParams struct {
-	UserID           int32       `db:"user_id" json:"user_id"`
-	FolderID         int32       `db:"folder_id" json:"folder_id"`
-	Type             string      `db:"type" json:"type"`
-	RelativePath     string      `db:"relative_path" json:"relative_path"`
-	OriginalFilename string      `db:"original_filename" json:"original_filename"`
-	FileSize         int64       `db:"file_size" json:"file_size"`
-	MimeType         pgtype.Text `db:"mime_type" json:"mime_type"`
+	UserID           int64          `db:"user_id" json:"user_id"`
+	FolderID         int64          `db:"folder_id" json:"folder_id"`
+	Type             string         `db:"type" json:"type"`
+	RelativePath     string         `db:"relative_path" json:"relative_path"`
+	OriginalFilename string         `db:"original_filename" json:"original_filename"`
+	FileSize         int64          `db:"file_size" json:"file_size"`
+	MimeType         sql.NullString `db:"mime_type" json:"mime_type"`
 }
 
 func (q *Queries) CreateUpload(ctx context.Context, arg CreateUploadParams) (Upload, error) {
-	row := q.db.QueryRow(ctx, createUpload,
+	row := q.db.QueryRowContext(ctx, createUpload,
 		arg.UserID,
 		arg.FolderID,
 		arg.Type,
@@ -70,31 +69,31 @@ func (q *Queries) CreateUpload(ctx context.Context, arg CreateUploadParams) (Upl
 
 const deleteUpload = `-- name: DeleteUpload :exec
 DELETE FROM uploads
-WHERE id = $1 AND user_id = $2
+WHERE id = ?1 AND user_id = ?2
 `
 
 type DeleteUploadParams struct {
-	ID     int32 `db:"id" json:"id"`
-	UserID int32 `db:"user_id" json:"user_id"`
+	ID     int64 `db:"id" json:"id"`
+	UserID int64 `db:"user_id" json:"user_id"`
 }
 
 func (q *Queries) DeleteUpload(ctx context.Context, arg DeleteUploadParams) error {
-	_, err := q.db.Exec(ctx, deleteUpload, arg.ID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, deleteUpload, arg.ID, arg.UserID)
 	return err
 }
 
 const getUploadByIDAndUserID = `-- name: GetUploadByIDAndUserID :one
 SELECT id, user_id, folder_id, type, relative_path, original_filename, file_size, mime_type, created_at, updated_at FROM uploads
-WHERE id = $1 AND user_id = $2 LIMIT 1
+WHERE id = ?1 AND user_id = ?2 LIMIT 1
 `
 
 type GetUploadByIDAndUserIDParams struct {
-	ID     int32 `db:"id" json:"id"`
-	UserID int32 `db:"user_id" json:"user_id"`
+	ID     int64 `db:"id" json:"id"`
+	UserID int64 `db:"user_id" json:"user_id"`
 }
 
 func (q *Queries) GetUploadByIDAndUserID(ctx context.Context, arg GetUploadByIDAndUserIDParams) (Upload, error) {
-	row := q.db.QueryRow(ctx, getUploadByIDAndUserID, arg.ID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, getUploadByIDAndUserID, arg.ID, arg.UserID)
 	var i Upload
 	err := row.Scan(
 		&i.ID,
@@ -113,19 +112,19 @@ func (q *Queries) GetUploadByIDAndUserID(ctx context.Context, arg GetUploadByIDA
 
 const listUploadsByUserIDPaginated = `-- name: ListUploadsByUserIDPaginated :many
 SELECT id, user_id, folder_id, type, relative_path, original_filename, file_size, mime_type, created_at, updated_at FROM uploads
-WHERE user_id = $1
+WHERE user_id = ?1
 ORDER BY created_at DESC, id DESC
-LIMIT $2 OFFSET $3
+LIMIT ?2 OFFSET ?3
 `
 
 type ListUploadsByUserIDPaginatedParams struct {
-	UserID int32 `db:"user_id" json:"user_id"`
-	Limit  int32 `db:"limit" json:"limit"`
-	Offset int32 `db:"offset" json:"offset"`
+	UserID int64 `db:"user_id" json:"user_id"`
+	Limit  int64 `db:"limit" json:"limit"`
+	Offset int64 `db:"offset" json:"offset"`
 }
 
 func (q *Queries) ListUploadsByUserIDPaginated(ctx context.Context, arg ListUploadsByUserIDPaginatedParams) ([]Upload, error) {
-	rows, err := q.db.Query(ctx, listUploadsByUserIDPaginated, arg.UserID, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, listUploadsByUserIDPaginated, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -148,6 +147,9 @@ func (q *Queries) ListUploadsByUserIDPaginated(ctx context.Context, arg ListUplo
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

@@ -51,11 +51,11 @@ func (f *Factory) User(opts ...UserOption) *db.User {
 	}
 
 	var user db.User
-	err = f.conn.QueryRow(ctx,
+	err = f.conn.QueryRowContext(ctx,
 		`INSERT INTO users (email, name, password, roles, email_verified_at)
-		 VALUES ($1, $2, $3, $4, CASE WHEN $5 THEN CURRENT_TIMESTAMP END)
+		 VALUES (?, ?, ?, ?, CASE WHEN ? THEN CURRENT_TIMESTAMP END)
 		 RETURNING id, email, name, password, roles, created_at, updated_at, email_verified_at`,
-		attrs.email, attrs.name, string(hash), attrs.roles, attrs.verified,
+		attrs.email, attrs.name, string(hash), db.Roles(attrs.roles), attrs.verified,
 	).Scan(&user.ID, &user.Email, &user.Name, &user.Password, &user.Roles, &user.CreatedAt, &user.UpdatedAt, &user.EmailVerifiedAt)
 	if err != nil {
 		f.t.Fatalf("factory.User: %v", err)

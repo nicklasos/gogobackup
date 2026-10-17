@@ -6,7 +6,7 @@ What is worth adding to the skeleton next, in priority order. Each item names th
 
 | Item | Why | Port from |
 |---|---|---|
-| Background jobs | Mail and other slow work run inside the request today; River (Postgres) fits the stack, with a jobs page in gopulse | — |
+| Background jobs | Mail and other slow work run inside the request today; a Redis-backed queue such as asynq fits the stack | — |
 | golangci-lint | CI runs `gofmt`, `go vet` and the tests; a linter config would catch more | — |
 | WebSocket authentication | Tokens are no longer accepted in the URL; a project with WebSockets needs a short-lived ticket endpoint instead | — |
 
@@ -18,10 +18,9 @@ What is worth adding to the skeleton next, in priority order. Each item names th
 | Image crop and resize | Useful once a project has avatars or galleries; needs an imaging library | `smartcity-backoffice-api/internal/uploads/crop.go` |
 | Role editing | Roles are fixed at creation today; add `UpdateUserRoles` with a last-super-admin guard when a project needs it | — |
 | Pagination, sort and filter conventions | Only page parsing exists; every list endpoint reinvents filters | `smartcity-backoffice-api/internal/pagination/` |
-| Constraint registry | Table-driven unique / foreign key constraint → error key, instead of string matching | `sytno/backend/internal/errs/postgres_fk.go` |
-| pgtype helpers | Less boilerplate converting nullable columns | `sytno/backend/internal/utils/pgtype.go` |
+| Constraint registry | Table-driven unique / foreign key constraint → error key, instead of string matching | — |
+| Null helpers | Less boilerplate converting `sql.Null*` columns | — |
 | Mail templates, translations and queueing | The two auth emails are plain English, and `Send` blocks on SMTP | — |
-| Savepoint-per-request in tests | A failed statement aborts the shared test transaction, so such a request must be last in a test | — |
 
 ## P3
 
@@ -32,6 +31,6 @@ What is worth adding to the skeleton next, in priority order. Each item names th
 
 ## Left out on purpose
 
-- **Queue / background jobs**: cron plus goroutines cover a skeleton; pick River or asynq per project.
+- **Queue / background jobs**: cron plus goroutines cover a skeleton; pick a queue per project (asynq runs on the Redis already here).
 - **Keyed lock**: in-process only, misleading once there is more than one instance.
-- **Per-module permissions (JSONB)** and **multi-tenancy**: project-specific; roles are enough here.
+- **Per-module permissions (JSON columns)** and **multi-tenancy**: project-specific; roles are enough here.

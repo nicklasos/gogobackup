@@ -45,8 +45,8 @@ func (s *UserService) ListByRole(ctx context.Context, actor middleware.Actor, ro
 
 	users, err := s.queries.ListUsersByRole(ctx, db.ListUsersByRoleParams{
 		Role:       role,
-		PageLimit:  pageSize,
-		PageOffset: (page - 1) * pageSize,
+		PageLimit:  int64(pageSize),
+		PageOffset: int64(page-1) * int64(pageSize),
 	})
 	if err != nil {
 		return nil, errs.WrapDatabaseError(err)
@@ -74,7 +74,7 @@ func (s *UserService) Create(ctx context.Context, actor middleware.Actor, req Cr
 		EmailVerified: true,
 	})
 	if err != nil {
-		if domainErr := errs.DomainErrorFromPostgresUniqueViolation(err); domainErr != nil {
+		if domainErr := errs.DomainErrorFromUniqueViolation(err); domainErr != nil {
 			return nil, ErrUserAlreadyExists
 		}
 		return nil, errs.WrapDatabaseError(err)
@@ -82,7 +82,7 @@ func (s *UserService) Create(ctx context.Context, actor middleware.Actor, req Cr
 	return &user, nil
 }
 
-func (s *UserService) Update(ctx context.Context, actor middleware.Actor, id int32, req UpdateUserRequest) (*db.User, error) {
+func (s *UserService) Update(ctx context.Context, actor middleware.Actor, id int64, req UpdateUserRequest) (*db.User, error) {
 	if err := s.requireManageable(ctx, actor, id); err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (s *UserService) Update(ctx context.Context, actor middleware.Actor, id int
 		KeepVerified: true,
 	})
 	if err != nil {
-		if domainErr := errs.DomainErrorFromPostgresUniqueViolation(err); domainErr != nil {
+		if domainErr := errs.DomainErrorFromUniqueViolation(err); domainErr != nil {
 			return nil, ErrUserAlreadyExists
 		}
 		return nil, errs.WrapDatabaseError(err)
@@ -103,7 +103,7 @@ func (s *UserService) Update(ctx context.Context, actor middleware.Actor, id int
 }
 
 // SetPassword replaces the password and revokes the user's refresh tokens.
-func (s *UserService) SetPassword(ctx context.Context, actor middleware.Actor, id int32, password string) error {
+func (s *UserService) SetPassword(ctx context.Context, actor middleware.Actor, id int64, password string) error {
 	if err := s.requireManageable(ctx, actor, id); err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (s *UserService) SetPassword(ctx context.Context, actor middleware.Actor, i
 
 // Delete removes a user. Deleting yourself is refused, which also guarantees
 // that the last super admin can never be deleted.
-func (s *UserService) Delete(ctx context.Context, actor middleware.Actor, id int32) error {
+func (s *UserService) Delete(ctx context.Context, actor middleware.Actor, id int64) error {
 	if id == actor.ID {
 		return ErrCannotDeleteSelf
 	}
@@ -139,7 +139,7 @@ func (s *UserService) Delete(ctx context.Context, actor middleware.Actor, id int
 	return nil
 }
 
-func (s *UserService) requireManageable(ctx context.Context, actor middleware.Actor, id int32) error {
+func (s *UserService) requireManageable(ctx context.Context, actor middleware.Actor, id int64) error {
 	user, err := s.queries.GetUserByID(ctx, id)
 	if err != nil {
 		return ErrUserNotFound

@@ -10,7 +10,7 @@ import (
 
 // CurrentUserID returns the authenticated user's ID. When there is none it answers 401
 // itself and returns false, so a handler only has to return.
-func CurrentUserID(c *gin.Context) (int32, bool) {
+func CurrentUserID(c *gin.Context) (int64, bool) {
 	userID, err := GetUserIDFromContext(c)
 	if err != nil {
 		errs.RespondWithError(c, err)
@@ -21,13 +21,13 @@ func CurrentUserID(c *gin.Context) (int32, bool) {
 
 // PathID parses a positive integer path parameter such as ":id". When it is not one it
 // answers 400 itself and returns false.
-func PathID(c *gin.Context, name string) (int32, bool) {
-	id, err := strconv.ParseInt(c.Param(name), 10, 32)
+func PathID(c *gin.Context, name string) (int64, bool) {
+	id, err := strconv.ParseInt(c.Param(name), 10, 64)
 	if err != nil || id < 1 {
 		errs.RespondWithBadRequest(c, errs.ErrKeyBadRequest, "Invalid "+name)
 		return 0, false
 	}
-	return int32(id), true
+	return id, true
 }
 
 // Page parses ?page and ?page_size with the defaults every list endpoint uses. When

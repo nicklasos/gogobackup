@@ -9,7 +9,7 @@ separate `cmd/cron` binary. Run them in one place only, or every job runs twice.
 2. **Register it**: add a `register<Name>Job()` method to `internal/scheduler/scheduler.go` and call it from `RegisterJobs`.
    The schedule is a cron expression or a shortcut such as `@daily`, `@hourly`, `@every 5m`.
 3. **Make it safe to repeat.** A job can be interrupted by a deploy and run again later:
-   delete or update by condition (`WHERE expires_at < now()`), never by a list computed earlier.
+   delete or update by condition (`WHERE datetime(expires_at) < datetime('now')`), never by a list computed earlier.
 4. **Log one line at the start and one at the end**, with counts when there are any. Return the error; the scheduler logs it.
 5. **Test** `Execute` directly in `tests/unit/`, starting from `testkit.New(t)`, with data from `app.Create.*`.
 6. `make test`.

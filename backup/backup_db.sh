@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Backup PostgreSQL or MySQL to a zip archive and upload to configured storage(s).
+# Backup PostgreSQL, MySQL or SQLite to a zip archive and upload to configured storage(s).
 # Config: copy .env.example → .env (or export vars). See README.md.
 
 set -euo pipefail
@@ -14,7 +14,7 @@ load_dotenv "${SCRIPT_DIR}/.env"
 
 # Defaults (only applied when unset after env / .env)
 : "${DATABASE_URL:=postgres://root:pass@localhost:5432/smartcity_prod}"
-# DB_ENGINE must be set in .env (postgres | mysql) — no URL auto-detect
+# DB_ENGINE must be set in .env (postgres | mysql | sqlite) — no URL auto-detect
 : "${STORAGE_TYPE:=gcs}"
 : "${GCS_BUCKET:=your-backup-bucket}"
 : "${GCS_CREDENTIALS:=}"
@@ -39,6 +39,10 @@ case "$DB_ENGINE" in
     # shellcheck source=lib/db_mysql.sh
     source "${SCRIPT_DIR}/lib/db_mysql.sh"
     ;;
+  sqlite)
+    # shellcheck source=lib/db_sqlite.sh
+    source "${SCRIPT_DIR}/lib/db_sqlite.sh"
+    ;;
   *)
     die "unsupported DB_ENGINE: $DB_ENGINE"
     ;;
@@ -51,11 +55,13 @@ require_cmd zip
 require_cmd unzip
 
 TIMESTAMP=$(backup_timestamp)
-SQL_FILE="${SCRIPT_DIR}/db_${TIMESTAMP}.sql"
-ZIP_FILE="${SCRIPT_DIR}/db_${TIMESTAMP}.sql.zip"
+# SQLite backs up the database file itself, the others a SQL dump
+if [ "$DB_ENGINE" = "sqlite" ]; then DUMP_EXT=db; else DUMP_EXT=sql; fi
+DUMP_FILE="${SCRIPT_DIR}/db_${TIMESTAMP}.${DUMP_EXT}"
+ZIP_FILE="${DUMP_FILE}.zip"
 
 cleanup_partial() {
-  rm -f "$SQL_FILE" "${SQL_FILE}.raw"
+  rm -f "$DUMP_FILE" "${DUMP_FILE}.raw" "${DUMP_FILE}-wal" "${DUMP_FILE}-shm"
   if [ -f "$ZIP_FILE" ] && [ "${UPLOAD_OK:-0}" != "1" ]; then
     rm -f "$ZIP_FILE"
   fi
@@ -63,17 +69,25 @@ cleanup_partial() {
 trap cleanup_partial EXIT
 
 log "Starting DB backup (engine=$DB_ENGINE)"
-log "Database host: $(database_url_host "$DATABASE_URL")"
-
 case "$DB_ENGINE" in
-  postgres) dump_postgres "$SQL_FILE" ;;
-  mysql) dump_mysql "$SQL_FILE" ;;
+  postgres)
+    log "Database host: $(database_url_host "$DATABASE_URL")"
+    dump_postgres "$DUMP_FILE"
+    ;;
+  mysql)
+    log "Database host: $(database_url_host "$DATABASE_URL")"
+    dump_mysql "$DUMP_FILE"
+    ;;
+  sqlite)
+    log "Database file: $(sqlite_database_path "$DATABASE_URL")"
+    dump_sqlite "$DUMP_FILE"
+    ;;
 esac
 
-if ! zip_file "$SQL_FILE" "$ZIP_FILE"; then
+if ! zip_file "$DUMP_FILE" "$ZIP_FILE"; then
   die "failed to create zip archive"
 fi
-rm -f "$SQL_FILE"
+rm -f "$DUMP_FILE"
 
 SIZE=$(du -h "$ZIP_FILE" | cut -f1)
 log "Created $ZIP_FILE ($SIZE)"

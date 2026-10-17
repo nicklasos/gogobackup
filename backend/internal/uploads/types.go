@@ -6,9 +6,9 @@ import (
 
 // UploadResponse represents upload information
 type UploadResponse struct {
-	ID               int32  `json:"id"`
-	UserID           int32  `json:"user_id"`
-	FolderID         int32  `json:"folder_id"`
+	ID               int64  `json:"id"`
+	UserID           int64  `json:"user_id"`
+	FolderID         int64  `json:"folder_id"`
 	Type             string `json:"type" enums:"image,video,audio,document,other"`
 	RelativePath     string `json:"relative_path"`
 	FullURL          string `json:"full_url"`

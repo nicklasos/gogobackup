@@ -19,7 +19,7 @@ var (
 ### 2. Return Errors from Services
 
 ```go
-func (s *Service) GetExample(ctx context.Context, id int32) (*db.Example, error) {
+func (s *Service) GetExample(ctx context.Context, id int64) (*db.Example, error) {
     example, err := s.queries.GetExampleByID(ctx, id)
     if err != nil {
         return nil, ErrExampleNotFound  // Return domain error
@@ -96,7 +96,7 @@ errs.RespondWithBadRequest(c, key, message)
 ## Wrapping Errors
 
 ```go
-// Prefer WrapDatabaseError for sqlc/pgx errors (ErrNoRows → 404, else 500)
+// Prefer WrapDatabaseError for sqlc errors (sql.ErrNoRows → 404, else 500)
 if err != nil {
     return nil, errs.WrapDatabaseError(err)
 }
@@ -107,7 +107,7 @@ if err != nil {
 }
 
 // Map unique constraint violations to stable domain errors
-if domainErr := errs.DomainErrorFromPostgresUniqueViolation(err); domainErr != nil {
+if domainErr := errs.DomainErrorFromUniqueViolation(err); domainErr != nil {
     return nil, ErrUserAlreadyExists
 }
 ```

@@ -96,12 +96,6 @@ server {
 
     location = /health {
 {{ proxy() }}    }
-{% if pulse_password | default('') %}
-
-    # Monitoring dashboard, behind its own password
-    location ^~ /_pulse {
-{{ proxy() }}    }
-{% endif %}
 {% if expose_swagger | bool %}
 
     location ^~ /swagger/ {

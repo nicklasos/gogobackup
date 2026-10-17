@@ -10,7 +10,6 @@
       tags: always
   roles:
     - common
-    - postgresql
     - redis
     - golang
     - nodejs

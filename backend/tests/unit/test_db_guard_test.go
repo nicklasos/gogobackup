@@ -8,30 +8,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAssertTestDatabaseURL(t *testing.T) {
+func TestAssertTestDatabasePath(t *testing.T) {
 	cases := []struct {
-		name        string
-		url         string
-		allowRemote bool
-		wantErr     bool
+		name    string
+		path    string
+		wantErr bool
 	}{
-		{"local test database", "postgres://postgres@localhost:5432/gogo_test?sslmode=disable", false, false},
-		{"loopback test database", "postgres://postgres@127.0.0.1:5432/gogo_test", false, false},
-		{"database without _test suffix", "postgres://postgres@localhost:5432/gogo?sslmode=disable", false, true},
-		{"remote host", "postgres://postgres@db.example.com:5432/gogo_test", false, true},
-		{"remote host allowed explicitly", "postgres://postgres@db.example.com:5432/gogo_test", true, false},
-		{"remote host allowed but wrong name", "postgres://postgres@db.example.com:5432/gogo", true, true},
+		{"relative test database", "./data/gogobackup_test.db", false},
+		{"absolute test database", "/var/lib/app/e2e_test.db", false},
+		{"real database", "./data/gogobackup.db", true},
+		{"suffix only in a directory name", "./data_test.db/gogobackup.db", true},
+		{"missing extension", "./data/gogobackup_test", true},
+		{"in-memory database", ":memory:", true},
+		{"empty path", "", true},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.allowRemote {
-				t.Setenv("ALLOW_REMOTE_TEST_DB", "1")
-			} else {
-				t.Setenv("ALLOW_REMOTE_TEST_DB", "")
-			}
-
-			err := config.AssertTestDatabaseURL(tc.url)
+			err := config.AssertTestDatabasePath(tc.path)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -39,4 +33,14 @@ func TestAssertTestDatabaseURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUseTestDatabase(t *testing.T) {
+	cfg := &config.Config{DatabasePath: "./data/gogobackup.db", TestDatabasePath: "./data/gogobackup_test.db"}
+	assert.NoError(t, cfg.UseTestDatabase())
+	assert.Equal(t, "./data/gogobackup_test.db", cfg.DatabasePath)
+
+	unsafe := &config.Config{DatabasePath: "./data/gogobackup.db", TestDatabasePath: "./data/gogobackup.db"}
+	assert.Error(t, unsafe.UseTestDatabase())
+	assert.Equal(t, "./data/gogobackup.db", unsafe.DatabasePath, "a refused path leaves the real one in place")
 }

@@ -1,13 +1,13 @@
 package unit
 
 import (
+	"database/sql"
 	"errors"
 	"testing"
 
 	"app/internal/db"
 	"app/tests/testkit"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -53,6 +53,6 @@ func TestTxRunner_WithTx(t *testing.T) {
 		assert.ErrorIs(t, err, boom)
 
 		_, err = app.Queries.GetUserByEmail(app.Ctx, "tx-rollback@example.com")
-		assert.ErrorIs(t, err, pgx.ErrNoRows)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
 	})
 }

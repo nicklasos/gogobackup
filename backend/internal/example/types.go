@@ -18,8 +18,8 @@ type UpdateExampleRequest struct {
 
 // ExampleResponse represents example information
 type ExampleResponse struct {
-	ID          int32  `json:"id"`
-	UserID      int32  `json:"user_id"`
+	ID          int64  `json:"id"`
+	UserID      int64  `json:"user_id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	CreatedAt   string `json:"created_at"`

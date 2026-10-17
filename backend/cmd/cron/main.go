@@ -15,7 +15,7 @@ import (
 
 func main() {
 	var (
-		useTestDB = flag.Bool("test-db", false, "Use TEST_DATABASE_URL instead of DATABASE_URL")
+		useTestDB = flag.Bool("test-db", false, "Use TEST_DATABASE_PATH instead of DATABASE_PATH")
 	)
 	flag.Parse()
 
@@ -28,7 +28,7 @@ func main() {
 		if err := cfg.UseTestDatabase(); err != nil {
 			log.Fatal(err)
 		}
-		log.Println("Using TEST_DATABASE_URL for database connection")
+		log.Println("Using TEST_DATABASE_PATH for the database")
 	}
 
 	appLogger, err := logger.New(logger.Config{

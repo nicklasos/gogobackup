@@ -1,7 +1,8 @@
 # Gogo API Tests
 
-Tests run against a real PostgreSQL database. Each test gets its own transaction, rolled back when
-the test ends — the same idea as Laravel's `RefreshDatabase`.
+Tests run against a real SQLite database. Each test gets its own freshly migrated database file in
+`t.TempDir()`, removed when the test ends: the same idea as Laravel's `RefreshDatabase`. The schema is
+migrated once per test binary and copied for each test, so this costs a file copy.
 
 ## Writing a test
 
@@ -61,7 +62,7 @@ func TestExampleService_GetExample(t *testing.T) {
 ### `app` (`tests/testkit/app.go`)
 
 - `app.Create` — the factories, below
-- `app.Ctx`, `app.Queries`, `app.Tx`, `app.TxRunner`, `app.Config`, `app.Logger`, `app.Cache` — what a service constructor asks for
+- `app.Ctx`, `app.Queries`, `app.DB` (`*sql.DB`, for raw SQL with `?` placeholders), `app.TxRunner`, `app.Config`, `app.Logger`, `app.Cache` — what a service constructor asks for
 - `app.Mail.Sent()` — every email the application sent during the test
 - `app.Token(user)`, `testkit.Actor(user)`, `testkit.JPEG`, `testkit.PDF`
 
@@ -115,7 +116,7 @@ type OrderOption func(*orderAttrs)
 
 func WithStatus(status string) OrderOption { return func(a *orderAttrs) { a.status = status } }
 
-func (f *Factory) Order(userID int32, opts ...OrderOption) *db.Order {
+func (f *Factory) Order(userID int64, opts ...OrderOption) *db.Order {
     f.t.Helper()
 
     attrs := orderAttrs{status: "new"}
@@ -124,8 +125,8 @@ func (f *Factory) Order(userID int32, opts ...OrderOption) *db.Order {
     }
 
     var order db.Order
-    err := f.conn.QueryRow(ctx,
-        `INSERT INTO orders (user_id, status) VALUES ($1, $2) RETURNING id, user_id, status, created_at`,
+    err := f.conn.QueryRowContext(ctx,
+        `INSERT INTO orders (user_id, status) VALUES (?, ?) RETURNING id, user_id, status, created_at`,
         userID, attrs.status,
     ).Scan(&order.ID, &order.UserID, &order.Status, &order.CreatedAt)
     if err != nil {
@@ -137,33 +138,18 @@ func (f *Factory) Order(userID int32, opts ...OrderOption) *db.Order {
 
 ## Things to know
 
-- One transaction per test: a failed statement (a unique violation, say) aborts it, so make that request the last one.
+- A failed statement (a unique violation, say) does not spoil the rest of the test: nothing is wrapped in a shared transaction.
+- Raw SQL in a test writes timestamps with `CURRENT_TIMESTAMP` or `datetime('now', '-1 minute')`.
 - The test server is the production engine and routes (`server.NewEngine`, `server.RegisterRoutes`) and starts on the first request.
 - `tests/unit` holds service, policy and pure-logic tests; `tests/integration` holds HTTP tests. Both use the database.
 - A helper used by one test file lives at the top of that file (see `newAuthService` in `tests/unit/auth_service_test.go`).
 
 ## Running Tests
 
-### Prerequisites
-1. Set up a test database (separate from development):
-   ```bash
-   createdb gogo_test
-   ```
-
-2. Set `TEST_DATABASE_URL` in `.env` (or export it). The database name must end in `_test` and the host must be local, otherwise the suite refuses to run (`ALLOW_REMOTE_TEST_DB=1` lifts the host check):
-   ```bash
-   export TEST_DATABASE_URL="postgres://postgres@localhost:5432/gogo_test?sslmode=disable"
-   ```
-
-3. Run tests (migrations are applied automatically via Make):
-   ```bash
-   make test
-   ```
-
-### Running Tests
+Nothing to set up: no database server, no environment variables.
 
 ```bash
-# Run all tests (auto-migrates test DB when TEST_DATABASE_URL is set)
+# Run all tests
 make test
 
 # Run only unit tests

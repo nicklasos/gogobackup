@@ -6,10 +6,10 @@ A module is one resource: a table, its queries, and the endpoints over it. The s
 ## 1. Schema and queries
 
 1. Create `migrations/NNN_create_orders_table.sql` with the next number. Follow [add-migration.md](add-migration.md).
-   Include `id SERIAL PRIMARY KEY`, `created_at` and `updated_at` (`TIMESTAMP DEFAULT CURRENT_TIMESTAMP`),
+   Include `id INTEGER PRIMARY KEY`, `created_at` and `updated_at` (`TIMESTAMP DEFAULT CURRENT_TIMESTAMP`),
    and `user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE` when rows belong to a user.
 2. Create `internal/db/queries/orders.sql`. Typical set: `GetOrderByID :one`, `CreateOrder :one`,
-   `UpdateOrder :one`, `DeleteOrder :exec`, `ListOrdersForUserPaginated :many` (`LIMIT $2 OFFSET $3`),
+   `UpdateOrder :one`, `DeleteOrder :exec`, `ListOrdersForUserPaginated :many` (`LIMIT ?2 OFFSET ?3`),
    `CountOrdersForUser :one`. Look a record up by ID alone; who may touch it is the policy's job.
 3. `make migrate-up && make sqlc`.
 
@@ -26,7 +26,7 @@ A module is one resource: a table, its queries, and the endpoints over it. The s
 Details that are easy to get wrong:
 
 - **Errors**: declare them once at the top of the service (`ErrOrderNotFound = errs.NewNotFoundError(errs.ErrKeyOrderNotFound, "...")`)
-  and add the keys to `internal/errs/keys.go` as `orders.<what>`. Map `pgx.ErrNoRows` to the not-found error;
+  and add the keys to `internal/errs/keys.go` as `orders.<what>`. Map `sql.ErrNoRows` to the not-found error;
   wrap everything else with `errs.WrapDatabaseError`.
 - **Policy denial** is 403 with `errs.ErrKeyForbidden`; a missing record is 404. Load first, then check.
 - **Handlers** start with `middleware.CurrentActor(c)`, `middleware.PathID(c, "id")`, `middleware.Page(c)`.
@@ -46,7 +46,7 @@ Add `orders.RegisterRoutes(app)` to `internal/server/server.go`. The API and the
 
 ## 4. Factory and seed data
 
-1. `internal/factory/order.go`: `func (f *Factory) Order(userID int32, opts ...OrderOption) *db.Order` with defaults for every column (`tests/README.md` has the template).
+1. `internal/factory/order.go`: `func (f *Factory) Order(userID int64, opts ...OrderOption) *db.Order` with defaults for every column (`tests/README.md` has the template).
 2. Add a few records to `cmd/cli/internal/commands/seed.go`.
 
 ## 5. Tests
@@ -54,7 +54,6 @@ Add `orders.RegisterRoutes(app)` to `internal/server/server.go`. The API and the
 - `tests/unit/orders_policy_test.go` (or add to `policy_test.go`): a table of actor × expected result.
 - `tests/integration/orders_api_test.go`: for each route the success case, 401 without a token, validation failure,
   404, and one 403 from the policy. Start from `testkit.New(t)`, build data with `app.Create.*`, send requests with `app.As(user)`.
-- A request that makes a statement fail (a unique violation) must be the last one in its test: it aborts the test's transaction.
 
 ## 6. Finish
 

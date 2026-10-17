@@ -62,9 +62,9 @@ func TestAuthAPI_EmailsAreCaseInsensitive(t *testing.T) {
 		app := testkit.New(t)
 		app.Create.User(factory.WithEmail("twin@example.com"))
 
-		_, err := app.Tx.Exec(app.Ctx, "INSERT INTO users (email, name, password) VALUES ('TWIN@example.com', 'Twin', 'x')")
+		_, err := app.DB.ExecContext(app.Ctx, "INSERT INTO users (email, name, password) VALUES ('TWIN@example.com', 'Twin', 'x')")
 		require.Error(t, err)
-		assert.NotNil(t, errs.DomainErrorFromPostgresUniqueViolation(err), "mapped to the user-exists error")
+		assert.NotNil(t, errs.DomainErrorFromUniqueViolation(err), "mapped to the user-exists error")
 	})
 
 	t.Run("admins create and edit users with normalised emails", func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestAuthAPI_EmailsAreCaseInsensitive(t *testing.T) {
 
 		var created struct {
 			Data struct {
-				ID    int32  `json:"id"`
+				ID    int64  `json:"id"`
 				Email string `json:"email"`
 			} `json:"data"`
 		}
@@ -99,7 +99,7 @@ func TestAuthAPI_RefreshTokensAreStoredHashed(t *testing.T) {
 	require.NotEmpty(t, raw)
 
 	var stored string
-	require.NoError(t, app.Tx.QueryRow(app.Ctx, "SELECT token FROM refresh_tokens WHERE user_id = $1", user.ID).Scan(&stored))
+	require.NoError(t, app.DB.QueryRowContext(app.Ctx, "SELECT token FROM refresh_tokens WHERE user_id = ?", user.ID).Scan(&stored))
 	sum := sha256.Sum256([]byte(raw))
 	assert.Equal(t, hex.EncodeToString(sum[:]), stored)
 	assert.NotEqual(t, raw, stored)

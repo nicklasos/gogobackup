@@ -6,13 +6,13 @@
 
 <p align="center">
   A lightweight Go API starter kit: the parts every project needs, wired together and tested.<br>
-  Gin, PostgreSQL, sqlc, Goose, Redis, JWT auth with roles.
+  Gin, SQLite, sqlc, Goose, Redis, JWT auth with roles.
 </p>
 
 <p align="center">
   <img alt="Go" src="https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go&logoColor=white">
   <img alt="Gin" src="https://img.shields.io/badge/Gin-1.10-008ECF?logo=gin&logoColor=white">
-  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-13+-4169E1?logo=postgresql&logoColor=white">
+  <img alt="SQLite" src="https://img.shields.io/badge/SQLite-pure%20Go-003B57?logo=sqlite&logoColor=white">
   <img alt="Redis" src="https://img.shields.io/badge/Redis-6+-FF4438?logo=redis&logoColor=white">
   <img alt="sqlc" src="https://img.shields.io/badge/sqlc-type--safe%20SQL-2F7D95">
   <img alt="Swagger" src="https://img.shields.io/badge/docs-Swagger-85EA2D?logo=swagger&logoColor=black">
@@ -29,7 +29,7 @@
 
 ---
 
-Gogo is a skeleton, not a framework: copy it, rename it, and start writing modules. There is no ORM and no repository layer — services call type-safe sqlc queries directly, and tests run against a real PostgreSQL inside a transaction that is rolled back.
+Gogo is a skeleton, not a framework: copy it, rename it, and start writing modules. There is no ORM and no repository layer — services call type-safe sqlc queries directly, and every test runs against its own freshly migrated SQLite file.
 
 It pairs with **[gogo-front](https://github.com/nicklasos/gogo-front)**, a React + Ant Design admin UI built for this API.
 
@@ -37,35 +37,26 @@ It pairs with **[gogo-front](https://github.com/nicklasos/gogo-front)**, a React
 |---|---|
 | ![Swagger UI](docs/screenshots/swagger.png) | ![Admin UI](docs/screenshots/admin-ui.png) |
 
-A monitoring dashboard is built in, served by the API itself through **[gopulse](https://github.com/nicklasos/gopulse)**:
-
-| Requests and response times | SQL queries, by sqlc name |
-|---|---|
-| ![Monitoring overview](docs/screenshots/pulse-overview.png) | ![Query statistics](docs/screenshots/pulse-queries.png) |
-
-| Routes | Logs |
-|---|---|
-| ![Routes](docs/screenshots/pulse-routes.png) | ![Logs](docs/screenshots/pulse-logs.png) |
-
 ## Quick Start
 
 ### Prerequisites
-- Go 1.25+, PostgreSQL 13+, Redis 6+, Make
+- Go 1.25+, Redis 6+, Make. The database is a SQLite file; no server and no cgo.
 
 ### Setup
 ```bash
 git clone git@github.com:nicklasos/gogo.git my-api && cd my-api
 
-# Tools: sqlc, goose, air
+# Tools: sqlc, air
 go mod tidy
-make sqlc-install migrate-install air-install
+make sqlc-install air-install
 
 # Configuration (JWT_SECRET is required)
 cp .env.example .env
 
-# Postgres, Redis and a mail catcher in Docker (creates the gogo and gogo_test databases).
-# Skip this if you run Postgres and Redis yourself: createdb gogo && createdb gogo_test
+# Redis and a mail catcher in Docker. Skip this if you run Redis yourself.
 make up
+
+# Creates the database file at DATABASE_PATH (./data/gogobackup.db)
 make migrate-up
 
 # Accounts and sample data (admin@example.com / password123, and more)
@@ -83,7 +74,7 @@ curl -s localhost:8181/api/v1/auth/login \
   -d '{"email":"admin@example.com","password":"password123"}'
 ```
 
-Run the tests with `make test`; it migrates the test database first.
+Run the tests with `make test`. They need no database setup: each test gets its own temporary SQLite file.
 
 ## Features
 
@@ -106,14 +97,13 @@ Run the tests with `make test`; it migrates the test database first.
 - **Swagger**: Auto-generated API documentation
 - **Uploads**: content-checked file upload behind a `Storage` interface, paginated list, and file serving without directory listings
 - **Docker and CI**: `docker-compose.yml` for local services, a production `Dockerfile`, and a GitHub Actions workflow
-- **Monitoring dashboard**: requests per route, errors and panics, SQL statistics by sqlc query name, recent logs and server load at `/_pulse`
-- **Healthcheck**: `/health` checks PostgreSQL and Redis and answers 503 when either is down
+- **Healthcheck**: `/health` checks the database and Redis and answers 503 when either is down
 - **Scheduler**: Optional cron jobs (refresh-token cleanup)
 
 ## Tech Stack
 
 - **Go 1.25+** + **Gin** - API framework
-- **PostgreSQL** + **pgx/v5** - Database with connection pooling
+- **SQLite** + **modernc.org/sqlite** - Database in one file, pure Go driver
 - **SQLC** - Type-safe SQL code generation
 - **Redis** + **go-redis/v9** - Caching
 - **Goose** - Database migrations
@@ -138,10 +128,9 @@ gogo/
 │   ├── middleware/              # JWT, roles, CORS, request ID, pagination, recovery
 │   ├── cache/                   # Redis + MemoryCache
 │   ├── mail/                    # SMTP mail service + MemorySender
-│   ├── monitoring/              # gopulse dashboard wiring
 │   ├── errs/                    # Domain errors
 │   └── scheduler/               # Cron jobs
-├── migrations/                  # Goose database migrations
+├── migrations/                  # Goose migrations, embedded in the binaries
 └── sqlc.yaml
 ```
 
@@ -153,8 +142,8 @@ make help             # List all targets
 # Development
 make dev              # Hot reload server
 make run              # Start API
-make run-test-db      # Start API against TEST_DATABASE_URL
-make test             # Run all tests (auto-migrates test DB)
+make run-test-db      # Start API against TEST_DATABASE_PATH
+make test             # Run all tests
 
 # Database & SQLC
 make migrate-up       # Apply migrations
@@ -210,8 +199,8 @@ Admins can only manage accounts whose role is `user`; anything else returns 403 
 ## Environment Variables
 
 ```bash
-DATABASE_URL=postgres://postgres@localhost:5432/gogo?sslmode=disable
-TEST_DATABASE_URL=postgres://postgres@localhost:5432/gogo_test?sslmode=disable
+DATABASE_PATH=./data/gogobackup.db            # SQLite file; the directory is created on start
+TEST_DATABASE_PATH=./data/gogobackup_test.db  # for --test-db and cli --test; must end in _test.db
 REDIS_URL=redis://localhost:6379/0
 JWT_SECRET=your-secret-key-here   # production needs 32+ random characters: openssl rand -hex 32
 JWT_ACCESS_TOKEN_TTL=1h
@@ -224,7 +213,6 @@ PORT=8181
 APP_ENV=development
 APP_NAME=Gogobackup                 # also the Redis cache key prefix
 CORS_ALLOWED_ORIGINS=          # comma-separated; empty or * allows any origin
-PULSE_PASSWORD=                # set it to turn on the monitoring dashboard at /_pulse (user: PULSE_USERNAME, default admin)
 MAIL_HOST=                     # plus MAIL_PORT, MAIL_SCHEME, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS, MAIL_FROM_NAME
 LOG_LEVEL=info
 ENABLE_SCHEDULER=false
@@ -263,16 +251,6 @@ page, ok := middleware.Page(c)              // 400 when ?page / ?page_size are i
 - **Rate limiting**: login allows 60 requests a minute per IP and 40 failures an hour per email and IP, then locks that pair out for 5 minutes, 15 minutes, 1 hour, 6 hours, 24 hours. Emailed-link endpoints allow 10 requests per 10 minutes per IP. A 429 carries `Retry-After` and `details.retry_after_seconds`. Behind a proxy, set `TRUSTED_PROXIES` or every client shares the proxy's IP.
 - **Local development**: with `APP_DEBUG=true` emails are written to the log, link included. Or run `make up` and point `MAIL_HOST` at Mailpit (http://localhost:8025).
 
-## Monitoring
-
-Set `PULSE_PASSWORD` and open `http://localhost:8181/_pulse` (basic auth, user `admin` unless `PULSE_USERNAME` says otherwise). Without a password the dashboard does not exist and nothing is recorded.
-
-- **What it shows**: requests per route with average, P95 and P99; slow requests; errors and panics grouped with their stacks; SQL statements grouped by sqlc query name, with slow and failed ones listed; recent log records; CPU, memory, disk and goroutines per instance.
-- **How it is wired**: one middleware, a tracer on the pgx pool and a wrapper around the log handler, all in `cmd/api/main.go` through `internal/monitoring`. Pass the request context to queries and use the `*Context` log methods so both are linked to their request.
-- **Storage**: Redis, under `gopulse:<APP_NAME>:`, so history survives deploys and several instances share one dashboard. Everything expires on its own (a week at most).
-- **Your own numbers**: `monitoring.Record(app.Pulse, "orders", "created", total)` records a custom metric, and `app.Pulse.AddPage(...)` adds a tab for it. See the [gopulse README](https://github.com/nicklasos/gopulse#custom-pages).
-- **In production**, keep `/_pulse` behind the password and, ideally, off the public internet.
-
 ## Mail
 
 Modules send mail through `app.Mail` (a `mail.Sender`), passed into the service from `routes.go`:
@@ -308,7 +286,7 @@ config := &uploads.UploadConfig{
     BaseURL:      "http://localhost:8181/api/files",
     MaxFileSize:  50 * 1024 * 1024, // 50MB
     AllowedTypes: []string{".jpg", ".png", ".pdf"},
-    GetFolderID: func(ctx context.Context, userID int32) (int32, error) {
+    GetFolderID: func(ctx context.Context, userID int64) (int64, error) {
         return userID, nil
     },
 }
@@ -328,17 +306,19 @@ Follow [docs/recipes/add-module.md](docs/recipes/add-module.md). In short:
 ## Docker
 
 ```bash
-make up            # Postgres (gogo + gogo_test), Redis, Mailpit
+make up            # Redis, Mailpit
 make down
-make docker-build  # production image: api, cron and cli binaries plus goose
+make docker-build  # production image: api, cron and cli binaries
 docker compose --profile app up --build   # everything, API included
 ```
 
-The image runs migrations before the API starts (`RUN_MIGRATIONS=false` turns that off). Run the scheduler from the same image with the command `/app/cron`.
+The image keeps the database at `/data/db/gogobackup.db` (mount a volume there) and runs `cli migrate up` before the API starts (`RUN_MIGRATIONS=false` turns that off). Run the scheduler from the same image with the command `/app/cron`.
 
 ## Test database
 
-`TEST_DATABASE_URL` must point at a local database whose name ends in `_test`. Tests, `--test-db` (api, cron) and `--test` (cli) refuse anything else. Set `ALLOW_REMOTE_TEST_DB=1` to allow a remote host, for example in CI.
+`go test` needs no database: every test copies a migrated SQLite file into its own temporary directory.
+
+`TEST_DATABASE_PATH` is the database of `--test-db` (api, cron) and `--test` (cli), which the frontend E2E suite runs against (`make test-db-setup` migrates it). Its file name must end in `_test.db`; anything else is refused.
 
 ## Error Handling
 
@@ -347,7 +327,7 @@ The project uses structured error handling with the `errs` package. See `docs/ER
 **Quick reference:**
 - Services return domain errors: `errs.NewNotFoundError(key, message)`
 - Handlers use: `errs.RespondWithError(c, err)` or `errs.RespondWithValidationError(c, err)`
-- DB helpers: `errs.WrapDatabaseError`, `errs.DomainErrorFromPostgresUniqueViolation`
+- DB helpers: `errs.WrapDatabaseError`, `errs.DomainErrorFromUniqueViolation`
 - See `internal/example/` for complete examples
 
 ## Links

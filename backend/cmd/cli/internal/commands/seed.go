@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"os"
@@ -9,8 +10,6 @@ import (
 	"app/cmd/cli/internal"
 	"app/internal/factory"
 	"app/internal/middleware"
-
-	"github.com/jackc/pgx/v5"
 )
 
 const seedAdminEmail = "admin@example.com"
@@ -36,7 +35,7 @@ func RunSeed(app *internal.CLIApp, args []string) {
 	if _, err := app.Queries.GetUserByEmail(ctx, seedAdminEmail); err == nil {
 		fmt.Printf("Already seeded: %s exists. Nothing was changed.\n", seedAdminEmail)
 		return
-	} else if !errors.Is(err, pgx.ErrNoRows) {
+	} else if !errors.Is(err, sql.ErrNoRows) {
 		fmt.Fprintf(os.Stderr, "Seeding failed: %v\n", err)
 		os.Exit(1)
 	}

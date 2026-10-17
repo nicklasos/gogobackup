@@ -15,7 +15,7 @@ var (
 
 // Claims represents JWT claims for user authentication
 type Claims struct {
-	UserID int32  `json:"user_id"`
+	UserID int64  `json:"user_id"`
 	Email  string `json:"email"`
 	jwt.RegisteredClaims
 }
@@ -47,7 +47,7 @@ func ExtractBearerToken(authHeader string) (string, bool) {
 // Returns (nil, nil) if no token is provided
 // Returns (nil, error) if token is invalid or verification fails
 // Returns (userID, nil) if token is valid
-func ExtractUserIDFromJWT(c *gin.Context, verifier UserJWTVerifier) (*int32, error) {
+func ExtractUserIDFromJWT(c *gin.Context, verifier UserJWTVerifier) (*int64, error) {
 	tokenString, _ := ExtractBearerToken(c.GetHeader("Authorization"))
 
 	if tokenString == "" {
@@ -103,18 +103,18 @@ func UserAuthMiddleware(auth UserAuth) gin.HandlerFunc {
 // GetUserIDFromContext retrieves the user ID from the Gin context
 // This should be used instead of duplicated user ID extraction code
 // Returns a structured error if user is not authenticated or ID format is invalid
-func GetUserIDFromContext(c *gin.Context) (int32, error) {
+func GetUserIDFromContext(c *gin.Context) (int64, error) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		return 0, ErrUserNotAuthenticated
 	}
 
-	userIDInt32, ok := userID.(int32)
+	id, ok := userID.(int64)
 	if !ok {
 		return 0, ErrInvalidUserIDFormat
 	}
 
-	return userIDInt32, nil
+	return id, nil
 }
 
 // GetUserRolesFromContext returns roles loaded by UserAuthMiddleware.

@@ -6,15 +6,14 @@ import (
 	"log"
 
 	"app/cmd/cli/internal"
+	"app/migrations"
 
-	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 )
 
-const (
-	dialect       = "postgres"
-	migrationsDir = "migrations"
-)
+// migrationsDir is where "create" writes new files. Every other command runs the
+// migrations embedded in the binary.
+const migrationsDir = "migrations"
 
 // RunMigrate runs database migrations
 func RunMigrate(app *internal.CLIApp, args []string) {
@@ -51,33 +50,31 @@ func RunMigrate(app *internal.CLIApp, args []string) {
 
 	command := fs.Arg(0)
 
-	sqlDB := stdlib.OpenDB(*app.Database.Config().ConnConfig)
-	defer sqlDB.Close()
-
-	if err := goose.SetDialect(dialect); err != nil {
+	goose.SetBaseFS(migrations.FS)
+	if err := goose.SetDialect(migrations.Dialect); err != nil {
 		log.Fatalf("Failed to set dialect: %v", err)
 	}
 
 	switch command {
 	case "up":
-		if err := goose.Up(sqlDB, migrationsDir); err != nil {
+		if err := goose.Up(app.Database, "."); err != nil {
 			log.Fatalf("Migration up failed: %v", err)
 		}
 		fmt.Println("Migrations applied successfully")
 
 	case "down":
-		if err := goose.Down(sqlDB, migrationsDir); err != nil {
+		if err := goose.Down(app.Database, "."); err != nil {
 			log.Fatalf("Migration down failed: %v", err)
 		}
 		fmt.Println("Migration rolled back successfully")
 
 	case "status":
-		if err := goose.Status(sqlDB, migrationsDir); err != nil {
+		if err := goose.Status(app.Database, "."); err != nil {
 			log.Fatalf("Failed to get migration status: %v", err)
 		}
 
 	case "version":
-		version, err := goose.GetDBVersion(sqlDB)
+		version, err := goose.GetDBVersion(app.Database)
 		if err != nil {
 			log.Fatalf("Failed to get database version: %v", err)
 		}
@@ -90,13 +87,14 @@ func RunMigrate(app *internal.CLIApp, args []string) {
 			return
 		}
 		name := fs.Arg(1)
-		if err := goose.Create(sqlDB, migrationsDir, name, "sql"); err != nil {
+		goose.SetBaseFS(nil)
+		if err := goose.Create(app.Database, migrationsDir, name, "sql"); err != nil {
 			log.Fatalf("Failed to create migration: %v", err)
 		}
 		fmt.Printf("Created migration: %s\n", name)
 
 	case "reset":
-		if err := goose.Reset(sqlDB, migrationsDir); err != nil {
+		if err := goose.Reset(app.Database, "."); err != nil {
 			log.Fatalf("Migration reset failed: %v", err)
 		}
 		fmt.Println("All migrations rolled back successfully")

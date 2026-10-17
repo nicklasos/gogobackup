@@ -43,7 +43,10 @@ tmp/
 # Local file storage (UPLOAD_FOLDER)
 /uploads/
 
-# Database files (if using SQLite)
+# SQLite database files (DATABASE_PATH, TEST_DATABASE_PATH)
+/data/
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3

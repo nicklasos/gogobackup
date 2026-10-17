@@ -1,11 +1,8 @@
 package testkit
 
 import (
-	"fmt"
 	"sort"
 	"strings"
-
-	"github.com/jackc/pgx/v5"
 )
 
 // Row is the columns a row must have, for the database assertions:
@@ -53,23 +50,27 @@ func (a *App) count(table string, row Row) int {
 	var conditions []string
 	var args []any
 	for _, column := range columns {
-		name := pgx.Identifier{column}.Sanitize()
+		name := quoteIdentifier(column)
 		if row[column] == nil {
 			conditions = append(conditions, name+" IS NULL")
 			continue
 		}
 		args = append(args, row[column])
-		conditions = append(conditions, fmt.Sprintf("%s = $%d", name, len(args)))
+		conditions = append(conditions, name+" = ?")
 	}
 
-	query := "SELECT count(*) FROM " + pgx.Identifier{table}.Sanitize()
+	query := "SELECT count(*) FROM " + quoteIdentifier(table)
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
 	var count int
-	if err := a.Tx.QueryRow(a.Ctx, query, args...).Scan(&count); err != nil {
+	if err := a.DB.QueryRowContext(a.Ctx, query, args...).Scan(&count); err != nil {
 		a.t.Fatalf("testkit: count rows in %s: %v", table, err)
 	}
 	return count
+}
+
+func quoteIdentifier(name string) string {
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }
