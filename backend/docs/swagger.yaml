@@ -264,6 +264,39 @@ definitions:
     required:
     - paths
     type: object
+  internal_plans.LastRunResponse:
+    properties:
+      finished_at:
+        type: string
+        x-nullable: true
+      id:
+        type: integer
+      size_bytes:
+        type: integer
+        x-nullable: true
+      started_at:
+        type: string
+        x-nullable: true
+      status:
+        enum:
+        - queued
+        - running
+        - succeeded
+        - failed
+        type: string
+      trigger:
+        enum:
+        - schedule
+        - manual
+        type: string
+    required:
+    - finished_at
+    - id
+    - size_bytes
+    - started_at
+    - status
+    - trigger
+    type: object
   internal_plans.MySQLConfig:
     properties:
       database:
@@ -389,6 +422,13 @@ definitions:
         type: integer
       keep_weekly:
         type: integer
+      last_run:
+        allOf:
+        - $ref: '#/definitions/internal_plans.LastRunResponse'
+        x-nullable: true
+      last_success_at:
+        type: string
+        x-nullable: true
       max_age_days:
         type: integer
       mysql:
@@ -428,6 +468,8 @@ definitions:
     - id
     - keep_monthly
     - keep_weekly
+    - last_run
+    - last_success_at
     - max_age_days
     - name
     - next_run_at
@@ -649,6 +691,213 @@ definitions:
     - Friday
     - Saturday
     - Sunday
+  internal_runs.ArchiveResponse:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+        x-nullable: true
+      id:
+        type: integer
+      object_key:
+        type: string
+      plan_id:
+        type: integer
+      run_id:
+        type: integer
+      sha256:
+        type: string
+      size_bytes:
+        type: integer
+      storage_id:
+        type: integer
+      storage_kind:
+        allOf:
+        - $ref: '#/definitions/app_internal_storages.Kind'
+        enum:
+        - local
+        - s3
+        - gcs
+      storage_name:
+        type: string
+    required:
+    - created_at
+    - deleted_at
+    - id
+    - object_key
+    - plan_id
+    - run_id
+    - sha256
+    - size_bytes
+    - storage_id
+    - storage_kind
+    - storage_name
+    type: object
+  internal_runs.PaginatedArchivesResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_runs.ArchiveResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/internal.PaginationMeta'
+    required:
+    - data
+    - pagination
+    type: object
+  internal_runs.PaginatedRunsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_runs.RunResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/internal.PaginationMeta'
+    required:
+    - data
+    - pagination
+    type: object
+  internal_runs.RunDataResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_runs.RunResponse'
+    required:
+    - data
+    type: object
+  internal_runs.RunDetailDataResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_runs.RunDetailResponse'
+    required:
+    - data
+    type: object
+  internal_runs.RunDetailResponse:
+    properties:
+      archives:
+        items:
+          $ref: '#/definitions/internal_runs.ArchiveResponse'
+        type: array
+      created_at:
+        type: string
+      error:
+        type: string
+        x-nullable: true
+      finished_at:
+        type: string
+        x-nullable: true
+      id:
+        type: integer
+      log:
+        type: string
+      plan_id:
+        type: integer
+      scheduled_for:
+        type: string
+        x-nullable: true
+      size_bytes:
+        type: integer
+        x-nullable: true
+      started_at:
+        type: string
+        x-nullable: true
+      status:
+        allOf:
+        - $ref: '#/definitions/internal_runs.Status'
+        enum:
+        - queued
+        - running
+        - succeeded
+        - failed
+      trigger:
+        allOf:
+        - $ref: '#/definitions/internal_runs.Trigger'
+        enum:
+        - schedule
+        - manual
+    required:
+    - archives
+    - created_at
+    - error
+    - finished_at
+    - id
+    - log
+    - plan_id
+    - scheduled_for
+    - size_bytes
+    - started_at
+    - status
+    - trigger
+    type: object
+  internal_runs.RunResponse:
+    properties:
+      created_at:
+        type: string
+      error:
+        type: string
+        x-nullable: true
+      finished_at:
+        type: string
+        x-nullable: true
+      id:
+        type: integer
+      plan_id:
+        type: integer
+      scheduled_for:
+        type: string
+        x-nullable: true
+      size_bytes:
+        type: integer
+        x-nullable: true
+      started_at:
+        type: string
+        x-nullable: true
+      status:
+        allOf:
+        - $ref: '#/definitions/internal_runs.Status'
+        enum:
+        - queued
+        - running
+        - succeeded
+        - failed
+      trigger:
+        allOf:
+        - $ref: '#/definitions/internal_runs.Trigger'
+        enum:
+        - schedule
+        - manual
+    required:
+    - created_at
+    - error
+    - finished_at
+    - id
+    - plan_id
+    - scheduled_for
+    - size_bytes
+    - started_at
+    - status
+    - trigger
+    type: object
+  internal_runs.Status:
+    enum:
+    - queued
+    - running
+    - succeeded
+    - failed
+    type: string
+    x-enum-varnames:
+    - StatusQueued
+    - StatusRunning
+    - StatusSucceeded
+    - StatusFailed
+  internal_runs.Trigger:
+    enum:
+    - schedule
+    - manual
+    type: string
+    x-enum-varnames:
+    - TriggerSchedule
+    - TriggerManual
   internal_storages.GCSConfig:
     properties:
       bucket:
@@ -1509,6 +1758,166 @@ paths:
       summary: Update backup plan
       tags:
       - plans
+  /api/v1/plans/{id}/archives:
+    get:
+      consumes:
+      - application/json
+      description: Archives still kept, newest first, one entry per storage. storage_id
+        narrows the list to one storage. Admins only.
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Only the archives on this storage
+        in: query
+        name: storage_id
+        type: integer
+      - default: 1
+        description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 'Page size (default: 20, min: 1, max: 100)'
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_runs.PaginatedArchivesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List the archives of a plan (paginated)
+      tags:
+      - runs
+  /api/v1/plans/{id}/run:
+    post:
+      consumes:
+      - application/json
+      description: Queues a manual run, which the runner starts within seconds. A
+        plan with a run queued or running already is a 409 plans.run_in_progress.
+        Disabled plans can be run by hand. Admins only.
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/internal_runs.RunDataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Run a backup plan now
+      tags:
+      - runs
+  /api/v1/plans/{id}/runs:
+    get:
+      consumes:
+      - application/json
+      description: Newest first, without logs. Admins only.
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 'Page size (default: 20, min: 1, max: 100)'
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_runs.PaginatedRunsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List the runs of a plan (paginated)
+      tags:
+      - runs
   /api/v1/plans/{id}/test:
     post:
       consumes:
@@ -1605,6 +2014,51 @@ paths:
       summary: Test an unsaved source
       tags:
       - plans
+  /api/v1/runs/{id}:
+    get:
+      consumes:
+      - application/json
+      description: The log is written while the run goes on, every few seconds, so
+        polling this shows it live. archives lists what the run stored, per storage.
+        Admins only.
+      parameters:
+      - description: Run ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_runs.RunDetailDataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a run with its log
+      tags:
+      - runs
   /api/v1/storages:
     get:
       consumes:

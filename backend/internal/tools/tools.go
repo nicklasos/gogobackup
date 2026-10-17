@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -49,14 +50,16 @@ func (System) Find(ctx context.Context, name string) (Tool, error) {
 	return Tool{Name: name, Path: path, Version: firstLine(out)}, nil
 }
 
-// Fake answers Find from a map of program name to `--version` output; a name it does not
-// have is not installed.
+// Fake answers Find from the programs it was given; a name it does not have is not installed.
+// A program given only a version has a path that does not exist: enough for a source test, not
+// for a dump. Install gives it a real program to run.
 type Fake struct {
-	versions map[string]string
+	mu    sync.Mutex
+	tools map[string]Tool
 }
 
 func NewFake(versions map[string]string) *Fake {
-	fake := &Fake{versions: map[string]string{}}
+	fake := &Fake{tools: map[string]Tool{}}
 	for name, version := range versions {
 		fake.Set(name, version)
 	}
@@ -64,17 +67,30 @@ func NewFake(versions map[string]string) *Fake {
 }
 
 // Set installs a program with the given `--version` output.
-func (f *Fake) Set(name, version string) { f.versions[name] = version }
+func (f *Fake) Set(name, version string) { f.Install(name, "/usr/bin/"+name, version) }
+
+// Install installs the program at path, a real one or a script standing in for it.
+func (f *Fake) Install(name, path, version string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.tools[name] = Tool{Name: name, Path: path, Version: version}
+}
 
 // Remove uninstalls a program.
-func (f *Fake) Remove(name string) { delete(f.versions, name) }
+func (f *Fake) Remove(name string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.tools, name)
+}
 
 func (f *Fake) Find(_ context.Context, name string) (Tool, error) {
-	version, ok := f.versions[name]
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	tool, ok := f.tools[name]
 	if !ok {
 		return Tool{Name: name}, ErrNotFound
 	}
-	return Tool{Name: name, Path: "/usr/bin/" + name, Version: version}, nil
+	return tool, nil
 }
 
 func firstLine(out []byte) string {

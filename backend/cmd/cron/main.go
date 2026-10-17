@@ -10,7 +10,11 @@ import (
 	"app/config"
 	"app/internal/db"
 	"app/internal/logger"
+	"app/internal/mail"
+	"app/internal/runs"
 	"app/internal/scheduler"
+	"app/internal/secretbox"
+	"app/internal/tools"
 )
 
 func main() {
@@ -29,6 +33,15 @@ func main() {
 			log.Fatal(err)
 		}
 		log.Println("Using TEST_DATABASE_PATH for the database")
+	}
+
+	// The worker opens storage credentials and source passwords, sealed with ENCRYPTION_KEY.
+	if err := cfg.ValidateEncryptionKey(); err != nil {
+		log.Fatal(err)
+	}
+	secrets, err := secretbox.New(cfg.EncryptionKey)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	appLogger, err := logger.New(logger.Config{
@@ -53,12 +66,23 @@ func main() {
 	appLogger.Info("Database connection established")
 
 	queries := db.New(database)
+	tx := db.NewTxRunner(database)
 
 	deps := &scheduler.Dependencies{
 		Config:  cfg,
 		DB:      database,
 		Queries: queries,
+		Tx:      tx,
 		Logger:  appLogger,
+		Worker: runs.NewWorker(runs.Deps{
+			Config:  cfg,
+			Queries: queries,
+			Tx:      tx,
+			Secrets: secrets,
+			Tools:   tools.System{},
+			Mail:    mail.NewService(cfg, appLogger),
+			Logger:  appLogger,
+		}),
 	}
 
 	cronScheduler := scheduler.NewScheduler(deps)
@@ -68,7 +92,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	cronScheduler.Start()
+	if err := cronScheduler.Start(); err != nil {
+		appLogger.Error("Failed to start the scheduler", "error", err)
+		os.Exit(1)
+	}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

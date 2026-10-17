@@ -46,6 +46,12 @@ const (
 	ErrKeyPlansStorageNotFound   = "plans.storage_not_found"
 	ErrKeyPlansDuplicateSchedule = "plans.duplicate_schedule"
 	ErrKeyPlansKeepNeedsMaxAge   = "plans.keep_needs_max_age"
+	ErrKeyPlansRunInProgress     = "plans.run_in_progress"
+)
+
+// Runs error keys
+const (
+	ErrKeyRunsNotFound = "runs.not_found"
 )
 
 // Validation error keys

@@ -948,6 +948,247 @@
                 }
             }
         },
+        "/api/v1/plans/{id}/archives": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Archives still kept, newest first, one entry per storage. storage_id narrows the list to one storage. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "List the archives of a plan (paginated)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Only the archives on this storage",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Page size (default: 20, min: 1, max: 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_runs.PaginatedArchivesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/plans/{id}/run": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Queues a manual run, which the runner starts within seconds. A plan with a run queued or running already is a 409 plans.run_in_progress. Disabled plans can be run by hand. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Run a backup plan now",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/internal_runs.RunDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/plans/{id}/runs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Newest first, without logs. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "List the runs of a plan (paginated)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Page size (default: 20, min: 1, max: 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_runs.PaginatedRunsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/plans/{id}/test": {
             "post": {
                 "security": [
@@ -980,6 +1221,73 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_plans.SourceTestDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/runs/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The log is written while the run goes on, every few seconds, so polling this shows it live. archives lists what the run stored, per storage. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Get a run with its log",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Run ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_runs.RunDetailDataResponse"
                         }
                     },
                     "400": {
@@ -2329,6 +2637,50 @@
                 }
             }
         },
+        "internal_plans.LastRunResponse": {
+            "type": "object",
+            "required": [
+                "finished_at",
+                "id",
+                "size_bytes",
+                "started_at",
+                "status",
+                "trigger"
+            ],
+            "properties": {
+                "finished_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "size_bytes": {
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "started_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "queued",
+                        "running",
+                        "succeeded",
+                        "failed"
+                    ]
+                },
+                "trigger": {
+                    "type": "string",
+                    "enum": [
+                        "schedule",
+                        "manual"
+                    ]
+                }
+            }
+        },
         "internal_plans.MySQLConfig": {
             "type": "object",
             "required": [
@@ -2494,6 +2846,8 @@
                 "id",
                 "keep_monthly",
                 "keep_weekly",
+                "last_run",
+                "last_success_at",
                 "max_age_days",
                 "name",
                 "next_run_at",
@@ -2521,6 +2875,18 @@
                 },
                 "keep_weekly": {
                     "type": "integer"
+                },
+                "last_run": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_plans.LastRunResponse"
+                        }
+                    ],
+                    "x-nullable": true
+                },
+                "last_success_at": {
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "max_age_days": {
                     "type": "integer"
@@ -2872,6 +3238,302 @@
                 "Friday",
                 "Saturday",
                 "Sunday"
+            ]
+        },
+        "internal_runs.ArchiveResponse": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "deleted_at",
+                "id",
+                "object_key",
+                "plan_id",
+                "run_id",
+                "sha256",
+                "size_bytes",
+                "storage_id",
+                "storage_kind",
+                "storage_name"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "object_key": {
+                    "type": "string"
+                },
+                "plan_id": {
+                    "type": "integer"
+                },
+                "run_id": {
+                    "type": "integer"
+                },
+                "sha256": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "storage_id": {
+                    "type": "integer"
+                },
+                "storage_kind": {
+                    "enum": [
+                        "local",
+                        "s3",
+                        "gcs"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/app_internal_storages.Kind"
+                        }
+                    ]
+                },
+                "storage_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_runs.PaginatedArchivesResponse": {
+            "type": "object",
+            "required": [
+                "data",
+                "pagination"
+            ],
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_runs.ArchiveResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/internal.PaginationMeta"
+                }
+            }
+        },
+        "internal_runs.PaginatedRunsResponse": {
+            "type": "object",
+            "required": [
+                "data",
+                "pagination"
+            ],
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_runs.RunResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/internal.PaginationMeta"
+                }
+            }
+        },
+        "internal_runs.RunDataResponse": {
+            "type": "object",
+            "required": [
+                "data"
+            ],
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_runs.RunResponse"
+                }
+            }
+        },
+        "internal_runs.RunDetailDataResponse": {
+            "type": "object",
+            "required": [
+                "data"
+            ],
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_runs.RunDetailResponse"
+                }
+            }
+        },
+        "internal_runs.RunDetailResponse": {
+            "type": "object",
+            "required": [
+                "archives",
+                "created_at",
+                "error",
+                "finished_at",
+                "id",
+                "log",
+                "plan_id",
+                "scheduled_for",
+                "size_bytes",
+                "started_at",
+                "status",
+                "trigger"
+            ],
+            "properties": {
+                "archives": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_runs.ArchiveResponse"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "finished_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "log": {
+                    "type": "string"
+                },
+                "plan_id": {
+                    "type": "integer"
+                },
+                "scheduled_for": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "size_bytes": {
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "started_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "status": {
+                    "enum": [
+                        "queued",
+                        "running",
+                        "succeeded",
+                        "failed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_runs.Status"
+                        }
+                    ]
+                },
+                "trigger": {
+                    "enum": [
+                        "schedule",
+                        "manual"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_runs.Trigger"
+                        }
+                    ]
+                }
+            }
+        },
+        "internal_runs.RunResponse": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "error",
+                "finished_at",
+                "id",
+                "plan_id",
+                "scheduled_for",
+                "size_bytes",
+                "started_at",
+                "status",
+                "trigger"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "finished_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "plan_id": {
+                    "type": "integer"
+                },
+                "scheduled_for": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "size_bytes": {
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "started_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "status": {
+                    "enum": [
+                        "queued",
+                        "running",
+                        "succeeded",
+                        "failed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_runs.Status"
+                        }
+                    ]
+                },
+                "trigger": {
+                    "enum": [
+                        "schedule",
+                        "manual"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_runs.Trigger"
+                        }
+                    ]
+                }
+            }
+        },
+        "internal_runs.Status": {
+            "type": "string",
+            "enum": [
+                "queued",
+                "running",
+                "succeeded",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "StatusQueued",
+                "StatusRunning",
+                "StatusSucceeded",
+                "StatusFailed"
+            ]
+        },
+        "internal_runs.Trigger": {
+            "type": "string",
+            "enum": [
+                "schedule",
+                "manual"
+            ],
+            "x-enum-varnames": [
+                "TriggerSchedule",
+                "TriggerManual"
             ]
         },
         "internal_storages.GCSConfig": {

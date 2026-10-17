@@ -44,12 +44,24 @@ func planResponse(plan *Plan, now time.Time) (*PlanResponse, error) {
 		return nil, err
 	}
 	if next, ok := NextRun(response.Schedules, now); ok && plan.Enabled {
-		formatted := internal.FormatTime(sql.NullTime{Time: next, Valid: true})
-		response.NextRunAt = &formatted
+		response.NextRunAt = internal.FormatOptionalTime(sql.NullTime{Time: next, Valid: true})
 	}
 	for i, storage := range plan.Storages {
 		response.Storages[i] = PlanStorageResponse{ID: storage.ID, Name: storage.Name, Kind: storages.Kind(storage.Kind)}
 	}
+	if run := plan.LastRun; run != nil {
+		response.LastRun = &LastRunResponse{
+			ID:         run.ID,
+			Status:     run.Status,
+			Trigger:    run.Trigger,
+			StartedAt:  internal.FormatOptionalTime(run.StartedAt),
+			FinishedAt: internal.FormatOptionalTime(run.FinishedAt),
+		}
+		if run.SizeBytes.Valid {
+			response.LastRun.SizeBytes = &run.SizeBytes.Int64
+		}
+	}
+	response.LastSuccess = internal.FormatOptionalTime(plan.LastSuccessAt)
 	return response, nil
 }
 

@@ -30,6 +30,7 @@ import (
 	"app/internal/logger"
 	"app/internal/mail"
 	"app/internal/middleware"
+	"app/internal/runs"
 	"app/internal/secretbox"
 	"app/internal/server"
 	"app/internal/tools"
@@ -78,6 +79,7 @@ type App struct {
 
 	t      *testing.T
 	server *httptest.Server
+	worker *runs.Worker
 }
 
 // New starts a test. Pass configure functions to change the config:
@@ -102,6 +104,7 @@ func New(t *testing.T, configure ...func(*config.Config)) *App {
 		AllowRegistration: true,
 		AuthRateLimit:     true,
 		TrustedProxies:    []string{"127.0.0.1", "::1"},
+		RunnerConcurrency: 2,
 	}
 	for _, fn := range configure {
 		fn(cfg)
@@ -183,11 +186,41 @@ func (a *App) baseURL() string {
 		Secrets: a.Secrets,
 		Tools:   a.Tools,
 		Api:     router.Group("/api/v1"),
+
+		WakeWorker: a.Worker().Wake,
 	})
 
 	a.server = httptest.NewServer(router)
 	a.t.Cleanup(a.server.Close)
 	return a.server.URL
+}
+
+// Worker is the runner on the test's database, tools and mail. It is not started: Drain runs
+// what is queued, synchronously. A test of the start and stop calls Start and registers Stop.
+func (a *App) Worker() *runs.Worker {
+	if a.worker == nil {
+		a.worker = runs.NewWorker(runs.Deps{
+			Config:  a.Config,
+			Queries: a.Queries,
+			Tx:      a.TxRunner,
+			Secrets: a.Secrets,
+			Tools:   a.Tools,
+			Mail:    a.Mail,
+			Logger:  a.Logger,
+		})
+	}
+	return a.worker
+}
+
+// UseRealTool puts the program from this machine's PATH in app.Tools, for a test that runs a
+// real dump. CI installs the ones the tests need.
+func (a *App) UseRealTool(name string) {
+	a.t.Helper()
+	tool, err := tools.System{}.Find(a.Ctx, name)
+	if err != nil {
+		a.t.Fatalf("testkit: %s is needed on PATH for this test: %v", name, err)
+	}
+	a.Tools.Install(name, tool.Path, tool.Version)
 }
 
 // Actor is the user as a policy sees them, for calling a service directly.

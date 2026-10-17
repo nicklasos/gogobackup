@@ -134,6 +134,15 @@ export interface InternalPlansFilesInput {
   paths: string[];
 }
 
+export interface InternalPlansLastRunResponse {
+  finished_at?: string | null;
+  id: number;
+  size_bytes?: number | null;
+  started_at?: string | null;
+  status: "queued" | "running" | "succeeded" | "failed";
+  trigger: "schedule" | "manual";
+}
+
 export interface InternalPlansMySQLConfig {
   database: string;
   host: string;
@@ -201,6 +210,8 @@ export interface InternalPlansPlanResponse {
   id: number;
   keep_monthly: number;
   keep_weekly: number;
+  last_run?: InternalPlansLastRunResponse | null;
+  last_success_at?: string | null;
   max_age_days: number;
   mysql?: InternalPlansMySQLConfig;
   name: string;
@@ -298,6 +309,70 @@ export type InternalPlansWeekday =
   | "fri"
   | "sat"
   | "sun";
+
+export interface InternalRunsArchiveResponse {
+  sha256: string;
+  created_at: string;
+  deleted_at?: string | null;
+  id: number;
+  object_key: string;
+  plan_id: number;
+  run_id: number;
+  size_bytes: number;
+  storage_id: number;
+  storage_kind: "local" | "s3" | "gcs";
+  storage_name: string;
+}
+
+export interface InternalRunsPaginatedArchivesResponse {
+  data: InternalRunsArchiveResponse[];
+  pagination: InternalPaginationMeta;
+}
+
+export interface InternalRunsPaginatedRunsResponse {
+  data: InternalRunsRunResponse[];
+  pagination: InternalPaginationMeta;
+}
+
+export interface InternalRunsRunDataResponse {
+  data: InternalRunsRunResponse;
+}
+
+export interface InternalRunsRunDetailDataResponse {
+  data: InternalRunsRunDetailResponse;
+}
+
+export interface InternalRunsRunDetailResponse {
+  archives: InternalRunsArchiveResponse[];
+  created_at: string;
+  error?: string | null;
+  finished_at?: string | null;
+  id: number;
+  log: string;
+  plan_id: number;
+  scheduled_for?: string | null;
+  size_bytes?: number | null;
+  started_at?: string | null;
+  status: "queued" | "running" | "succeeded" | "failed";
+  trigger: "schedule" | "manual";
+}
+
+export interface InternalRunsRunResponse {
+  created_at: string;
+  error?: string | null;
+  finished_at?: string | null;
+  id: number;
+  plan_id: number;
+  scheduled_for?: string | null;
+  size_bytes?: number | null;
+  started_at?: string | null;
+  status: "queued" | "running" | "succeeded" | "failed";
+  trigger: "schedule" | "manual";
+}
+
+export type InternalRunsStatus = "queued" | "running" | "succeeded" | "failed";
+
+export type InternalRunsTrigger = "schedule" | "manual";
 
 export interface InternalStoragesGCSConfig {
   bucket: string;

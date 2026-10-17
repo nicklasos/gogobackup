@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 
 	"app/internal/errs"
+	"app/internal/runlog"
 	"app/internal/tools"
 )
 
@@ -32,6 +34,11 @@ type source struct {
 	respond func(config []byte, r *PlanResponse) error
 	// test checks that the source can be backed up from this server.
 	test func(ctx context.Context, config, secret []byte, finder tools.Finder) TestResult
+	// dump writes one backup of the source to w, compressed, and logs its steps. What the tool
+	// prints goes to the log too.
+	dump func(ctx context.Context, config, secret []byte, finder tools.Finder, w io.Writer, log *runlog.Log) error
+	// extension ends the name of every archive of the kind.
+	extension string
 }
 
 // sourceBlock is one kind's block of a request.
@@ -47,22 +54,30 @@ var sources = map[SourceKind]source{
 		secretFields: []string{"postgres.password"},
 		respond:      func(config []byte, r *PlanResponse) error { return json.Unmarshal(config, &r.Postgres) },
 		test:         testPostgres,
+		dump:         dumpPostgres,
+		extension:    "dump",
 	},
 	SourceMySQL: {
 		block:        func(r *SourceRequest) (sourceBlock, bool) { return r.MySQL, r.MySQL != nil },
 		secretFields: []string{"mysql.password"},
 		respond:      func(config []byte, r *PlanResponse) error { return json.Unmarshal(config, &r.MySQL) },
 		test:         testMySQL,
+		dump:         dumpMySQL,
+		extension:    "sql.gz",
 	},
 	SourceSQLite: {
-		block:   func(r *SourceRequest) (sourceBlock, bool) { return r.SQLite, r.SQLite != nil },
-		respond: func(config []byte, r *PlanResponse) error { return json.Unmarshal(config, &r.SQLite) },
-		test:    testSQLite,
+		block:     func(r *SourceRequest) (sourceBlock, bool) { return r.SQLite, r.SQLite != nil },
+		respond:   func(config []byte, r *PlanResponse) error { return json.Unmarshal(config, &r.SQLite) },
+		test:      testSQLite,
+		dump:      dumpSQLite,
+		extension: "db.gz",
 	},
 	SourceFiles: {
-		block:   func(r *SourceRequest) (sourceBlock, bool) { return r.Files, r.Files != nil },
-		respond: func(config []byte, r *PlanResponse) error { return json.Unmarshal(config, &r.Files) },
-		test:    testFiles,
+		block:     func(r *SourceRequest) (sourceBlock, bool) { return r.Files, r.Files != nil },
+		respond:   func(config []byte, r *PlanResponse) error { return json.Unmarshal(config, &r.Files) },
+		test:      testFiles,
+		dump:      dumpFiles,
+		extension: "tar.gz",
 	},
 }
 

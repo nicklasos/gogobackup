@@ -18,6 +18,7 @@ import (
 	"app/internal/db"
 	"app/internal/logger"
 	"app/internal/mail"
+	"app/internal/runs"
 	"app/internal/scheduler"
 	"app/internal/secretbox"
 	"app/internal/server"
@@ -130,19 +131,34 @@ func main() {
 		Api:     r.Group("/api/v1"),
 	}
 
-	// ENABLE_SCHEDULER=false when bin/gogo-cron runs the jobs as its own process instead
+	// ENABLE_SCHEDULER=false when bin/gogo-cron runs the jobs and the backups as its own process instead
 	if cfg.EnableScheduler {
+		worker := runs.NewWorker(runs.Deps{
+			Config:  cfg,
+			Queries: app.Queries,
+			Tx:      app.Tx,
+			Secrets: secrets,
+			Tools:   app.Tools,
+			Mail:    app.Mail,
+			Logger:  logger,
+		})
+		app.WakeWorker = worker.Wake
 		cronScheduler := scheduler.NewScheduler(&scheduler.Dependencies{
 			Config:  cfg,
 			DB:      database,
 			Queries: app.Queries,
+			Tx:      app.Tx,
 			Logger:  logger,
+			Worker:  worker,
 		})
 		if err := cronScheduler.RegisterJobs(); err != nil {
 			logger.Error("Failed to register scheduler jobs", "error", err)
 			log.Fatal("Failed to register scheduler jobs:", err)
 		}
-		cronScheduler.Start()
+		if err := cronScheduler.Start(); err != nil {
+			logger.Error("Failed to start the scheduler", "error", err)
+			log.Fatal("Failed to start the scheduler:", err)
+		}
 		defer cronScheduler.Stop()
 	}
 
@@ -167,7 +183,7 @@ func main() {
 	}()
 
 	// Without this a stop signal kills the process at once: in-flight requests are cut off
-	// and the deferred scheduler stop and connection closes never run.
+	// and the deferred scheduler stop, which records running backups as stopped, never runs.
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
