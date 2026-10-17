@@ -309,6 +309,7 @@ func TestStoragesAPI_ListObjects(t *testing.T) {
 		s3 := app.Create.Storage(factory.S3Storage(storages.S3Config{Endpoint: fake.Endpoint, Region: "us-east-1", Bucket: fake.Bucket, Prefix: "nightly", UsePathStyle: true}, "a", "b"))
 		d, err := storagesService(app).Driver(app.Ctx, s3)
 		require.NoError(t, err)
+		t.Cleanup(func() { d.Close() })
 		require.NoError(t, d.Put(app.Ctx, "db/2026-10-17.dump.gz", strings.NewReader("x")))
 
 		app.As(admin).GET("/api/v1/storages/%d/objects", s3.ID).

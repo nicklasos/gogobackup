@@ -81,15 +81,6 @@ export class PlanEditorPage extends BasePage {
     return this.page.getByTestId('plan-retention-summary')
   }
 
-  get runButton(): Locator {
-    return this.page.getByTestId('plan-run-button')
-  }
-
-  /** The status tag of the latest run, as on the list. */
-  get runStatus(): Locator {
-    return this.root.locator('[data-testid^="plan-run-status-"]')
-  }
-
   get saveButton(): Locator {
     return this.page.getByTestId('plan-save-button')
   }
@@ -142,8 +133,14 @@ export class PlanEditorPage extends BasePage {
     await this.page.getByTestId('plan-keep-monthly-input').fill(String(months))
   }
 
+  /** Saving lands on the plan's page. */
   async save(): Promise<void> {
     await this.saveButton.click()
-    await expect(this.page.getByTestId('plans-page')).toBeVisible({ timeout: 15000 })
+    await expect(this.page.getByTestId('plan-page')).toBeVisible({ timeout: 15000 })
+  }
+
+  async delete(): Promise<void> {
+    await this.page.getByTestId('plan-editor-delete-button').click()
+    await this.page.getByTestId('plan-editor-delete-confirm').click()
   }
 }

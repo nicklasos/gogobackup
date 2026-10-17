@@ -84,7 +84,8 @@ type LastRunResponse struct {
 // PlanResponse is a plan without its source password: secret_set says whether one is stored.
 // Exactly the source block named by source_kind is present. next_run_at is null for a plan
 // that is disabled or has no schedules. last_run is null before the first run, and
-// last_success_at before the first that succeeded.
+// last_success_at and last_size_bytes (the size of that backup) before the first that
+// succeeded. folder is where its archives go in each storage, such as "myproject-dev/".
 type PlanResponse struct {
 	ID          int64                 `json:"id"`
 	Name        string                `json:"name"`
@@ -103,8 +104,51 @@ type PlanResponse struct {
 	NextRunAt   *string               `json:"next_run_at" extensions:"x-nullable"`
 	LastRun     *LastRunResponse      `json:"last_run" extensions:"x-nullable"`
 	LastSuccess *string               `json:"last_success_at" extensions:"x-nullable"`
+	LastSize    *int64                `json:"last_size_bytes" extensions:"x-nullable"`
+	Health      Health                `json:"health" enums:"running,failed,paused,overdue,never,ok"`
+	Folder      string                `json:"folder"`
 	CreatedAt   string                `json:"created_at"`
 	UpdatedAt   string                `json:"updated_at"`
+}
+
+// SetEnabledRequest pauses (false) or resumes (true) a plan
+type SetEnabledRequest struct {
+	Enabled *bool `json:"enabled" binding:"required"`
+}
+
+// DayResponse is how many runs of a plan that started on one UTC day succeeded and failed
+type DayResponse struct {
+	Date      string `json:"date" example:"2026-10-17"`
+	Succeeded int64  `json:"succeeded"`
+	Failed    int64  `json:"failed"`
+}
+
+// DashboardPlanResponse is a plan with its runs per day: the last 30 UTC days, oldest first,
+// today last, every day present
+type DashboardPlanResponse struct {
+	PlanResponse
+	Days []DayResponse `json:"days"`
+}
+
+// HealthSummaryResponse is how many plans have each health
+type HealthSummaryResponse struct {
+	Running int `json:"running"`
+	Failed  int `json:"failed"`
+	Paused  int `json:"paused"`
+	Overdue int `json:"overdue"`
+	Never   int `json:"never"`
+	OK      int `json:"ok"`
+}
+
+// DashboardResponse is every plan, by name, and how many have each health
+type DashboardResponse struct {
+	Plans   []DashboardPlanResponse `json:"plans"`
+	Summary HealthSummaryResponse   `json:"summary"`
+}
+
+// DashboardDataResponse wraps the dashboard
+type DashboardDataResponse struct {
+	Data DashboardResponse `json:"data"`
 }
 
 // PlanDataResponse wraps a plan

@@ -12,9 +12,9 @@ const ForgotPasswordPage = lazy(() => import('@/auth/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('@/auth/ResetPasswordPage'))
 const VerifyEmailPage = lazy(() => import('@/auth/VerifyEmailPage'))
 const PlanEditorPage = lazy(() => import('@/features/plans/pages/PlanEditorPage'))
-const PlansPage = lazy(() => import('@/features/plans/pages/PlansPage'))
+const PlanPage = lazy(() => import('@/features/plans/pages/PlanPage'))
 const ProfilePage = lazy(() => import('@/features/account/ProfilePage'))
-const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'))
+const DashboardPage = lazy(() => import('@/features/plans/pages/DashboardPage'))
 const StorageBrowserPage = lazy(() => import('@/features/storages/pages/StorageBrowserPage'))
 const StorageEditorPage = lazy(() => import('@/features/storages/pages/StorageEditorPage'))
 const StoragesPage = lazy(() => import('@/features/storages/pages/StoragesPage'))
@@ -49,19 +49,21 @@ export function AppRoutes() {
         <Route index element={<DashboardPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="verify-email" element={<VerifyEmailPage />} />
-        <Route
-          path="plans"
-          element={
-            <RequireRole roles={[ROLE_ADMIN]}>
-              <PlansPage />
-            </RequireRole>
-          }
-        />
+        {/* The dashboard is the list of plans */}
+        <Route path="plans" element={<Navigate to="/" replace />} />
         <Route
           path="plans/new"
           element={
             <RequireRole roles={[ROLE_ADMIN]}>
               <PlanEditorPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="plans/:id"
+          element={
+            <RequireRole roles={[ROLE_ADMIN]}>
+              <PlanPage />
             </RequireRole>
           }
         />

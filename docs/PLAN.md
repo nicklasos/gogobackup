@@ -44,7 +44,7 @@ Every row below is a table in SQLite. Kinds are closed sets, and each kind has i
 - A dump streams from the tool through gzip and sha256 straight to every storage of the plan at once, one pipe per storage, with no temp file. A storage that fails is dropped and the others finish.
 - Retention is a pure function: `Prune(archives, policy, now) (remove)`. It never removes the newest archive. It has table tests for the weekly and monthly rules, across month and year boundaries.
 - The scheduler ticks once a minute, in the API process or in `cmd/cron`, finds the latest due slot of each plan, and inserts a `queued` run. A worker in the same process runs them, a few at once, and never two runs of one plan at once.
-- A plan card is green when its last run succeeded, red when it failed, grey when it never ran, and amber when the last success is older than its schedule allows.
+- A plan card is coloured by its health, one rule on the server (`plans.PlanHealth`), first match wins: blue while a run is queued or running, red when the last run failed, grey when paused, amber when a slot at least an hour old has no successful run since (overdue), grey when it never ran, green otherwise.
 
 ## Restore speed
 

@@ -24,6 +24,8 @@ type Driver interface {
 	List(ctx context.Context, prefix string) ([]Entry, error)
 	// Delete succeeds when the object is already gone.
 	Delete(ctx context.Context, key string) error
+	// Close releases the connection the driver holds. Every driver that was opened is closed.
+	Close() error
 }
 
 // Entry is one item of a listing. Name is relative to the listed prefix and has no slash.

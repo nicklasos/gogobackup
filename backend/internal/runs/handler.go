@@ -2,8 +2,10 @@ package runs
 
 import (
 	"database/sql"
+	"mime"
 	"net/http"
 	"strconv"
+	"time"
 
 	"app/internal"
 	"app/internal/db"
@@ -15,11 +17,12 @@ import (
 )
 
 type Handler struct {
-	service *RunService
+	service  *RunService
+	archives *ArchiveService
 }
 
-func NewHandler(service *RunService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *RunService, archives *ArchiveService) *Handler {
+	return &Handler{service: service, archives: archives}
 }
 
 func runResponse(run db.Run) RunResponse {
@@ -32,6 +35,10 @@ func runResponse(run db.Run) RunResponse {
 		StartedAt:    internal.FormatOptionalTime(run.StartedAt),
 		FinishedAt:   internal.FormatOptionalTime(run.FinishedAt),
 		CreatedAt:    internal.FormatTime(run.CreatedAt),
+	}
+	if run.StartedAt.Valid && run.FinishedAt.Valid {
+		ms := run.FinishedAt.Time.Sub(run.StartedAt.Time).Milliseconds()
+		response.DurationMs = &ms
 	}
 	if run.SizeBytes.Valid {
 		response.SizeBytes = &run.SizeBytes.Int64
@@ -220,5 +227,98 @@ func (h *Handler) ListArchives(c *gin.Context) {
 	c.JSON(http.StatusOK, PaginatedArchivesResponse{
 		Data:       items,
 		Pagination: internal.NewPaginationMeta(result.Total, page.Page, page.PageSize),
+	})
+}
+
+// DownloadArchive streams an archive from its storage
+//
+//	@Summary		Download an archive
+//	@Description	Streams the archive's object from its storage, as an attachment named after the object. An archive that retention deleted is a 404; a storage that fails, or has lost the object, a 502 storages.unreachable. A browser uses a download link instead. Admins only.
+//	@Tags			runs
+//	@Produce		octet-stream
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"Archive ID"
+//	@Success		200	{file}		file
+//	@Failure		400	{object}	errs.ErrorResponse
+//	@Failure		401	{object}	errs.ErrorResponse
+//	@Failure		403	{object}	errs.ErrorResponse
+//	@Failure		404	{object}	errs.ErrorResponse
+//	@Failure		500	{object}	errs.ErrorResponse
+//	@Failure		502	{object}	errs.ErrorResponse
+//	@Router			/api/v1/archives/{id}/download [get]
+func (h *Handler) DownloadArchive(c *gin.Context) {
+	id, ok := middleware.PathID(c, "id")
+	if !ok {
+		return
+	}
+
+	download, err := h.archives.Open(c.Request.Context(), id)
+	if err != nil {
+		errs.RespondWithError(c, err)
+		return
+	}
+	streamDownload(c, download)
+}
+
+// CreateDownloadLink makes a short-lived link that downloads an archive without a session
+//
+//	@Summary		Make a download link for an archive
+//	@Description	A token for GET /api/v1/downloads/{token}, valid for a minute. A browser follows it to save a large archive straight to disk; a request with the Authorization header cannot do that. Admins only.
+//	@Tags			runs
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"Archive ID"
+//	@Success		200	{object}	DownloadLinkDataResponse
+//	@Failure		400	{object}	errs.ErrorResponse
+//	@Failure		401	{object}	errs.ErrorResponse
+//	@Failure		403	{object}	errs.ErrorResponse
+//	@Failure		404	{object}	errs.ErrorResponse
+//	@Failure		500	{object}	errs.ErrorResponse
+//	@Router			/api/v1/archives/{id}/download-link [post]
+func (h *Handler) CreateDownloadLink(c *gin.Context) {
+	id, ok := middleware.PathID(c, "id")
+	if !ok {
+		return
+	}
+
+	token, expires, err := h.archives.Link(c.Request.Context(), id, time.Now())
+	if err != nil {
+		errs.RespondWithError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, DownloadLinkDataResponse{Data: DownloadLinkResponse{
+		Token:     token,
+		ExpiresAt: internal.FormatTime(sql.NullTime{Time: expires, Valid: true}),
+	}})
+}
+
+// DownloadByLink streams the archive a download link names
+//
+//	@Summary		Download an archive by link
+//	@Description	Needs no session: the token from POST /api/v1/archives/{id}/download-link is the permission, until it expires a minute after it was made. An invalid or expired token is a 403 archives.invalid_link.
+//	@Tags			runs
+//	@Produce		octet-stream
+//	@Param			token	path		string	true	"Download token"
+//	@Success		200		{file}		file
+//	@Failure		403		{object}	errs.ErrorResponse
+//	@Failure		404		{object}	errs.ErrorResponse
+//	@Failure		500		{object}	errs.ErrorResponse
+//	@Failure		502		{object}	errs.ErrorResponse
+//	@Router			/api/v1/downloads/{token} [get]
+func (h *Handler) DownloadByLink(c *gin.Context) {
+	download, err := h.archives.OpenLink(c.Request.Context(), c.Param("token"), time.Now())
+	if err != nil {
+		errs.RespondWithError(c, err)
+		return
+	}
+	streamDownload(c, download)
+}
+
+func streamDownload(c *gin.Context, download *Download) {
+	defer download.Close()
+	c.DataFromReader(http.StatusOK, download.Size, "application/octet-stream", download, map[string]string{
+		"Content-Disposition": mime.FormatMediaType("attachment", map[string]string{"filename": download.Name}),
+		"Cache-Control":       "no-store",
 	})
 }

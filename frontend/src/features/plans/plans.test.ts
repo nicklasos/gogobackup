@@ -19,6 +19,8 @@ const base: Plan = {
   storages: [{ id: 3, name: 'Nightly', kind: 'local' }],
   enabled: true,
   next_run_at: null,
+  health: 'never',
+  folder: 'shop/',
   created_at: '',
   updated_at: '',
 }

@@ -47,6 +47,55 @@ func (q *Queries) CountActiveRunsOfPlan(ctx context.Context, planID int64) (int6
 	return count, err
 }
 
+const countFinishedRunsPerDay = `-- name: CountFinishedRunsPerDay :many
+SELECT plan_id,
+       CAST(date(started_at) AS TEXT) AS day,
+       CAST(SUM(status = 'succeeded') AS INTEGER) AS succeeded,
+       CAST(SUM(status = 'failed') AS INTEGER) AS failed
+FROM runs
+WHERE status IN ('succeeded', 'failed')
+  AND date(started_at) >= CAST(?1 AS TEXT)
+GROUP BY plan_id, day
+ORDER BY plan_id, day
+`
+
+type CountFinishedRunsPerDayRow struct {
+	PlanID    int64  `db:"plan_id" json:"plan_id"`
+	Day       string `db:"day" json:"day"`
+	Succeeded int64  `db:"succeeded" json:"succeeded"`
+	Failed    int64  `db:"failed" json:"failed"`
+}
+
+// One row per plan and UTC day with a finished run on or after the day `since` (YYYY-MM-DD), for
+// the dashboard's strip of days. A run counts on the day it started.
+func (q *Queries) CountFinishedRunsPerDay(ctx context.Context, since string) ([]CountFinishedRunsPerDayRow, error) {
+	rows, err := q.db.QueryContext(ctx, countFinishedRunsPerDay, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountFinishedRunsPerDayRow
+	for rows.Next() {
+		var i CountFinishedRunsPerDayRow
+		if err := rows.Scan(
+			&i.PlanID,
+			&i.Day,
+			&i.Succeeded,
+			&i.Failed,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countLiveArchivesOfPlan = `-- name: CountLiveArchivesOfPlan :one
 SELECT COUNT(*) FROM archives
 WHERE plan_id = ?1
@@ -218,6 +267,28 @@ func (q *Queries) FinishRun(ctx context.Context, arg FinishRunParams) (int64, er
 	return result.RowsAffected()
 }
 
+const getArchiveByID = `-- name: GetArchiveByID :one
+SELECT id, run_id, plan_id, storage_id, object_key, size_bytes, sha256, created_at, deleted_at FROM archives
+WHERE id = ?1 LIMIT 1
+`
+
+func (q *Queries) GetArchiveByID(ctx context.Context, id int64) (Archive, error) {
+	row := q.db.QueryRowContext(ctx, getArchiveByID, id)
+	var i Archive
+	err := row.Scan(
+		&i.ID,
+		&i.RunID,
+		&i.PlanID,
+		&i.StorageID,
+		&i.ObjectKey,
+		&i.SizeBytes,
+		&i.Sha256,
+		&i.CreatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getRunByID = `-- name: GetRunByID :one
 SELECT id, plan_id, "trigger", scheduled_for, status, started_at, finished_at, size_bytes, log, error, created_at FROM runs
 WHERE id = ?1 LIMIT 1
@@ -322,7 +393,7 @@ func (q *Queries) LatestRunsOfPlans(ctx context.Context, planIds []int64) ([]Lat
 }
 
 const latestSuccessesOfPlans = `-- name: LatestSuccessesOfPlans :many
-SELECT id, plan_id, finished_at
+SELECT id, plan_id, finished_at, size_bytes
 FROM runs
 WHERE id IN (
     SELECT MAX(r.id) FROM runs AS r
@@ -332,9 +403,10 @@ WHERE id IN (
 `
 
 type LatestSuccessesOfPlansRow struct {
-	ID         int64        `db:"id" json:"id"`
-	PlanID     int64        `db:"plan_id" json:"plan_id"`
-	FinishedAt sql.NullTime `db:"finished_at" json:"finished_at"`
+	ID         int64         `db:"id" json:"id"`
+	PlanID     int64         `db:"plan_id" json:"plan_id"`
+	FinishedAt sql.NullTime  `db:"finished_at" json:"finished_at"`
+	SizeBytes  sql.NullInt64 `db:"size_bytes" json:"size_bytes"`
 }
 
 func (q *Queries) LatestSuccessesOfPlans(ctx context.Context, planIds []int64) ([]LatestSuccessesOfPlansRow, error) {
@@ -356,7 +428,12 @@ func (q *Queries) LatestSuccessesOfPlans(ctx context.Context, planIds []int64) (
 	var items []LatestSuccessesOfPlansRow
 	for rows.Next() {
 		var i LatestSuccessesOfPlansRow
-		if err := rows.Scan(&i.ID, &i.PlanID, &i.FinishedAt); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlanID,
+			&i.FinishedAt,
+			&i.SizeBytes,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

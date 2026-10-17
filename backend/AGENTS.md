@@ -32,9 +32,9 @@ gogo/
 │   │   └── types.go             # Request/response types
 │   ├── users/                   # User management (super admins, admins, users)
 │   ├── storages/                # Where backups go: kinds registry (kinds.go), service, handlers
-│   │   └── driver/              # Driver interface (Put/Open/List/Delete), local, S3, GCS, Probe
-│   ├── plans/                   # Backup plans: sources registry (sources.go), schedules (NextRun, PrevRun), source tests, dumps (dump.go)
-│   ├── runs/                    # The runner: run lifecycle, worker, fan-out upload, retention (Prune), run and archive endpoints
+│   │   └── driver/              # Driver interface (Put/Open/List/Delete/Close), local, S3, GCS, Probe
+│   ├── plans/                   # Backup plans: sources registry (sources.go), schedules (NextRun, PrevRun), health (PlanHealth), dashboard, source tests, dumps (dump.go)
+│   ├── runs/                    # The runner: run lifecycle, worker, fan-out upload, retention (Prune), run and archive endpoints, downloads
 │   ├── runlog/                  # A run's log: timestamped lines, capped at 1 MB
 │   ├── tools/                   # Finds pg_dump, mysqldump, sqlite3 on PATH (System) or pretends to (Fake)
 │   ├── selfbackup/              # Ensure: the plan that backs up DATABASE_PATH, for `cli self-backup`
@@ -119,14 +119,18 @@ When adding new modules:
 - A storage kind (`local`, `s3`, `gcs`) is one entry in the `kinds` registry in `internal/storages/kinds.go`: its request block, the fields of its credentials, how to open its driver, and how to show its config. Adding a kind is one entry and one driver, not a new branch in the service.
 - `config` holds the kind's settings as JSON; `secret` holds its credentials as JSON sealed by `app.Secrets` (`internal/secretbox`). No response type carries a credential: responses say `secret_set`.
 - Drivers take keys relative to the storage's directory or bucket prefix and refuse `..` and absolute keys (`driver.CleanKey`); the local driver goes through `os.Root`, so a symlink cannot lead out either. `Put` and `Open` stream: phases 5 and 7 send archives of any size through them.
-- `StorageService.Driver(ctx, storage)` opens a saved storage for other modules.
+- `StorageService.Driver(ctx, storage)` opens a saved storage for other modules. Whoever opens a driver closes it (`Close`): a GCS driver holds its own client.
+- `storages.Unreachable(err)` is the 502 `storages.unreachable` for a storage that failed, with the reason in `details.reason`.
 - Tests run offline: `testkit.NewFakeS3(t)` (gofakes3 on a loopback port) and `testkit.NewFakeGCS(t)` (fake-gcs-server in process). `app.Create.Storage(factory.S3Storage(...))` seals credentials with the test key.
 
 ## Plans
 - A plan is what to back up (a source), when (schedules), where to (one or more storages) and how long to keep it (retention). `internal/runs` runs them (see Runner).
 - A source kind (`postgres`, `mysql`, `sqlite`, `files`) is one entry in the `sources` registry in `internal/plans/sources.go`: its request block, its password field, how to show its config, how to test it, how to dump it and the extension of its archives. Like storage kinds, `source_config` is JSON and `source_secret` is the password sealed by `app.Secrets`; responses say `secret_set`.
 - Schedules are `[]plans.Schedule` (`{time: "HH:MM" UTC, days: [...]}`, no days is every day), stored as JSON. `plans.NextRun(schedules, after)` says when a plan runs next, and the admin panel's `nextRun` runs the same cases (`tests/unit/testdata/next_run.json`). `plans.PrevRun(schedules, at)` is the latest slot at or before `at`, which the scheduler runs (`testdata/prev_run.json`; the panel has no port of it).
-- Plan responses carry `last_run` (the latest run, any status) and `last_success_at`.
+- Plan responses carry `last_run` (the latest run, any status), `last_success_at` and `last_size_bytes` (that backup's size), `folder` (`plans.Folder`, the `<plan-slug>/` its archives go in) and `health`.
+- Health is one pure function, `plans.PlanHealth` (table test in `tests/unit/health_test.go`). The first that applies wins: `running` (the latest run is queued or running), `failed` (it failed), `paused` (disabled), `overdue` (a slot at least an hour old and later than the last save has no successful run at or after it), `never` (no runs), `ok`. The admin panel colours cards from it and has no copy of the rule.
+- `GET /dashboard` is every plan, not paginated, as a plan response plus `days`: the last 30 UTC days, oldest first, each with how many runs that started that day succeeded and failed (`CountFinishedRunsPerDay`, one grouped query for all plans), and a `summary` of plans per health.
+- `PUT /plans/:id/enabled` pauses or resumes a plan. Only a change counts as a save, and resuming is one, so the scheduler does not run the slots missed while paused.
 - `plan_storages` links plans to storages. Deleting a plan removes its links; deleting a storage that a plan uses is a 409 `storages.in_use` listing the plans.
 - A source test connects (Postgres with pgx, MySQL with go-sql-driver) or opens the files, and looks for the dump program through `app.Tools`. Tests get `tools.Fake` as `app.Tools`: every program is installed until `app.Tools.Remove(name)`.
 - `plans.PgDumpCompatible` is the rule that pg_dump must be at least the server's major version.
@@ -139,11 +143,13 @@ When adding new modules:
 - A run dumps the source once (`PlanService.Dump`) into a `runs.FanOut`, which writes the stream to every storage of the plan at once, one pipe and one `Put` per storage, and counts and hashes it on the way. No temp file holds the archive. A storage that fails is dropped and the others carry on; the run succeeds only when the dump succeeded and every storage stored it. Each storage that stored it gets an `archives` row with the size and sha256. The object key is `<plan-slug>/<plan-slug>-<UTC start yyyymmddTHHMMSSZ>-<run id>.<ext>` (`runs.ObjectKey`).
 - After a run that succeeded, retention runs per storage of the plan: `runs.Prune(archives, policy, now)` is pure and returns the archives to remove (table tests in `tests/unit/runs_test.go`). It never removes the newest archive. Deleting removes the object, then sets `deleted_at`; an object already gone counts as deleted, and one that cannot be deleted keeps its row for the next run to try again.
 - The log is a `runlog.Log`: timestamped lines, the last 1 MB kept. Dump programs' stderr goes into it. It is written to `runs.log` every 2 s while the run goes on and at the end, so `GET /runs/:id` shows it live.
-- A failed run emails every admin and super admin with a verified email: the error, the last 40 log lines and a link to the plan. It is sent after the run is recorded.
+- A failed run emails every admin and super admin with a verified email: the error, the last 40 log lines and a link to the plan's page (`/plans/:id`). It is sent after the run is recorded.
+- Run responses carry `duration_ms` once the run finished.
+- Archives download two ways, both streaming from the storage with `Content-Disposition: attachment` and `Content-Length` from the archive's size. `GET /archives/:id/download` takes the admin's bearer token, for scripts. A browser cannot send that header on a plain navigation, so `POST /archives/:id/download-link` gives an admin a token that `GET /downloads/:token` accepts without a session for one minute (`runs.ArchiveService`: the archive id and expiry, sealed by `app.Secrets`). The browser then saves an archive of any size straight to disk. A deleted archive is 404 `archives.not_found`, a bad or expired token 403 `archives.invalid_link`, a storage that fails 502 `storages.unreachable`.
 - Dump programs come from `app.Tools` (`tools.Finder`). Their passwords never go in arguments: `PGPASSWORD` in pg_dump's environment, a 0600 `--defaults-extra-file` for mysqldump, removed after.
 - **Adding a source kind's dump** is one `dump` function and one `extension` in its `sources` entry. The function writes the compressed archive to `w`, logs its steps, sends the program's stderr to `log.Writer(name + ": ")` (`runTool` does that) and returns when the archive is complete. Nothing outside `internal/plans` changes.
 - Tests drive the worker with `app.Worker().Drain(ctx)`, which runs everything queued synchronously, and enqueue slots with `runs.NewRunService(...).EnqueueDue(ctx, clock)`. `tools.Fake` installs a real program with `app.UseRealTool("sqlite3")` or a script with `app.Tools.Install(name, path, version)`. Postgres and MySQL dumps of real servers run when `TEST_POSTGRES_URL` and `TEST_MYSQL_URL` are set (CI sets both); otherwise they skip.
-- Factories: `app.Create.Run(plan, factory.WithRunStatus(runs.StatusRunning))`, `app.Create.Archive(run, storage, factory.ArchiveCreatedAt(t))`.
+- Factories: `app.Create.Run(plan, factory.WithRunStatus(runs.StatusRunning), factory.StartedAt(t), factory.RunSize(n))`, `app.Create.Archive(run, storage, factory.ArchiveCreatedAt(t), factory.ArchiveDeleted())`.
 
 ## Self-backup
 - `cli self-backup --dir DIR` (`internal/selfbackup.Ensure`) makes sure a plan backs up the service's own `DATABASE_PATH`; `deploy/` runs it on every release. It finds the plan by its source (`ListSQLitePlansByPath`), not its name, and leaves a found plan untouched. Without one it reuses a local storage at `DIR` (`ListLocalStoragesByPath`) or creates "Gogobackup itself (local)", then creates "Gogobackup itself". Both go through `StorageService` and `PlanService` after the binding validator, as an API request would.

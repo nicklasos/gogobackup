@@ -47,6 +47,14 @@ Import with the `@/` alias. A feature imports from `api`, `auth`, `layout` and `
 
 `features/storages` is the reference for a paginated list plus a full-page editor; `features/users` for a table with modal forms.
 
+## Plans and the dashboard
+- `/` is the dashboard (`features/plans/pages/DashboardPage`): every plan as a card from `GET /dashboard`. A plain user gets a greeting instead (`dashboard-no-access`). `/plans` redirects to `/`.
+- The API decides a plan's health. `features/plans/health.ts` maps each health to its tag colour, strip colour and icon (`HEALTH`); nothing else branches on it. `days.ts` colours the 30-day strip, `runChart.ts` lays out the runs chart (pure, tested in `dashboard.test.ts`).
+- Polling: the dashboard every 5 s while a plan runs and every 30 s otherwise, a plan or runs page every 3 s while a run is active, an open run's log every 2 s (`runStatus.ts`). Run now marks the plan running in the cache at once (`withRunQueued`) instead of refetching.
+- `/plans/:id` is the plan page: runs (chart, table, a drawer for one run's log at `?run=`), archives and storages tabs (`?tab=`). The editor returns there.
+- Archives download through a one-minute link (`POST /archives/:id/download-link`), which the browser follows itself, so a large archive goes straight to disk (`useDownloadArchive`, `shared/utils/download.ts`).
+- The storage browser opens at a folder from `?prefix=`.
+
 ## API client
 - `api.get/post/put/patch/del<T>()` return the response's `data` field.
 - `api.getPage<T>()` returns `{ data, pagination }` for paginated lists.
@@ -107,7 +115,7 @@ make build
 - `tests/e2e/shared-session/`: specs that share one signed-in plain user (`auth.setup.ts` writes `.auth/user.json`).
 - `tests/e2e/own-session/`: specs that sign in themselves with `loginAs(page, role)`, or test the signed-out pages.
 - A spec runs in the project of the folder it is in; nothing has to be registered.
-- Users are seeded straight into the test database (`helpers/db-helper.ts`); emails start with `e2e-` so cleanup finds them. Use `uniqueEmail()` for users created through the UI.
+- Users are seeded straight into the test database (`helpers/db-helper.ts`); emails start with `e2e-` so cleanup finds them. Plans, runs and archives too (`createPlan`, `createRun`, `createArchive`); the test API runs the scheduler and the worker, so seed `running` runs rather than `queued` ones, and keep a plan's last save after its past slots. Use `uniqueEmail()` for users created through the UI.
 - The API is started with `AUTH_RATE_LIMIT=false` and `APP_DEBUG=true` (no throttling, mail only logged).
 - Emailed links cannot be read back (only a hash is stored): plant a token with `dbHelper.createEmailToken(userId, purpose)`.
 - Requires `TEST_DATABASE_PATH` (a SQLite file whose name ends in `_test.db`, relative to `../backend`) in `../backend/.env`. The helper opens the same file the API writes.

@@ -8,9 +8,11 @@ export interface NavItem {
   testId: string
   roles: readonly Role[] | 'all'
   path: string
+  /** Other sections that belong to this item, such as the pages a dashboard links to. */
+  alsoPaths?: readonly string[]
 }
 
-type Target = Pick<NavItem, 'key' | 'path'>
+type Target = Pick<NavItem, 'key' | 'path' | 'alsoPaths'>
 
 export function visibleNav(items: readonly NavItem[], user: RoleHolder | null): NavItem[] {
   return items.filter((item) => item.roles === 'all' || hasAnyRole(user, item.roles))
@@ -20,9 +22,11 @@ export function visibleNav(items: readonly NavItem[], user: RoleHolder | null): 
 export function selectNavKey(items: readonly Target[], pathname: string): string | undefined {
   let best: { key: string; length: number } | undefined
   for (const item of items) {
-    const matches = item.path === '/' ? pathname === '/' : pathname === item.path || pathname.startsWith(`${item.path}/`)
-    if (matches && (!best || item.path.length > best.length)) {
-      best = { key: item.key, length: item.path.length }
+    for (const path of [item.path, ...(item.alsoPaths ?? [])]) {
+      const matches = path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`)
+      if (matches && (!best || path.length > best.length)) {
+        best = { key: item.key, length: path.length }
+      }
     }
   }
   return best?.key
@@ -31,8 +35,8 @@ export function selectNavKey(items: readonly Target[], pathname: string): string
 /** Only one of the two menus shows a selected item: the one with the longest match. */
 export function selectActiveNav(main: readonly Target[], admin: readonly Target[], pathname: string): { main?: string; admin?: string } {
   const tagged = [
-    ...main.map((item) => ({ path: item.path, key: `main:${item.key}` })),
-    ...admin.map((item) => ({ path: item.path, key: `admin:${item.key}` })),
+    ...main.map((item) => ({ ...item, key: `main:${item.key}` })),
+    ...admin.map((item) => ({ ...item, key: `admin:${item.key}` })),
   ]
   const active = selectNavKey(tagged, pathname)
   if (!active) return {}

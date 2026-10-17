@@ -62,7 +62,37 @@ func planResponse(plan *Plan, now time.Time) (*PlanResponse, error) {
 		}
 	}
 	response.LastSuccess = internal.FormatOptionalTime(plan.LastSuccessAt)
+	if plan.LastSuccessSize.Valid {
+		response.LastSize = &plan.LastSuccessSize.Int64
+	}
+	response.Health = PlanHealth(plan.Enabled, response.Schedules, plan.UpdatedAt.Time, plan.LastRun, plan.LastSuccessAt, now)
+	response.Folder = Folder(plan.Name)
 	return response, nil
+}
+
+func dashboardResponse(plans []DashboardPlan, now time.Time) (*DashboardResponse, error) {
+	response := &DashboardResponse{Plans: make([]DashboardPlanResponse, len(plans))}
+	for i := range plans {
+		plan, err := planResponse(&plans[i].Plan, now)
+		if err != nil {
+			return nil, err
+		}
+		days := make([]DayResponse, len(plans[i].Days))
+		for j, day := range plans[i].Days {
+			days[j] = DayResponse{Date: day.Date, Succeeded: day.Succeeded, Failed: day.Failed}
+		}
+		response.Plans[i] = DashboardPlanResponse{PlanResponse: *plan, Days: days}
+		response.Summary.add(plan.Health)
+	}
+	return response, nil
+}
+
+func (s *HealthSummaryResponse) add(health Health) {
+	counters := map[Health]*int{
+		HealthRunning: &s.Running, HealthFailed: &s.Failed, HealthPaused: &s.Paused,
+		HealthOverdue: &s.Overdue, HealthNever: &s.Never, HealthOK: &s.OK,
+	}
+	*counters[health]++
 }
 
 func sourceTestResponse(result *TestResult) SourceTestResponse {
@@ -129,6 +159,71 @@ func (h *Handler) ListPlans(c *gin.Context) {
 		Data:       items,
 		Pagination: internal.NewPaginationMeta(result.Total, page.Page, page.PageSize),
 	})
+}
+
+// Dashboard lists every plan with its health and its runs per day
+//
+//	@Summary		Plans dashboard
+//	@Description	Every plan, by name, not paginated: with its health, its latest run, its last successful backup and how many runs succeeded and failed on each of the last 30 UTC days. summary counts the plans per health. Admins only.
+//	@Tags			plans
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	DashboardDataResponse
+//	@Failure		401	{object}	errs.ErrorResponse
+//	@Failure		403	{object}	errs.ErrorResponse
+//	@Failure		500	{object}	errs.ErrorResponse
+//	@Router			/api/v1/dashboard [get]
+func (h *Handler) Dashboard(c *gin.Context) {
+	now := time.Now()
+	plans, err := h.service.Dashboard(c.Request.Context(), now)
+	if err != nil {
+		errs.RespondWithError(c, err)
+		return
+	}
+	response, err := dashboardResponse(plans, now)
+	if err != nil {
+		errs.RespondWithError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, DashboardDataResponse{Data: *response})
+}
+
+// SetEnabled pauses or resumes a backup plan
+//
+//	@Summary		Pause or resume a backup plan
+//	@Description	A paused plan keeps its settings and can still be run by hand, but does not run on its schedule. Resuming starts with the next slot, not the ones missed while paused. Admins only.
+//	@Tags			plans
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int					true	"Plan ID"
+//	@Param			request	body		SetEnabledRequest	true	"Enabled"
+//	@Success		200		{object}	PlanDataResponse
+//	@Failure		400		{object}	errs.ValidationErrorResponse
+//	@Failure		401		{object}	errs.ErrorResponse
+//	@Failure		403		{object}	errs.ErrorResponse
+//	@Failure		404		{object}	errs.ErrorResponse
+//	@Failure		500		{object}	errs.ErrorResponse
+//	@Router			/api/v1/plans/{id}/enabled [put]
+func (h *Handler) SetEnabled(c *gin.Context) {
+	id, ok := middleware.PathID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req SetEnabledRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		errs.RespondWithValidationError(c, err)
+		return
+	}
+
+	plan, err := h.service.SetEnabled(c.Request.Context(), id, *req.Enabled)
+	if err != nil {
+		errs.RespondWithError(c, err)
+		return
+	}
+	h.respondPlan(c, plan)
 }
 
 // GetPlan retrieves a backup plan by ID

@@ -6,7 +6,7 @@ import (
 )
 
 // RunResponse is a run without its log. scheduled_for is set for a scheduled run; started_at,
-// finished_at and size_bytes once it got that far; error when it failed.
+// finished_at, duration_ms and size_bytes once it got that far; error when it failed.
 type RunResponse struct {
 	ID           int64   `json:"id"`
 	PlanID       int64   `json:"plan_id"`
@@ -15,6 +15,7 @@ type RunResponse struct {
 	ScheduledFor *string `json:"scheduled_for" extensions:"x-nullable"`
 	StartedAt    *string `json:"started_at" extensions:"x-nullable"`
 	FinishedAt   *string `json:"finished_at" extensions:"x-nullable"`
+	DurationMs   *int64  `json:"duration_ms" extensions:"x-nullable"`
 	SizeBytes    *int64  `json:"size_bytes" extensions:"x-nullable"`
 	Error        *string `json:"error" extensions:"x-nullable"`
 	CreatedAt    string  `json:"created_at"`
@@ -62,4 +63,16 @@ type PaginatedRunsResponse struct {
 type PaginatedArchivesResponse struct {
 	Data       []ArchiveResponse       `json:"data"`
 	Pagination internal.PaginationMeta `json:"pagination"`
+}
+
+// DownloadLinkResponse is a token for GET /api/v1/downloads/{token}, which downloads the archive
+// without a session until expires_at, a minute from now
+type DownloadLinkResponse struct {
+	Token     string `json:"token"`
+	ExpiresAt string `json:"expires_at"`
+}
+
+// DownloadLinkDataResponse wraps a download link
+type DownloadLinkDataResponse struct {
+	Data DownloadLinkResponse `json:"data"`
 }

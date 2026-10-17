@@ -14,8 +14,6 @@ import { RetentionFields } from '../components/RetentionFields'
 import { ScheduleRows } from '../components/ScheduleRows'
 import { SourceFields } from '../components/SourceFields'
 import { SourceTestResult } from '../components/SourceTestResult'
-import { RunNowButton } from '../components/RunNowButton'
-import { RunStatusTag } from '../components/RunStatusTag'
 import { useDeletePlan, usePlan, usePlanStorageChoices, useSavePlan, useTestPlanSource } from '../hooks'
 import { emptyPlanForm, formToRequest, formToSource, hasStoredSecret, planFormFields, planToForm, sourceFieldPaths, type PlanFormValues } from '../planForm'
 import { duplicateSchedules } from '../schedule'
@@ -65,13 +63,16 @@ export default function PlanEditorPage() {
     setTestResult(null)
   }
 
-  const leave = () => {
+  const leave = (to: string) => {
     setDirty(false)
     setGuardDirty(false)
-    navigate('/plans')
+    navigate(to)
   }
 
-  const back = { label: t('plans.title'), onClick: () => navigate('/plans'), testId: 'plan-editor-back-button' }
+  const back =
+    id == null
+      ? { label: t('navigation.dashboard'), onClick: () => navigate('/'), testId: 'plan-editor-back-button' }
+      : { label: plan.data?.name ?? t('common.back'), onClick: () => navigate(`/plans/${id}`), testId: 'plan-editor-back-button' }
 
   if (id != null && plan.isLoading) return <PageLoading />
   if (id != null && plan.isError) return <PageError error={plan.error} back={back} onRetry={() => plan.refetch()} />
@@ -84,9 +85,9 @@ export default function PlanEditorPage() {
     save.mutate(
       { id, body: formToRequest(all) },
       {
-        onSuccess: () => {
+        onSuccess: (saved) => {
           message.success(t('plans.saved'))
-          leave()
+          leave(`/plans/${saved.id}`)
         },
         onError: (error) => setServerError(applyFormErrors(form, t, error, planFormFields(all))),
       }
@@ -116,7 +117,7 @@ export default function PlanEditorPage() {
     remove.mutate(id, {
       onSuccess: () => {
         message.success(t('plans.deleted'))
-        leave()
+        leave('/')
       },
     })
   }
@@ -146,8 +147,6 @@ export default function PlanEditorPage() {
         <PageHeader
           title={id == null ? t('plans.create') : t('plans.edit')}
           back={back}
-          tags={plan.data && <RunStatusTag plan={plan.data} />}
-          extra={plan.data && <RunNowButton plan={plan.data} />}
         />
 
         {serverError && <Alert data-testid="plan-editor-error" type="error" showIcon message={serverError} style={{ marginBottom: token.marginMD }} />}

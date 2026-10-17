@@ -37,6 +37,19 @@ SELECT * FROM plans
 ORDER BY name COLLATE NOCASE, id
 LIMIT ?1 OFFSET ?2;
 
+-- name: ListPlans :many
+SELECT * FROM plans
+ORDER BY name COLLATE NOCASE, id;
+
+-- Only a change counts as a save: the scheduler skips slots from before the last save, so
+-- resuming a plan never starts the backup it missed while paused.
+-- name: SetPlanEnabled :one
+UPDATE plans
+SET enabled = sqlc.arg(enabled),
+    updated_at = CASE WHEN enabled = sqlc.arg(enabled) THEN updated_at ELSE CURRENT_TIMESTAMP END
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
 -- name: CountPlans :one
 SELECT COUNT(*) FROM plans;
 

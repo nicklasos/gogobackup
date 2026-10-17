@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test'
 import { DashboardPage } from '../pages/DashboardPage'
 
 test.describe('Dashboard', () => {
-  test('shows dashboard for authenticated user', async ({ page }) => {
+  test('greets a plain user without showing any plan', async ({ page }) => {
     const dashboard = new DashboardPage(page)
-    await page.goto('/')
-    await dashboard.expectVisible()
-    await expect(dashboard.welcome).toBeVisible()
+    await dashboard.gotoDashboard()
+    await expect(dashboard.noAccess).toBeVisible()
+    await expect(dashboard.cards).toHaveCount(0)
   })
 })

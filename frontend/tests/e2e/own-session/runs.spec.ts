@@ -4,10 +4,10 @@ import path from 'path'
 import { test, expect } from '@playwright/test'
 import { assertTestDatabasePath } from '../helpers/db-helper'
 import { dbHelper, loginAs } from '../helpers/test-helpers'
-import { PlanEditorPage } from '../pages/PlanEditorPage'
-import { PlansPage } from '../pages/PlansPage'
+import { DashboardPage } from '../pages/DashboardPage'
+import { PlanPage } from '../pages/PlanPage'
 
-/** A run takes a moment and the list polls every few seconds. */
+/** A run takes a moment and the pages poll every few seconds. */
 const RUN_TIMEOUT = 30_000
 
 async function sqlitePlanToNewDirectory(label: string) {
@@ -23,15 +23,14 @@ function archivesIn(dir: string): string[] {
 }
 
 test.describe('Running backup plans', () => {
-  test('Run now backs up the test database into the storage and the tag follows the run', async ({ page }) => {
+  test('Run now backs up the test database into the storage', async ({ page }) => {
     await loginAs(page, 'admin')
     const { dir, plan } = await sqlitePlanToNewDirectory('Run now')
-    const list = new PlansPage(page)
+    const dashboard = new DashboardPage(page)
 
-    await list.gotoList()
-    await expect(list.runStatus(plan.name)).toHaveAttribute('data-status', 'none')
-    await list.runNow(plan.name)
-    await expect(list.runStatus(plan.name)).toHaveAttribute('data-status', 'succeeded', { timeout: RUN_TIMEOUT })
+    await dashboard.gotoDashboard()
+    await dashboard.runNow(plan.id)
+    await expect(dashboard.card(plan.id)).toHaveAttribute('data-health', 'ok', { timeout: RUN_TIMEOUT })
 
     const archives = archivesIn(dir)
     expect(archives).toHaveLength(1)
@@ -39,20 +38,24 @@ test.describe('Running backup plans', () => {
     expect(archive.subarray(0, 2)).toEqual(Buffer.from([0x1f, 0x8b]))
   })
 
-  test('a plan whose storage directory is gone shows its run as failed', async ({ page }) => {
+  test('a plan whose storage directory is gone shows its run as failed, with the error and the log', async ({ page }) => {
     await loginAs(page, 'admin')
     const { dir, plan } = await sqlitePlanToNewDirectory('Broken')
     fs.rmSync(dir, { recursive: true, force: true })
-    const list = new PlansPage(page)
-    const editor = new PlanEditorPage(page)
+    const dashboard = new DashboardPage(page)
+    const planPage = new PlanPage(page)
 
-    await list.gotoList()
-    await list.edit(plan.name)
-    await editor.runButton.click()
-    await expect(editor.runStatus).toHaveAttribute('data-status', 'failed', { timeout: RUN_TIMEOUT })
-    await expect(editor.runButton).toBeEnabled()
+    await planPage.gotoPlan(plan.id)
+    await planPage.runButton.click()
+    await expect(planPage.health).toHaveAttribute('data-health', 'failed', { timeout: RUN_TIMEOUT })
+    await expect(planPage.runButton).toBeEnabled()
 
-    await list.gotoList()
-    await expect(list.runStatus(plan.name)).toHaveAttribute('data-status', 'failed')
+    await planPage.runRows.first().click()
+    await expect(planPage.drawerStatus).toHaveAttribute('data-status', 'failed')
+    await expect(planPage.runError).toBeVisible()
+    await expect(planPage.log).toContainText(plan.name)
+
+    await dashboard.gotoDashboard()
+    await expect(dashboard.card(plan.id)).toHaveAttribute('data-health', 'failed')
   })
 })

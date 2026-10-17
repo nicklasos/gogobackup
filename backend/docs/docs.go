@@ -24,6 +24,143 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/archives/{id}/download": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Streams the archive's object from its storage, as an attachment named after the object. An archive that retention deleted is a 404; a storage that fails, or has lost the object, a 502 storages.unreachable. A browser uses a download link instead. Admins only.",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Download an archive",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Archive ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/archives/{id}/download-link": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "A token for GET /api/v1/downloads/{token}, valid for a minute. A browser follows it to save a large archive straight to disk; a request with the Authorization header cannot do that. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Make a download link for an archive",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Archive ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_runs.DownloadLinkDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/forgot-password": {
             "post": {
                 "description": "Emails a single-use reset link when the address belongs to an account. Always answers 200, so it does not reveal which emails are registered.",
@@ -544,6 +681,105 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Every plan, by name, not paginated: with its health, its latest run, its last successful backup and how many runs succeeded and failed on each of the last 30 UTC days. summary counts the plans per health. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plans"
+                ],
+                "summary": "Plans dashboard",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_plans.DashboardDataResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/downloads/{token}": {
+            "get": {
+                "description": "Needs no session: the token from POST /api/v1/archives/{id}/download-link is the permission, until it expires a minute after it was made. An invalid or expired token is a 403 archives.invalid_link.",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Download an archive by link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Download token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/plans": {
             "get": {
                 "security": [
@@ -1012,6 +1248,82 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/plans/{id}/enabled": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "A paused plan keeps its settings and can still be run by hand, but does not run on its schedule. Resuming starts with the next slot, not the ones missed while paused. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plans"
+                ],
+                "summary": "Pause or resume a backup plan",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Enabled",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_plans.SetEnabledRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_plans.PlanDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ValidationErrorResponse"
                         }
                     },
                     "401": {
@@ -2601,6 +2913,189 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_plans.DashboardDataResponse": {
+            "type": "object",
+            "required": [
+                "data"
+            ],
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_plans.DashboardResponse"
+                }
+            }
+        },
+        "internal_plans.DashboardPlanResponse": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "days",
+                "enabled",
+                "folder",
+                "health",
+                "id",
+                "keep_monthly",
+                "keep_weekly",
+                "last_run",
+                "last_size_bytes",
+                "last_success_at",
+                "max_age_days",
+                "name",
+                "next_run_at",
+                "schedules",
+                "secret_set",
+                "source_kind",
+                "storages",
+                "updated_at"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "days": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_plans.DayResponse"
+                    }
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "files": {
+                    "$ref": "#/definitions/internal_plans.FilesConfig"
+                },
+                "folder": {
+                    "type": "string"
+                },
+                "health": {
+                    "enum": [
+                        "running",
+                        "failed",
+                        "paused",
+                        "overdue",
+                        "never",
+                        "ok"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_plans.Health"
+                        }
+                    ]
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "keep_monthly": {
+                    "type": "integer"
+                },
+                "keep_weekly": {
+                    "type": "integer"
+                },
+                "last_run": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_plans.LastRunResponse"
+                        }
+                    ],
+                    "x-nullable": true
+                },
+                "last_size_bytes": {
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "last_success_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "max_age_days": {
+                    "type": "integer"
+                },
+                "mysql": {
+                    "$ref": "#/definitions/internal_plans.MySQLConfig"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "next_run_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "postgres": {
+                    "$ref": "#/definitions/internal_plans.PostgresConfig"
+                },
+                "schedules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_plans.Schedule"
+                    }
+                },
+                "secret_set": {
+                    "type": "boolean"
+                },
+                "source_kind": {
+                    "enum": [
+                        "postgres",
+                        "mysql",
+                        "sqlite",
+                        "files"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_plans.SourceKind"
+                        }
+                    ]
+                },
+                "sqlite": {
+                    "$ref": "#/definitions/internal_plans.SQLiteConfig"
+                },
+                "storages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_plans.PlanStorageResponse"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_plans.DashboardResponse": {
+            "type": "object",
+            "required": [
+                "plans",
+                "summary"
+            ],
+            "properties": {
+                "plans": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_plans.DashboardPlanResponse"
+                    }
+                },
+                "summary": {
+                    "$ref": "#/definitions/internal_plans.HealthSummaryResponse"
+                }
+            }
+        },
+        "internal_plans.DayResponse": {
+            "type": "object",
+            "required": [
+                "date",
+                "failed",
+                "succeeded"
+            ],
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-10-17"
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "succeeded": {
+                    "type": "integer"
+                }
+            }
+        },
         "internal_plans.FilesConfig": {
             "type": "object",
             "required": [
@@ -2640,6 +3135,56 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "internal_plans.Health": {
+            "type": "string",
+            "enum": [
+                "running",
+                "failed",
+                "paused",
+                "overdue",
+                "never",
+                "ok"
+            ],
+            "x-enum-varnames": [
+                "HealthRunning",
+                "HealthFailed",
+                "HealthPaused",
+                "HealthOverdue",
+                "HealthNever",
+                "HealthOK"
+            ]
+        },
+        "internal_plans.HealthSummaryResponse": {
+            "type": "object",
+            "required": [
+                "failed",
+                "never",
+                "ok",
+                "overdue",
+                "paused",
+                "running"
+            ],
+            "properties": {
+                "failed": {
+                    "type": "integer"
+                },
+                "never": {
+                    "type": "integer"
+                },
+                "ok": {
+                    "type": "integer"
+                },
+                "overdue": {
+                    "type": "integer"
+                },
+                "paused": {
+                    "type": "integer"
+                },
+                "running": {
+                    "type": "integer"
                 }
             }
         },
@@ -2849,10 +3394,13 @@ const docTemplate = `{
             "required": [
                 "created_at",
                 "enabled",
+                "folder",
+                "health",
                 "id",
                 "keep_monthly",
                 "keep_weekly",
                 "last_run",
+                "last_size_bytes",
                 "last_success_at",
                 "max_age_days",
                 "name",
@@ -2873,6 +3421,24 @@ const docTemplate = `{
                 "files": {
                     "$ref": "#/definitions/internal_plans.FilesConfig"
                 },
+                "folder": {
+                    "type": "string"
+                },
+                "health": {
+                    "enum": [
+                        "running",
+                        "failed",
+                        "paused",
+                        "overdue",
+                        "never",
+                        "ok"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_plans.Health"
+                        }
+                    ]
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -2888,6 +3454,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/internal_plans.LastRunResponse"
                         }
                     ],
+                    "x-nullable": true
+                },
+                "last_size_bytes": {
+                    "type": "integer",
                     "x-nullable": true
                 },
                 "last_success_at": {
@@ -3120,6 +3690,17 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_plans.SetEnabledRequest": {
+            "type": "object",
+            "required": [
+                "enabled"
+            ],
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
         "internal_plans.SourceKind": {
             "type": "string",
             "enum": [
@@ -3307,6 +3888,32 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_runs.DownloadLinkDataResponse": {
+            "type": "object",
+            "required": [
+                "data"
+            ],
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_runs.DownloadLinkResponse"
+                }
+            }
+        },
+        "internal_runs.DownloadLinkResponse": {
+            "type": "object",
+            "required": [
+                "expires_at",
+                "token"
+            ],
+            "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_runs.PaginatedArchivesResponse": {
             "type": "object",
             "required": [
@@ -3370,6 +3977,7 @@ const docTemplate = `{
             "required": [
                 "archives",
                 "created_at",
+                "duration_ms",
                 "error",
                 "finished_at",
                 "id",
@@ -3390,6 +3998,10 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "duration_ms": {
+                    "type": "integer",
+                    "x-nullable": true
                 },
                 "error": {
                     "type": "string",
@@ -3450,6 +4062,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "created_at",
+                "duration_ms",
                 "error",
                 "finished_at",
                 "id",
@@ -3463,6 +4076,10 @@ const docTemplate = `{
             "properties": {
                 "created_at": {
                     "type": "string"
+                },
+                "duration_ms": {
+                    "type": "integer",
+                    "x-nullable": true
                 },
                 "error": {
                     "type": "string",

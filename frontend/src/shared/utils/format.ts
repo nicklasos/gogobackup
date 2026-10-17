@@ -53,3 +53,68 @@ export function formatBytes(bytes: number | null | undefined): string {
   }
   return `${formatNumber(value, unit === 0 ? 0 : 1)} ${units[unit]}`
 }
+
+const SECOND = 1000
+const MINUTE = 60 * SECOND
+const HOUR = 60 * MINUTE
+const DAY = 24 * HOUR
+
+const relativeSteps: { unit: Intl.RelativeTimeFormatUnit; ms: number; below: number }[] = [
+  { unit: 'second', ms: SECOND, below: 45 * SECOND },
+  { unit: 'minute', ms: MINUTE, below: 45 * MINUTE },
+  { unit: 'hour', ms: HOUR, below: 22 * HOUR },
+  { unit: 'day', ms: DAY, below: 26 * DAY },
+  { unit: 'month', ms: 30 * DAY, below: 320 * DAY },
+  { unit: 'year', ms: 365 * DAY, below: Infinity },
+]
+
+/** How long ago (or how far ahead) a moment is: "3 hours ago", "yesterday", "in 5 minutes". */
+export function formatRelative(value: string | null | undefined, now: Date = new Date()): string {
+  if (!value) return EMPTY
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  const diff = date.getTime() - now.getTime()
+  const step = relativeSteps.find(({ below }) => Math.abs(diff) < below) ?? relativeSteps[relativeSteps.length - 1]
+  const amount = step.unit === 'second' ? 0 : Math.round(diff / step.ms)
+  return new Intl.RelativeTimeFormat(LOCALES[lang], { numeric: 'auto' }).format(amount, step.unit)
+}
+
+const utcDay = (date: Date) => Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+
+/** When a plan runs next: "today 18:00 UTC", "tomorrow 03:00 UTC", or "Mon 19.10 03:00 UTC" further out. */
+export function formatNextRun(value: string | null | undefined, now: Date = new Date()): string {
+  if (!value) return EMPTY
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const time = `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())} UTC`
+  const days = Math.round((utcDay(date) - utcDay(now)) / DAY)
+  if (days === 0 || days === 1) {
+    return `${new Intl.RelativeTimeFormat(LOCALES[lang], { numeric: 'auto' }).format(days, 'day')} ${time}`
+  }
+  const weekday = new Intl.DateTimeFormat(LOCALES[lang], { weekday: 'short', timeZone: 'UTC' }).format(date)
+  return `${weekday} ${pad(date.getUTCDate())}.${pad(date.getUTCMonth() + 1)} ${time}`
+}
+
+/** A UTC day ("2026-10-14") as the month and day: "14 Oct". */
+export function formatDay(value: string): string {
+  const date = new Date(`${value}T00:00:00Z`)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat(LOCALES[lang], { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(date)
+}
+
+/** How long something took, in its two largest units: "850 ms", "12 sec", "3 min, 5 sec", "1 hr, 2 min". */
+export function formatDuration(ms: number | null | undefined): string {
+  if (missing(ms)) return EMPTY
+  const unit = (amount: number, name: string) =>
+    new Intl.NumberFormat(LOCALES[lang], { style: 'unit', unit: name, unitDisplay: 'short' }).format(amount)
+  if (ms < SECOND) return unit(Math.round(ms), 'millisecond')
+  const seconds = Math.round(ms / SECOND)
+  const parts =
+    seconds < 60
+      ? [unit(seconds, 'second')]
+      : seconds < 3600
+        ? [unit(Math.floor(seconds / 60), 'minute'), unit(seconds % 60, 'second')]
+        : [unit(Math.floor(seconds / 3600), 'hour'), unit(Math.floor((seconds % 3600) / 60), 'minute')]
+  return parts.join(', ')
+}

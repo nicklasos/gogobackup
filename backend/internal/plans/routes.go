@@ -19,5 +19,10 @@ func RegisterRoutes(app *internal.App) {
 		plans.PUT("/:id", handler.UpdatePlan)
 		plans.DELETE("/:id", handler.DeletePlan)
 		plans.POST("/:id/test", handler.TestPlan)
+		plans.PUT("/:id/enabled", handler.SetEnabled)
 	}
+
+	dashboard := app.Api.Group("/dashboard")
+	dashboard.Use(app.AuthMiddleware, middleware.RequireRole(middleware.RoleAdmin))
+	dashboard.GET("", handler.Dashboard)
 }

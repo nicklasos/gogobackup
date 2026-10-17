@@ -33,6 +33,13 @@ describe('selectNavKey', () => {
     assert.equal(selectNavKey(items, '/reports/12/edit'), 'reports')
   })
 
+  it('matches the extra sections an item owns', () => {
+    const withPlans = [{ key: 'home', path: '/', alsoPaths: ['/plans'] }, { key: 'reports', path: '/reports' }]
+    assert.equal(selectNavKey(withPlans, '/plans/7'), 'home')
+    assert.equal(selectNavKey(withPlans, '/plans-old'), undefined)
+    assert.deepEqual(selectActiveNav(withPlans, [], '/plans/7/edit'), { main: 'home' })
+  })
+
   it('does not match a path that only shares a prefix', () => {
     assert.equal(selectNavKey(items, '/reports-archive'), undefined)
   })
