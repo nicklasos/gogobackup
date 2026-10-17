@@ -63,6 +63,7 @@
   "navigation": {
     "dashboard": "Дашборд",
     "examples": "Приклади",
+    "storages": "Сховища",
     "users": "Користувачі",
     "profile": "Профіль",
     "adminMenu": "Адмін-меню",
@@ -74,6 +75,17 @@
       "super-admin": "Супер-адмін",
       "admin": "Адмін",
       "user": "Користувач"
+    },
+    "storageKind": {
+      "local": "Локальна тека",
+      "s3": "S3",
+      "gcs": "Google Cloud Storage"
+    },
+    "storageTestStep": {
+      "connect": "З'єднання",
+      "write": "Запис",
+      "read": "Читання",
+      "delete": "Видалення"
     }
   },
   "dashboard": {
@@ -94,6 +106,65 @@
     "deleteConfirm": "Видалити цей приклад?",
     "empty": "Прикладів ще немає",
     "view": "Переглянути"
+  },
+  "storages": {
+    "title": "Сховища",
+    "subtitle": "Де зберігаються резервні копії: тека на цьому сервері, S3-сумісний бакет або бакет Google Cloud Storage.",
+    "add": "Додати сховище",
+    "create": "Додати сховище",
+    "edit": "Редагувати сховище",
+    "nameField": "Назва",
+    "nameRequired": "Вкажіть назву",
+    "namePlaceholder": "Зовнішній S3",
+    "kindField": "Тип",
+    "kindHint": {
+      "local": "Тека на сервері, де працює Gogobackup. Вона має вже існувати й бути доступною сервісу для запису.",
+      "s3": "Amazon S3 або будь-який S3-сумісний сервіс: MinIO, Cloudflare R2, Backblaze B2, Wasabi.",
+      "gcs": "Бакет Google Cloud Storage з доступом через ключ сервісного акаунта."
+    },
+    "location": "Розташування",
+    "credentials": "Облікові дані",
+    "secretStored": "Збережено",
+    "secretMissing": "Відсутні",
+    "secretNotNeeded": "Не потрібні",
+    "secretKeepPlaceholder": "Збережено. Залиште порожнім, щоб не змінювати",
+    "saved": "Сховище збережено",
+    "deleted": "Сховище видалено",
+    "deleteConfirm": "Видалити це сховище?",
+    "deleteHint": "Файли, що вже в ньому, залишаться.",
+    "empty": "Сховищ ще немає",
+    "browse": "Переглянути",
+    "local": {
+      "path": "Тека",
+      "pathHint": "Абсолютний шлях на сервері, наприклад /var/backups/gogobackup."
+    },
+    "s3": {
+      "endpoint": "Адреса (endpoint)",
+      "endpointHint": "Залиште порожнім для Amazon S3. Для інших сервісів — їхня адреса, наприклад https://<account>.r2.cloudflarestorage.com.",
+      "bucket": "Бакет",
+      "region": "Регіон",
+      "pathStyle": "Адреси у стилі шляху (path-style)",
+      "pathStyleHint": "Увімкніть для MinIO та інших серверів, що не підтримують піддомени бакетів.",
+      "accessKeyId": "Access key ID",
+      "secretAccessKey": "Secret access key"
+    },
+    "gcs": {
+      "bucket": "Бакет",
+      "credentials": "Ключ сервісного акаунта (JSON)",
+      "credentialsHint": "Вставте вміст файлу ключа або завантажте його. Акаунт має створювати, читати й видаляти об'єкти в бакеті.",
+      "loadFile": "Завантажити файл ключа"
+    },
+    "prefix": "Тека в бакеті",
+    "prefixHint": "Необов'язково. Копії зберігатимуться в цій теці, наприклад gogobackup/.",
+    "testConnection": "Перевірити з'єднання",
+    "testOk": "З'єднання працює: тестовий файл записано, прочитано й видалено.",
+    "testFailed": "Перевірка не пройшла на кроці: {{step}}",
+    "objectName": "Назва",
+    "objectSize": "Розмір",
+    "objectModified": "Змінено",
+    "refresh": "Оновити",
+    "root": "Корінь",
+    "folderEmpty": "Тека порожня"
   },
   "userManagement": {
     "byRole": {
@@ -186,7 +257,16 @@
     "validation.error": "Некоректний запит",
     "crashTitle": "На цій сторінці сталася помилка",
     "crashHint": "Решта застосунку працює. Спробуйте ще раз або перезавантажте сторінку.",
-    "reloadPage": "Перезавантажити сторінку"
+    "reloadPage": "Перезавантажити сторінку",
+    "storages.not_found": "Сховище не знайдено",
+    "storages.name_taken": "Сховище з такою назвою вже існує",
+    "storages.invalid_prefix": "Ця тека не є коректним шляхом у сховищі",
+    "storages.unreachable": "Не вдалося з'єднатися зі сховищем",
+    "validation.local.path.invalid": "Вкажіть абсолютний шлях, наприклад /var/backups",
+    "validation.s3.endpoint.invalid": "Вкажіть адресу на кшталт https://s3.example.com, без шляху",
+    "validation.s3.prefix.invalid": "Тека не може містити ..",
+    "validation.gcs.prefix.invalid": "Тека не може містити ..",
+    "validation.gcs.credentials_json.invalid": "Вставте файл ключа сервісного акаунта: JSON із \"type\": \"service_account\""
   },
   "editor": {
     "placeholder": "Введіть текст",

@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"app/cmd/cli/internal"
 	"app/internal/factory"
 	"app/internal/middleware"
+	"app/internal/secretbox"
 )
 
 const seedAdminEmail = "admin@example.com"
@@ -40,7 +42,12 @@ func RunSeed(app *internal.CLIApp, args []string) {
 		os.Exit(1)
 	}
 
-	create := factory.New(seedReporter{}, app.Database)
+	secrets, err := secretbox.New(app.Config.EncryptionKey)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Seeding failed: %v\n", err)
+		os.Exit(1)
+	}
+	create := factory.New(seedReporter{}, app.Database, secrets)
 
 	create.User(factory.WithEmail(seedAdminEmail), factory.WithName("Super Admin"), factory.WithRoles(middleware.RoleSuperAdmin))
 	create.User(factory.WithEmail("manager@example.com"), factory.WithName("Manager"), factory.WithRoles(middleware.RoleAdmin))
@@ -54,9 +61,20 @@ func RunSeed(app *internal.CLIApp, args []string) {
 	)
 	create.Examples(user.ID, 30, "Sample example")
 
+	backups, err := filepath.Abs(filepath.Join("data", "backups"))
+	if err == nil {
+		err = os.MkdirAll(backups, 0o750)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Seeding failed: %v\n", err)
+		os.Exit(1)
+	}
+	create.Storage(factory.WithStorageName("Local backups"), factory.LocalStorage(backups))
+
 	fmt.Println("Seeded. Every account has the password:", factory.DefaultPassword)
 	fmt.Println("  super admin  ", seedAdminEmail)
 	fmt.Println("  admin         manager@example.com")
 	fmt.Println("  user          user@example.com (owns 31 examples)")
 	fmt.Println("  user          unverified@example.com (email not confirmed)")
+	fmt.Println("Storage \"Local backups\" points at", backups)
 }

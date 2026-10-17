@@ -15,6 +15,9 @@ const ProfilePage = lazy(() => import('@/features/account/ProfilePage'))
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'))
 const ExampleEditorPage = lazy(() => import('@/features/examples/pages/ExampleEditorPage'))
 const ExamplesPage = lazy(() => import('@/features/examples/pages/ExamplesPage'))
+const StorageBrowserPage = lazy(() => import('@/features/storages/pages/StorageBrowserPage'))
+const StorageEditorPage = lazy(() => import('@/features/storages/pages/StorageEditorPage'))
+const StoragesPage = lazy(() => import('@/features/storages/pages/StoragesPage'))
 const AdminsPage = lazy(() => import('@/features/users/pages/AdminsPage'))
 const SuperAdminsPage = lazy(() => import('@/features/users/pages/SuperAdminsPage'))
 const UsersPage = lazy(() => import('@/features/users/pages/UsersPage'))
@@ -49,6 +52,38 @@ export function AppRoutes() {
         <Route path="examples" element={<ExamplesPage />} />
         <Route path="examples/new" element={<ExampleEditorPage />} />
         <Route path="examples/:id/edit" element={<ExampleEditorPage />} />
+        <Route
+          path="storages"
+          element={
+            <RequireRole roles={[ROLE_ADMIN]}>
+              <StoragesPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="storages/new"
+          element={
+            <RequireRole roles={[ROLE_ADMIN]}>
+              <StorageEditorPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="storages/:id/edit"
+          element={
+            <RequireRole roles={[ROLE_ADMIN]}>
+              <StorageEditorPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="storages/:id/browse"
+          element={
+            <RequireRole roles={[ROLE_ADMIN]}>
+              <StorageBrowserPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="users"
           element={

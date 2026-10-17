@@ -7,8 +7,8 @@ import { applyFormErrors } from './formErrors'
 const t = (key: string, options?: Record<string, unknown>) => (options?.defaultValue as string | undefined) ?? key
 
 function fakeForm() {
-  const calls: { name: string; errors: string[] }[][] = []
-  const form = { setFields: (fields: { name: string; errors: string[] }[]) => calls.push(fields) } as unknown as FormInstance
+  const calls: { name: string | string[]; errors: string[] }[][] = []
+  const form = { setFields: (fields: { name: string | string[]; errors: string[] }[]) => calls.push(fields) } as unknown as FormInstance
   return { form, calls }
 }
 
@@ -20,6 +20,14 @@ describe('applyFormErrors', () => {
     assert.equal(applyFormErrors(form, t, error, ['title', 'description']), null)
     assert.equal(calls.length, 1)
     assert.deepEqual(calls[0].map((f) => f.name), ['title'])
+  })
+
+  it('names a field of a nested block by its path', () => {
+    const { form, calls } = fakeForm()
+    const error = new ApiError(400, 'validation.failed', 'invalid', { 's3.bucket': ['validation.s3.bucket.required'] })
+
+    assert.equal(applyFormErrors(form, t, error, ['s3.bucket']), null)
+    assert.deepEqual(calls[0].map((f) => f.name), [['s3', 'bucket']])
   })
 
   it('returns the errors of fields the form does not have', () => {

@@ -27,6 +27,16 @@ type RefreshToken struct {
 	IsRevoked sql.NullBool `db:"is_revoked" json:"is_revoked"`
 }
 
+type Storage struct {
+	ID        int64        `db:"id" json:"id"`
+	Name      string       `db:"name" json:"name"`
+	Kind      string       `db:"kind" json:"kind"`
+	Config    string       `db:"config" json:"config"`
+	Secret    []byte       `db:"secret" json:"secret"`
+	CreatedAt sql.NullTime `db:"created_at" json:"created_at"`
+	UpdatedAt sql.NullTime `db:"updated_at" json:"updated_at"`
+}
+
 type User struct {
 	ID              int64        `db:"id" json:"id"`
 	Email           string       `db:"email" json:"email"`

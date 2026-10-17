@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import type { User } from '@/auth/types'
 import { canDeleteExample, canUpdateExample, canViewExample } from './examples/policy'
 import type { Example } from './examples/types'
+import { canManageStorages } from './storages/policy'
 import { canDeleteUser, canManageUser } from './users/policy'
 
 const person = (id: number, ...roles: string[]): User => ({ id, roles, email: `u${id}@example.com`, name: `User ${id}`, email_verified: true })
@@ -47,5 +48,14 @@ describe('users policy', () => {
     assert.equal(canDeleteUser(superAdmin, { id: superAdmin.id, roles: ['super-admin'] }), false)
     assert.equal(canDeleteUser(superAdmin, { id: 99, roles: ['super-admin'] }), true)
     assert.equal(canDeleteUser(admin, { id: 99, roles: ['admin'] }), false)
+  })
+})
+
+describe('storages policy', () => {
+  it('is for admins and super admins, as the API route group', () => {
+    assert.equal(canManageStorages(superAdmin), true)
+    assert.equal(canManageStorages(admin), true)
+    assert.equal(canManageStorages(owner), false)
+    assert.equal(canManageStorages(null), false)
   })
 })

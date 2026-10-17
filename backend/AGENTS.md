@@ -23,7 +23,7 @@ gogo/
 │   ├── config.go                # Env → Config
 │   └── testdb.go                # Test-database safety guard
 ├── internal/
-│   ├── app.go                   # App context with DB, Tx, Cache, Logger, Mail, AuthMiddleware
+│   ├── app.go                   # App context with DB, Tx, Cache, Logger, Mail, Secrets, AuthMiddleware
 │   ├── server/server.go         # NewEngine (middleware) + RegisterRoutes (the module list)
 │   ├── auth/                    # Authentication module
 │   │   ├── auth_service.go      # Business logic
@@ -32,6 +32,9 @@ gogo/
 │   │   └── types.go             # Request/response types
 │   ├── users/                   # User management (super admins, admins, users)
 │   ├── example/                 # Example CRUD module (cache demo)
+│   ├── storages/                # Where backups go: kinds registry (kinds.go), service, handlers
+│   │   └── driver/              # Driver interface (Put/Open/List/Delete), local, S3, GCS, Probe
+│   ├── secretbox/               # AES-256-GCM sealing of credentials with ENCRYPTION_KEY
 │   ├── health/                  # /health and /api/v1/health
 │   ├── db/
 │   │   ├── tx.go                # TxRunner.WithTx transaction helper
@@ -103,10 +106,17 @@ When adding new modules:
 - `internal/example/policy.go` and `internal/users/policy.go` are the references; `tests/unit/policy_test.go` shows how to test one.
 
 ## Factories and seed data
-- `internal/factory` creates records with defaults. In a test it is `app.Create`: `app.Create.User()`, `app.Create.User(factory.Admin(), factory.Unverified())`, `app.Create.Example(user.ID, factory.WithTitle("..."))`, `app.Create.Examples(user.ID, 25, "Sample")`. Elsewhere: `factory.New(t, conn)`.
+- `internal/factory` creates records with defaults. In a test it is `app.Create`: `app.Create.User()`, `app.Create.User(factory.Admin(), factory.Unverified())`, `app.Create.Example(user.ID, factory.WithTitle("..."))`, `app.Create.Examples(user.ID, 25, "Sample")`, `app.Create.Storage(factory.LocalStorage(dir))`. Elsewhere: `factory.New(t, conn, secrets)`, where `secrets` seals storage credentials.
 - Every new table gets a factory. Tests never write `INSERT` statements by hand.
 - Users from a factory have the password `factory.DefaultPassword` and a verified email unless `factory.Unverified()` is passed.
 - `make seed` fills an empty development database through the same factories (`cmd/cli/internal/commands/seed.go`); add a new module's sample data there.
+
+## Storages
+- A storage kind (`local`, `s3`, `gcs`) is one entry in the `kinds` registry in `internal/storages/kinds.go`: its request block, the fields of its credentials, how to open its driver, and how to show its config. Adding a kind is one entry and one driver, not a new branch in the service.
+- `config` holds the kind's settings as JSON; `secret` holds its credentials as JSON sealed by `app.Secrets` (`internal/secretbox`). No response type carries a credential: responses say `secret_set`.
+- Drivers take keys relative to the storage's directory or bucket prefix and refuse `..` and absolute keys (`driver.CleanKey`); the local driver goes through `os.Root`, so a symlink cannot lead out either. `Put` and `Open` stream: phases 5 and 7 send archives of any size through them.
+- `StorageService.Driver(ctx, storage)` opens a saved storage for other modules.
+- Tests run offline: `testkit.NewFakeS3(t)` (gofakes3 on a loopback port) and `testkit.NewFakeGCS(t)` (fake-gcs-server in process). `app.Create.Storage(factory.S3Storage(...))` seals credentials with the test key.
 
 ## Transactions
 Services that need more than one write take `*db.TxRunner` (from `app.Tx`) and use:

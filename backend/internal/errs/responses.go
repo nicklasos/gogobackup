@@ -1,6 +1,7 @@
 package errs
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -18,6 +19,12 @@ type ErrorResponse struct {
 
 // RespondWithError sends a structured error response
 func RespondWithError(c *gin.Context, err error) {
+	var fields Fields
+	if errors.As(err, &fields) {
+		RespondWithValidationError(c, err)
+		return
+	}
+
 	domainErr := ExtractDomainError(err)
 
 	response := ErrorResponse{

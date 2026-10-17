@@ -29,6 +29,11 @@ npm run dev                                     # http://localhost:5173
 
 Sign in at http://localhost:5173 with `admin@example.com` / `password123`.
 
+The seed adds a local storage, `Local backups`, at `backend/data/backups`. Under **Storages** an admin adds
+local directories, S3-compatible buckets (AWS, MinIO, R2, B2) and Google Cloud Storage buckets, tests the
+connection and browses what is in them. Their credentials are encrypted with `ENCRYPTION_KEY` from
+`backend/.env` (`openssl rand -base64 32`); left empty in development, a public key is used with a warning.
+
 | | |
 |---|---|
 | Admin panel | http://localhost:5173 |
@@ -45,7 +50,7 @@ A fresh Ubuntu 22.04 or 24.04 server, a domain pointing at it, and Ansible on yo
 cd deploy
 ansible-galaxy collection install -r requirements.yml
 cp inventory/hosts.example.yml inventory/hosts.yml       # the server's address
-cp secrets.example.yml group_vars/all/secrets.yml        # passwords: openssl rand -hex 32
+cp secrets.example.yml group_vars/all/secrets.yml        # jwt_secret and encryption_key (see the file)
 $EDITOR group_vars/all/main.yml                          # app name, domain, repository, TLS mode
 ansible-playbook provision.yml
 ```

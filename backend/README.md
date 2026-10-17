@@ -83,6 +83,7 @@ Run the tests with `make test`. They need no database setup: each test gets its 
 - **Safe defaults**: registration closed unless `ALLOW_REGISTRATION=true`, and a weak `JWT_SECRET` is refused in production
 - **Roles**: `super-admin`, `admin`, `user` with `RequireRole` middleware; roles are read from the database on every request
 - **User management**: super admins manage super admins and admins, admins manage users
+- **Storages**: where backups go (a local directory, S3-compatible or Google Cloud Storage), with a connection test and a browser. Credentials are encrypted with `ENCRYPTION_KEY` and never returned
 - **Mail**: SMTP service (`app.Mail`), logged instead of sent in debug mode, with an in-memory sender for tests
 - **Policies**: who may do what to a record, one small `policy.go` per module
 - **Factories and seed data**: `app.Create.User(factory.Admin())` in tests, `make seed` for a development database
@@ -119,6 +120,9 @@ gogo/
 │   ├── auth/                    # Authentication module
 │   ├── users/                   # User management
 │   ├── example/                 # Example CRUD module (cache demo)
+│   ├── storages/                # Storages: kinds registry, service, handlers
+│   │   └── driver/              # Local, S3 and GCS drivers: Put, Open, List, Delete, Probe
+│   ├── secretbox/               # AES-256-GCM for credentials at rest
 │   ├── db/queries/              # SQL queries (sqlc)
 │   ├── middleware/              # JWT, roles, CORS, request ID, pagination, recovery
 │   ├── cache/                   # In-process cache with TTLs
@@ -178,6 +182,16 @@ Admins can only manage accounts whose role is `user`; anything else returns 403 
 - `GET /api/v1/examples/:id` - Get example (protected)
 - `PUT /api/v1/examples/:id` - Update example (protected)
 - `DELETE /api/v1/examples/:id` - Delete example (protected)
+
+### Storages (admins)
+- `GET /api/v1/storages` - List storages, without credentials
+- `POST /api/v1/storages` - Create a storage: `{name, kind, local|s3|gcs: {...}}`, the block named by `kind`
+- `GET /api/v1/storages/:id` - Get a storage (`secret_set` says whether credentials are stored)
+- `PUT /api/v1/storages/:id` - Update; blank credentials keep the stored ones
+- `DELETE /api/v1/storages/:id` - Delete (the files in it are not touched)
+- `POST /api/v1/storages/test` - Test an unsaved form (`?storage_id=` to use a saved storage's credentials)
+- `POST /api/v1/storages/:id/test` - Test a saved storage: write, read back and delete a probe file
+- `GET /api/v1/storages/:id/objects?prefix=` - List one folder
 
 ### Other
 - `GET /health` - Health check (database); 503 with a per-dependency `checks` map when one is down

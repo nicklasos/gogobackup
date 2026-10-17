@@ -69,15 +69,39 @@ func (r *Response) AssertError(status int, key string) *Response {
 }
 
 // AssertInvalid checks that validation failed, and that each given field has an error.
+// A field in a nested block is named by its path: "s3.bucket".
 func (r *Response) AssertInvalid(fields ...string) *Response {
 	r.t.Helper()
 	r.AssertError(http.StatusBadRequest, errs.ErrKeyValidationFailed)
+	errors := r.fieldErrors()
 	for _, field := range fields {
-		if _, ok := r.lookup("errors." + field); !ok {
+		if _, ok := errors[field]; !ok {
 			r.t.Fatalf("%s: expected a validation error for %q\n%s", r.request, field, r.Body)
 		}
 	}
 	return r
+}
+
+// AssertFieldError checks that validation failed with the given key on the field.
+func (r *Response) AssertFieldError(field, key string) *Response {
+	r.t.Helper()
+	r.AssertInvalid(field)
+	for _, got := range r.fieldErrors()[field] {
+		if got == key {
+			return r
+		}
+	}
+	r.t.Fatalf("%s: expected %q on %q\n%s", r.request, key, field, r.Body)
+	return r
+}
+
+func (r *Response) fieldErrors() map[string][]string {
+	r.t.Helper()
+	var body struct {
+		Errors map[string][]string `json:"errors"`
+	}
+	r.JSON(&body)
+	return body.Errors
 }
 
 // AssertJSONPath checks the value at a dot-separated path, where a number is an array index:

@@ -867,6 +867,562 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/storages": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Every storage, without credentials. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storages"
+                ],
+                "summary": "List storages (paginated)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Page size (default: 20, min: 1, max: 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_storages.PaginatedStoragesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Send the block named by kind (local, s3 or gcs) and no other. S3 and GCS need credentials. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storages"
+                ],
+                "summary": "Create storage",
+                "parameters": [
+                    {
+                        "description": "Storage",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_storages.StorageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_storages.StorageDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/storages/test": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Writes a small object, reads it back and deletes it. A failed test is a 200 whose step says what failed. On an edit form, pass storage_id so blank credentials are taken from that storage. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storages"
+                ],
+                "summary": "Test an unsaved storage",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "The storage being edited, whose credentials a blank form uses",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Storage",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_storages.StorageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_storages.TestResultDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/storages/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "A storage without its credentials: secret_set says whether they are stored. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storages"
+                ],
+                "summary": "Get storage",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Storage ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_storages.StorageDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Credentials left blank keep the stored ones, unless the kind changes. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storages"
+                ],
+                "summary": "Update storage",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Storage ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Storage",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_storages.StorageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_storages.StorageDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the storage from Gogobackup. The files in it are not touched. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storages"
+                ],
+                "summary": "Delete storage",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Storage ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/storages/{id}/objects": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The folders, then the files, directly under prefix (empty for the top). A storage that cannot be reached is a 502 with the reason in details.reason. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storages"
+                ],
+                "summary": "Browse a storage",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Storage ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Folder inside the storage, such as nightly/2026/",
+                        "name": "prefix",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_storages.ObjectsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/storages/{id}/test": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Writes a small object, reads it back and deletes it. A failed test is a 200 whose step says what failed. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "storages"
+                ],
+                "summary": "Test a storage",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Storage ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_storages.TestResultDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/users": {
             "get": {
                 "security": [
@@ -1252,6 +1808,31 @@ const docTemplate = `{
                 }
             }
         },
+        "app_internal_errs.ValidationErrorResponse": {
+            "type": "object",
+            "required": [
+                "error_key",
+                "errors",
+                "message"
+            ],
+            "properties": {
+                "error_key": {
+                    "type": "string"
+                },
+                "errors": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "internal.MessageData": {
             "type": "object",
             "required": [
@@ -1624,6 +2205,311 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_storages.GCSConfig": {
+            "type": "object",
+            "required": [
+                "bucket",
+                "prefix"
+            ],
+            "properties": {
+                "bucket": {
+                    "type": "string"
+                },
+                "prefix": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_storages.GCSInput": {
+            "type": "object",
+            "required": [
+                "bucket"
+            ],
+            "properties": {
+                "bucket": {
+                    "type": "string"
+                },
+                "credentials_json": {
+                    "type": "string"
+                },
+                "prefix": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_storages.Kind": {
+            "type": "string",
+            "enum": [
+                "local",
+                "s3",
+                "gcs"
+            ],
+            "x-enum-varnames": [
+                "KindLocal",
+                "KindS3",
+                "KindGCS"
+            ]
+        },
+        "internal_storages.LocalConfig": {
+            "type": "object",
+            "required": [
+                "path"
+            ],
+            "properties": {
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_storages.LocalInput": {
+            "type": "object",
+            "required": [
+                "path"
+            ],
+            "properties": {
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_storages.ObjectResponse": {
+            "type": "object",
+            "required": [
+                "is_dir",
+                "name",
+                "size"
+            ],
+            "properties": {
+                "is_dir": {
+                    "type": "boolean"
+                },
+                "modified_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_storages.ObjectsResponse": {
+            "type": "object",
+            "required": [
+                "data"
+            ],
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_storages.ObjectResponse"
+                    }
+                }
+            }
+        },
+        "internal_storages.PaginatedStoragesResponse": {
+            "type": "object",
+            "required": [
+                "data",
+                "pagination"
+            ],
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_storages.StorageResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/internal.PaginationMeta"
+                }
+            }
+        },
+        "internal_storages.S3Config": {
+            "type": "object",
+            "required": [
+                "bucket",
+                "endpoint",
+                "prefix",
+                "region",
+                "use_path_style"
+            ],
+            "properties": {
+                "bucket": {
+                    "type": "string"
+                },
+                "endpoint": {
+                    "type": "string"
+                },
+                "prefix": {
+                    "type": "string"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "use_path_style": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_storages.S3Input": {
+            "type": "object",
+            "required": [
+                "bucket"
+            ],
+            "properties": {
+                "access_key_id": {
+                    "type": "string"
+                },
+                "bucket": {
+                    "type": "string"
+                },
+                "endpoint": {
+                    "type": "string"
+                },
+                "prefix": {
+                    "type": "string"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "secret_access_key": {
+                    "type": "string"
+                },
+                "use_path_style": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_storages.StorageDataResponse": {
+            "type": "object",
+            "required": [
+                "data"
+            ],
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_storages.StorageResponse"
+                }
+            }
+        },
+        "internal_storages.StorageRequest": {
+            "type": "object",
+            "required": [
+                "kind",
+                "name"
+            ],
+            "properties": {
+                "gcs": {
+                    "$ref": "#/definitions/internal_storages.GCSInput"
+                },
+                "kind": {
+                    "enum": [
+                        "local",
+                        "s3",
+                        "gcs"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_storages.Kind"
+                        }
+                    ]
+                },
+                "local": {
+                    "$ref": "#/definitions/internal_storages.LocalInput"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "s3": {
+                    "$ref": "#/definitions/internal_storages.S3Input"
+                }
+            }
+        },
+        "internal_storages.StorageResponse": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "id",
+                "kind",
+                "name",
+                "secret_set",
+                "updated_at"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "gcs": {
+                    "$ref": "#/definitions/internal_storages.GCSConfig"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "enum": [
+                        "local",
+                        "s3",
+                        "gcs"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_storages.Kind"
+                        }
+                    ]
+                },
+                "local": {
+                    "$ref": "#/definitions/internal_storages.LocalConfig"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "s3": {
+                    "$ref": "#/definitions/internal_storages.S3Config"
+                },
+                "secret_set": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_storages.TestResultDataResponse": {
+            "type": "object",
+            "required": [
+                "data"
+            ],
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_storages.TestResultResponse"
+                }
+            }
+        },
+        "internal_storages.TestResultResponse": {
+            "type": "object",
+            "required": [
+                "ok"
+            ],
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "step": {
+                    "type": "string",
+                    "enum": [
+                        "connect",
+                        "write",
+                        "read",
+                        "delete"
+                    ]
                 }
             }
         },

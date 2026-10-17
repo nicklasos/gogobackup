@@ -59,6 +59,7 @@
   "navigation": {
     "dashboard": "Dashboard",
     "examples": "Examples",
+    "storages": "Storages",
     "users": "Users",
     "profile": "Profile",
     "adminMenu": "Admin menu",
@@ -70,6 +71,17 @@
       "super-admin": "Super admin",
       "admin": "Admin",
       "user": "User"
+    },
+    "storageKind": {
+      "local": "Local directory",
+      "s3": "S3",
+      "gcs": "Google Cloud Storage"
+    },
+    "storageTestStep": {
+      "connect": "Connect",
+      "write": "Write",
+      "read": "Read back",
+      "delete": "Delete"
     }
   },
   "dashboard": {
@@ -90,6 +102,65 @@
     "deleteConfirm": "Delete this example?",
     "empty": "No examples yet",
     "view": "View"
+  },
+  "storages": {
+    "title": "Storages",
+    "subtitle": "Where backups are kept: a directory on this server, an S3-compatible bucket or a Google Cloud Storage bucket.",
+    "add": "Add storage",
+    "create": "Add storage",
+    "edit": "Edit storage",
+    "nameField": "Name",
+    "nameRequired": "Name is required",
+    "namePlaceholder": "Offsite S3",
+    "kindField": "Kind",
+    "kindHint": {
+      "local": "A directory on the server Gogobackup runs on. It must already exist and be writable by the service.",
+      "s3": "Amazon S3, or any S3-compatible service: MinIO, Cloudflare R2, Backblaze B2, Wasabi.",
+      "gcs": "A Google Cloud Storage bucket, reached with a service-account key."
+    },
+    "location": "Location",
+    "credentials": "Credentials",
+    "secretStored": "Stored",
+    "secretMissing": "Missing",
+    "secretNotNeeded": "Not needed",
+    "secretKeepPlaceholder": "Stored. Leave blank to keep it",
+    "saved": "Storage saved",
+    "deleted": "Storage deleted",
+    "deleteConfirm": "Delete this storage?",
+    "deleteHint": "Files already in it are not touched.",
+    "empty": "No storages yet",
+    "browse": "Browse",
+    "local": {
+      "path": "Directory",
+      "pathHint": "An absolute path on the server, such as /var/backups/gogobackup."
+    },
+    "s3": {
+      "endpoint": "Endpoint",
+      "endpointHint": "Leave blank for Amazon S3. For other services, their URL, such as https://<account>.r2.cloudflarestorage.com.",
+      "bucket": "Bucket",
+      "region": "Region",
+      "pathStyle": "Path-style URLs",
+      "pathStyleHint": "Turn on for MinIO and other servers that do not support bucket subdomains.",
+      "accessKeyId": "Access key ID",
+      "secretAccessKey": "Secret access key"
+    },
+    "gcs": {
+      "bucket": "Bucket",
+      "credentials": "Service-account key (JSON)",
+      "credentialsHint": "Paste the key file, or load it. The account needs to create, read and delete objects in the bucket.",
+      "loadFile": "Load key file"
+    },
+    "prefix": "Folder in the bucket",
+    "prefixHint": "Optional. Backups go under this folder, such as gogobackup/.",
+    "testConnection": "Test connection",
+    "testOk": "Connection works: a test file was written, read back and deleted.",
+    "testFailed": "Connection failed at step: {{step}}",
+    "objectName": "Name",
+    "objectSize": "Size",
+    "objectModified": "Modified",
+    "refresh": "Refresh",
+    "root": "Top",
+    "folderEmpty": "This folder is empty"
   },
   "userManagement": {
     "byRole": {
@@ -182,7 +253,16 @@
     "validation.error": "Invalid request",
     "crashTitle": "This page ran into a problem",
     "crashHint": "The rest of the app still works. Try again, or reload the page.",
-    "reloadPage": "Reload page"
+    "reloadPage": "Reload page",
+    "storages.not_found": "Storage not found",
+    "storages.name_taken": "A storage with this name already exists",
+    "storages.invalid_prefix": "This folder is not a valid path in the storage",
+    "storages.unreachable": "The storage could not be reached",
+    "validation.local.path.invalid": "Use an absolute path, such as /var/backups",
+    "validation.s3.endpoint.invalid": "Use a URL such as https://s3.example.com, with no path",
+    "validation.s3.prefix.invalid": "The folder cannot contain ..",
+    "validation.gcs.prefix.invalid": "The folder cannot contain ..",
+    "validation.gcs.credentials_json.invalid": "Paste a service-account key file: JSON with \"type\": \"service_account\""
   },
   "editor": {
     "placeholder": "Enter content",

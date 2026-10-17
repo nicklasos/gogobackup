@@ -18,6 +18,12 @@ export interface AppInternalErrsErrorResponse {
   timestamp?: string;
 }
 
+export interface AppInternalErrsValidationErrorResponse {
+  error_key: string;
+  errors: Record<string, string[]>;
+  message: string;
+}
+
 export interface InternalAuthForgotPasswordRequest {
   email: string;
 }
@@ -141,6 +147,96 @@ export interface InternalPaginationMeta {
   last_page: number;
   per_page: number;
   total: number;
+}
+
+export interface InternalStoragesGCSConfig {
+  bucket: string;
+  prefix: string;
+}
+
+export interface InternalStoragesGCSInput {
+  bucket: string;
+  credentials_json?: string;
+  prefix?: string;
+}
+
+export type InternalStoragesKind = "local" | "s3" | "gcs";
+
+export interface InternalStoragesLocalConfig {
+  path: string;
+}
+
+export interface InternalStoragesLocalInput {
+  path: string;
+}
+
+export interface InternalStoragesObjectResponse {
+  is_dir: boolean;
+  modified_at?: string;
+  name: string;
+  size: number;
+}
+
+export interface InternalStoragesObjectsResponse {
+  data: InternalStoragesObjectResponse[];
+}
+
+export interface InternalStoragesPaginatedStoragesResponse {
+  data: InternalStoragesStorageResponse[];
+  pagination: InternalPaginationMeta;
+}
+
+export interface InternalStoragesS3Config {
+  bucket: string;
+  endpoint: string;
+  prefix: string;
+  region: string;
+  use_path_style: boolean;
+}
+
+export interface InternalStoragesS3Input {
+  access_key_id?: string;
+  bucket: string;
+  endpoint?: string;
+  prefix?: string;
+  region?: string;
+  secret_access_key?: string;
+  use_path_style?: boolean;
+}
+
+export interface InternalStoragesStorageDataResponse {
+  data: InternalStoragesStorageResponse;
+}
+
+export interface InternalStoragesStorageRequest {
+  s3?: InternalStoragesS3Input;
+  gcs?: InternalStoragesGCSInput;
+  kind: "local" | "s3" | "gcs";
+  local?: InternalStoragesLocalInput;
+  /** @maxLength 100 */
+  name: string;
+}
+
+export interface InternalStoragesStorageResponse {
+  s3?: InternalStoragesS3Config;
+  created_at: string;
+  gcs?: InternalStoragesGCSConfig;
+  id: number;
+  kind: "local" | "s3" | "gcs";
+  local?: InternalStoragesLocalConfig;
+  name: string;
+  secret_set: boolean;
+  updated_at: string;
+}
+
+export interface InternalStoragesTestResultDataResponse {
+  data: InternalStoragesTestResultResponse;
+}
+
+export interface InternalStoragesTestResultResponse {
+  error?: string;
+  ok: boolean;
+  step?: "connect" | "write" | "read" | "delete";
 }
 
 export interface InternalUsersCreateUserRequest {

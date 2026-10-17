@@ -126,9 +126,9 @@ export class DatabaseHelper {
       .run(count, userId, prefix)
   }
 
-  /** Examples and refresh tokens go with their user (ON DELETE CASCADE). */
+  /** Examples and refresh tokens go with their user (ON DELETE CASCADE). Storages are global: theirs start with "E2E". */
   async cleanupTestData(): Promise<void> {
-    this.connection().exec(`DELETE FROM users WHERE email LIKE 'e2e-%@example.com'`)
+    this.connection().exec(`DELETE FROM users WHERE email LIKE 'e2e-%@example.com'; DELETE FROM storages WHERE name LIKE 'E2E%'`)
   }
 }
 

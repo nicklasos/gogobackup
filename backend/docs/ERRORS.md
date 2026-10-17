@@ -70,7 +70,14 @@ const (
 )
 ```
 
-Keys are grouped by module (`auth.*`, `users.*`, `examples.*`, `validation.*`). Clients translate them, so treat a key as part of the API contract.
+Keys are grouped by module (`auth.*`, `users.*`, `examples.*`, `storages.*`, `validation.*`).
+
+| Key | Status | When |
+|---|---|---|
+| `storages.not_found` | 404 | No storage with this ID |
+| `storages.name_taken` | 400, as a field error on `name` | Another storage has this name (case-insensitive) |
+| `storages.invalid_prefix` | 400 | `?prefix=` of a listing climbs out with `..` or is absolute |
+| `storages.unreachable` | 502 | Listing a storage failed; `details.reason` says why | Clients translate them, so treat a key as part of the API contract.
 
 Validation failures have their own shape and always return 400:
 
@@ -81,6 +88,15 @@ Validation failures have their own shape and always return 400:
   "errors": { "email": ["validation.email.required"] }
 }
 ```
+
+A service reports such a failure itself with `errs.Fields`, which `RespondWithError` answers in the same shape:
+
+```go
+return nil, errs.FieldError("local.path", "invalid")         // validation.local.path.invalid
+return nil, errs.Fields{"name": {errs.ErrKeyStoragesNameTaken}}
+```
+
+A field inside a nested block is named by its path, `s3.bucket`, both from binding and from `errs.Fields`.
 
 ## Handler Helpers
 
