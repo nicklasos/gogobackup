@@ -18,7 +18,7 @@
 ```
 gogo/
 ├── cmd/api/main.go              # Main application entry (--port, --test-db)
-├── cmd/cli/main.go              # CLI (migrate, create-user, mail, smoke test); global --test flag
+├── cmd/cli/main.go              # CLI (migrate, create-user, self-backup, seed, mail, smoke test); global --test flag
 ├── config/
 │   ├── config.go                # Env → Config
 │   └── testdb.go                # Test-database safety guard
@@ -37,6 +37,7 @@ gogo/
 │   ├── runs/                    # The runner: run lifecycle, worker, fan-out upload, retention (Prune), run and archive endpoints
 │   ├── runlog/                  # A run's log: timestamped lines, capped at 1 MB
 │   ├── tools/                   # Finds pg_dump, mysqldump, sqlite3 on PATH (System) or pretends to (Fake)
+│   ├── selfbackup/              # Ensure: the plan that backs up DATABASE_PATH, for `cli self-backup`
 │   ├── secretbox/               # AES-256-GCM sealing of credentials with ENCRYPTION_KEY
 │   ├── health/                  # /health and /api/v1/health
 │   ├── db/
@@ -143,6 +144,10 @@ When adding new modules:
 - **Adding a source kind's dump** is one `dump` function and one `extension` in its `sources` entry. The function writes the compressed archive to `w`, logs its steps, sends the program's stderr to `log.Writer(name + ": ")` (`runTool` does that) and returns when the archive is complete. Nothing outside `internal/plans` changes.
 - Tests drive the worker with `app.Worker().Drain(ctx)`, which runs everything queued synchronously, and enqueue slots with `runs.NewRunService(...).EnqueueDue(ctx, clock)`. `tools.Fake` installs a real program with `app.UseRealTool("sqlite3")` or a script with `app.Tools.Install(name, path, version)`. Postgres and MySQL dumps of real servers run when `TEST_POSTGRES_URL` and `TEST_MYSQL_URL` are set (CI sets both); otherwise they skip.
 - Factories: `app.Create.Run(plan, factory.WithRunStatus(runs.StatusRunning))`, `app.Create.Archive(run, storage, factory.ArchiveCreatedAt(t))`.
+
+## Self-backup
+- `cli self-backup --dir DIR` (`internal/selfbackup.Ensure`) makes sure a plan backs up the service's own `DATABASE_PATH`; `deploy/` runs it on every release. It finds the plan by its source (`ListSQLitePlansByPath`), not its name, and leaves a found plan untouched. Without one it reuses a local storage at `DIR` (`ListLocalStoragesByPath`) or creates "Gogobackup itself (local)", then creates "Gogobackup itself". Both go through `StorageService` and `PlanService` after the binding validator, as an API request would.
+- The command prints `Created ...` only when it created something; the deploy task reads that as a change.
 
 ## Transactions
 Services that need more than one write take `*db.TxRunner` (from `app.Tx`) and use:

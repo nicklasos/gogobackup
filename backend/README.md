@@ -114,7 +114,7 @@ Run the tests with `make test`. They need no database setup: each test gets its 
 ```
 gogo/
 ├── cmd/api/main.go              # Application entry point (--port, --test-db)
-├── cmd/cli/main.go              # CLI (migrate, create-user, test)
+├── cmd/cli/main.go              # CLI (migrate, create-user, self-backup, seed, mail, test)
 ├── internal/
 │   ├── app.go                   # App context with DB, Tx, Cache, Logger, Mail
 │   ├── server/                  # Engine middleware + the list of modules
@@ -293,7 +293,11 @@ make docker-build  # production image: api and cli binaries
 docker compose --profile app up --build   # everything, API included
 ```
 
-The image keeps the database at `/data/db/gogobackup.db` (mount a volume there) and runs `cli migrate up` before the API starts (`RUN_MIGRATIONS=false` turns that off). The API runs the scheduled jobs itself unless `ENABLE_SCHEDULER=false`, in which case run `/app/cron` as a second container.
+The image keeps the database at `/data/db/gogobackup.db` (mount a volume there) and runs `cli migrate up` before the API starts (`RUN_MIGRATIONS=false` turns that off). The API runs the scheduled jobs itself unless `ENABLE_SCHEDULER=false`, in which case run `/app/cron` as a second container. The image has `sqlite3`, `pg_dump` 18 and `mysqldump` (MariaDB), so plans of every source kind run in it.
+
+## Backing up Gogobackup itself
+
+`make cli -- self-backup --dir /var/backups/gogobackup` makes sure the plan "Gogobackup itself" backs up `DATABASE_PATH` every day at 03:15 UTC to a local storage in that directory, keeping 30 days, then 8 weekly and 12 monthly archives (`--time`, `--max-age-days`, `--keep-weekly`, `--keep-monthly`). It is safe to run on every deploy: a plan that already backs up `DATABASE_PATH` is found by its source, whatever it is called now, and is left exactly as it is. `deploy/` runs it after migrations. The local copy shares the server's disk, so add an S3 or GCS storage to the plan; and keep `ENCRYPTION_KEY` somewhere off the server, because the stored credentials in a restored database cannot be opened without it.
 
 ## Test database
 
