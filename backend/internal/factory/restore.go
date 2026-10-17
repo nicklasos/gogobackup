@@ -39,9 +39,7 @@ func (f *Factory) Restore(archive *db.Archive, opts ...RestoreOption) *db.Restor
 	for _, opt := range opts {
 		opt(&attrs)
 	}
-	var plan db.Plan
-	err := f.conn.QueryRowContext(ctx, `SELECT source_kind, source_config FROM plans WHERE id = ?`, archive.PlanID).
-		Scan(&plan.SourceKind, &plan.SourceConfig)
+	plan, err := f.queries.GetPlanByID(ctx, archive.PlanID)
 	if err != nil {
 		f.t.Fatalf("factory.Restore: %v", err)
 	}
@@ -66,14 +64,17 @@ func (f *Factory) Restore(archive *db.Archive, opts ...RestoreOption) *db.Restor
 		errText = sql.NullString{String: "factory: failed", Valid: true}
 	}
 
-	var r db.Restore
-	err = f.conn.QueryRowContext(ctx,
-		`INSERT INTO restores (archive_id, plan_id, source_kind, target_config, status, started_at, finished_at, error, created_by)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-		 RETURNING id, archive_id, plan_id, source_kind, target_config, target_secret, status, log, error, created_by, created_at, started_at, finished_at`,
-		archive.ID, archive.PlanID, plan.SourceKind, target, string(attrs.status), started, finished, errText, attrs.createdBy,
-	).Scan(&r.ID, &r.ArchiveID, &r.PlanID, &r.SourceKind, &r.TargetConfig, &r.TargetSecret, &r.Status, &r.Log, &r.Error,
-		&r.CreatedBy, &r.CreatedAt, &r.StartedAt, &r.FinishedAt)
+	r, err := f.queries.FactoryCreateRestore(ctx, db.FactoryCreateRestoreParams{
+		ArchiveID:    sql.NullInt64{Int64: archive.ID, Valid: true},
+		PlanID:       archive.PlanID,
+		SourceKind:   plan.SourceKind,
+		TargetConfig: target,
+		Status:       string(attrs.status),
+		StartedAt:    started,
+		FinishedAt:   finished,
+		Error:        errText,
+		CreatedBy:    attrs.createdBy,
+	})
 	if err != nil {
 		f.t.Fatalf("factory.Restore: %v", err)
 	}

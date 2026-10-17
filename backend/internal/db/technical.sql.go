@@ -17,3 +17,14 @@ func (q *Queries) Healthcheck(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, healthcheck)
 	return err
 }
+
+const sQLiteVersion = `-- name: SQLiteVersion :one
+SELECT sqlite_version()
+`
+
+func (q *Queries) SQLiteVersion(ctx context.Context) (string, error) {
+	row := q.db.QueryRowContext(ctx, sQLiteVersion)
+	var sqlite_version string
+	err := row.Scan(&sqlite_version)
+	return sqlite_version, err
+}

@@ -125,23 +125,23 @@ func (f *Factory) Plan(opts ...PlanOption) *db.Plan {
 		secret = f.secrets.Seal(plain)
 	}
 
-	var plan db.Plan
-	err = f.conn.QueryRowContext(ctx,
-		`INSERT INTO plans (name, source_kind, source_config, source_secret, schedules, max_age_days, keep_weekly, keep_monthly, enabled, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?10, CURRENT_TIMESTAMP), COALESCE(?10, CURRENT_TIMESTAMP))
-		 RETURNING id, name, source_kind, source_config, source_secret, schedules, max_age_days, keep_weekly, keep_monthly, enabled, created_at, updated_at`,
-		attrs.name, string(attrs.kind), string(config), secret, string(schedules),
-		attrs.maxAgeDays, attrs.keepWeekly, attrs.keepMonthly, attrs.enabled, attrs.createdAt,
-	).Scan(&plan.ID, &plan.Name, &plan.SourceKind, &plan.SourceConfig, &plan.SourceSecret, &plan.Schedules,
-		&plan.MaxAgeDays, &plan.KeepWeekly, &plan.KeepMonthly, &plan.Enabled, &plan.CreatedAt, &plan.UpdatedAt)
+	plan, err := f.queries.FactoryCreatePlan(ctx, db.FactoryCreatePlanParams{
+		Name:         attrs.name,
+		SourceKind:   string(attrs.kind),
+		SourceConfig: string(config),
+		SourceSecret: secret,
+		Schedules:    string(schedules),
+		MaxAgeDays:   attrs.maxAgeDays,
+		KeepWeekly:   attrs.keepWeekly,
+		KeepMonthly:  attrs.keepMonthly,
+		Enabled:      attrs.enabled,
+		CreatedAt:    attrs.createdAt,
+	})
 	if err != nil {
 		f.t.Fatalf("factory.Plan: %v", err)
 	}
 	for _, storageID := range attrs.storageIDs {
-		var linked int64
-		err := f.conn.QueryRowContext(ctx,
-			`INSERT INTO plan_storages (plan_id, storage_id) VALUES (?, ?) RETURNING plan_id`, plan.ID, storageID,
-		).Scan(&linked)
+		_, err := f.queries.FactoryLinkPlanStorage(ctx, db.FactoryLinkPlanStorageParams{PlanID: plan.ID, StorageID: storageID})
 		if err != nil {
 			f.t.Fatalf("factory.Plan: %v", err)
 		}

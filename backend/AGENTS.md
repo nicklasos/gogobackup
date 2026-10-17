@@ -111,7 +111,7 @@ When adding new modules:
 
 ## Factories and seed data
 - `internal/factory` creates records with defaults. In a test it is `app.Create`: `app.Create.User()`, `app.Create.User(factory.Admin(), factory.Unverified())`, `app.Create.Storage(factory.LocalStorage(dir))`, `app.Create.Plan(factory.SQLiteSource(path), factory.WithStorages(storage))`. Elsewhere: `factory.New(t, conn, secrets)`, where `secrets` seals storage credentials.
-- Every new table gets a factory. Tests never write `INSERT` statements by hand.
+- Every new table gets a factory. Factories write through the `Factory*` queries in `internal/db/queries/factory.sql`; tests still never write `INSERT` statements by hand.
 - Users from a factory have the password `factory.DefaultPassword` and a verified email unless `factory.Unverified()` is passed.
 - `make seed` fills an empty development database through the same factories (`cmd/cli/internal/commands/seed.go`); add a new module's sample data there.
 
@@ -198,6 +198,10 @@ Transactions take SQLite's write lock when they begin (`_txlock=immediate`), so 
 - Timestamps are TEXT in UTC. Compare a stored timestamp with now through `datetime()` on both sides (`datetime(expires_at) > datetime('now')`): Go and `CURRENT_TIMESTAMP` write different formats.
 - Nullable columns are `sql.NullString`, `sql.NullTime`, `sql.NullBool`; IDs are `int64`; a missing row is `sql.ErrNoRows`.
 - Pass the request context into services so queries are cancelled with the request.
+- Every query against Gogobackup's own database goes through sqlc, in `internal/db/queries`, including the
+  factories. Hand-written SQL is only for the databases Gogobackup backs up or restores into
+  (`internal/plans/probe.go`, `restore_databases.go`), testkit's generic `AssertDatabase*` helpers, and
+  `*_test.go` files that create states the app forbids.
 
 ## Mail
 - Services take a `mail.Sender` (from `app.Mail`) and call `Send(ctx, mail.Message{To, Subject, Text, HTML})`.

@@ -13,11 +13,11 @@ package factory
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"sync/atomic"
 	"time"
 
+	"app/internal/db"
 	"app/internal/secretbox"
 )
 
@@ -30,21 +30,16 @@ type TB interface {
 	Fatalf(format string, args ...any)
 }
 
-// DB is satisfied by *sql.DB and *sql.Tx.
-type DB interface {
-	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-}
-
 // Factory creates records on one connection and reports failures to one TB. secrets seals
 // the credentials of the storages it creates, as the API does.
 type Factory struct {
 	t       TB
-	conn    DB
+	queries *db.Queries
 	secrets *secretbox.Box
 }
 
-func New(t TB, conn DB, secrets *secretbox.Box) *Factory {
-	return &Factory{t: t, conn: conn, secrets: secrets}
+func New(t TB, conn db.DBTX, secrets *secretbox.Box) *Factory {
+	return &Factory{t: t, queries: db.New(conn), secrets: secrets}
 }
 
 var sequence atomic.Int64

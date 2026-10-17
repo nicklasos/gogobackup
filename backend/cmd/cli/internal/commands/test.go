@@ -40,8 +40,7 @@ func RunTest(app *internal.CLIApp, args []string) {
 
 	// Test basic query
 	fmt.Println("Testing basic database query...")
-	var dbVersion string
-	err := app.Database.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&dbVersion)
+	_, err := app.Queries.SQLiteVersion(ctx)
 	if err != nil {
 		app.Logger.Error("Failed to get database version", "error", err)
 		fmt.Printf("Database query failed: %v\n", err)
