@@ -17,7 +17,7 @@ stderr_logfile_backups=10
 stopsignal=TERM
 ; The API finishes in-flight requests for up to 20 seconds before it exits
 stopwaitsecs=30
-{% if enable_scheduler %}
+{% if not scheduler_in_api %}
 
 [program:{{ app_name }}-cron]
 command={{ backend_dir }}/bin/gogo-cron

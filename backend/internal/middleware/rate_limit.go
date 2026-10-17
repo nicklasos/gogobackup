@@ -67,7 +67,7 @@ func MarkAuthSuccess(c *gin.Context) {
 // ClientIP must be trustworthy for this to mean anything: the router has to declare
 // its trusted proxies (see internal/server), otherwise a client can forge
 // X-Forwarded-For and get a fresh bucket per request.
-func AuthRateLimit(c cache.Cache, log *logger.Logger) gin.HandlerFunc {
+func AuthRateLimit(c *cache.MemoryCache, log *logger.Logger) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		if c == nil {
 			ctx.Next()
@@ -103,7 +103,7 @@ func AuthRateLimit(c cache.Cache, log *logger.Logger) gin.HandlerFunc {
 // RateLimit caps how often a single IP may call the routes it guards: limit requests
 // per window, counted under scope. It only stops hammering and keeps no failure counter,
 // so use it for endpoints such as token refresh or "send me a reset link".
-func RateLimit(c cache.Cache, log *logger.Logger, scope string, limit int, window time.Duration) gin.HandlerFunc {
+func RateLimit(c *cache.MemoryCache, log *logger.Logger, scope string, limit int, window time.Duration) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		if c == nil {
 			ctx.Next()
@@ -121,7 +121,7 @@ func RateLimit(c cache.Cache, log *logger.Logger, scope string, limit int, windo
 	}
 }
 
-func recordAuthFailure(ctx context.Context, c cache.Cache, identity string) {
+func recordAuthFailure(ctx context.Context, c *cache.MemoryCache, identity string) {
 	failures, _ := bumpWindow(ctx, c, failureKey(identity), loginFailureWindow)
 	if failures < loginFailureLimit {
 		return
@@ -136,7 +136,7 @@ func recordAuthFailure(ctx context.Context, c cache.Cache, identity string) {
 	_ = c.Forget(ctx, failureKey(identity))
 }
 
-func clearAuthFailures(ctx context.Context, c cache.Cache, identity string) {
+func clearAuthFailures(ctx context.Context, c *cache.MemoryCache, identity string) {
 	_ = c.Forget(ctx, failureKey(identity))
 	_ = c.Forget(ctx, blockKey(identity))
 	_ = c.Forget(ctx, strikeKey(identity))
@@ -156,7 +156,7 @@ func blockDuration(strikes int) time.Duration {
 // window slides on every strike, which is safe here because a strike costs
 // loginFailureLimit fresh failures; it still decays loginStrikeWindow after the block
 // it armed has ended, or immediately once the login succeeds.
-func bumpStrike(ctx context.Context, c cache.Cache, identity string) int {
+func bumpStrike(ctx context.Context, c *cache.MemoryCache, identity string) int {
 	now := time.Now()
 
 	var w windowCounter
@@ -171,7 +171,7 @@ func bumpStrike(ctx context.Context, c cache.Cache, identity string) int {
 	return w.Count
 }
 
-func blockedUntil(ctx context.Context, c cache.Cache, identity string) (time.Time, bool) {
+func blockedUntil(ctx context.Context, c *cache.MemoryCache, identity string) (time.Time, bool) {
 	var until time.Time
 	if err := c.Get(ctx, blockKey(identity), &until); err != nil {
 		return time.Time{}, false
@@ -188,7 +188,7 @@ type windowCounter struct {
 }
 
 // bumpWindow returns the new count and the moment the window rolls over.
-func bumpWindow(ctx context.Context, c cache.Cache, key string, window time.Duration) (int, time.Time) {
+func bumpWindow(ctx context.Context, c *cache.MemoryCache, key string, window time.Duration) (int, time.Time) {
 	now := time.Now()
 
 	var w windowCounter

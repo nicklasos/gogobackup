@@ -18,7 +18,6 @@
 ```
 gogo/
 ├── cmd/api/main.go              # Main application entry (--port, --test-db)
-├── cmd/cron/main.go             # Standalone scheduler
 ├── cmd/cli/main.go              # CLI (migrate, create-user, mail, smoke test); global --test flag
 ├── config/
 │   ├── config.go                # Env → Config
@@ -33,7 +32,6 @@ gogo/
 │   │   └── types.go             # Request/response types
 │   ├── users/                   # User management (super admins, admins, users)
 │   ├── example/                 # Example CRUD module (cache demo)
-│   ├── uploads/                 # File uploads + public static route
 │   ├── health/                  # /health and /api/v1/health
 │   ├── db/
 │   │   ├── tx.go                # TxRunner.WithTx transaction helper
@@ -45,10 +43,10 @@ gogo/
 │   │   ├── logging.go           # RequestID, Recovery, ErrorHandler
 │   │   ├── request.go           # CurrentUserID, PathID, Page: handler helpers that answer the error themselves
 │   │   └── pagination.go        # ?page / ?page_size parsing
-│   ├── cache/                   # RedisCache + MemoryCache
+│   ├── cache/                   # MemoryCache: in-process, with TTLs
 │   ├── mail/                    # SMTP Service + MemorySender (tests)
 │   ├── errs/                    # Domain errors + WrapDatabaseError
-│   ├── scheduler/               # Cron (cleanup refresh tokens)
+│   ├── scheduler/               # Cron jobs, run by the API or cmd/cron (cleanup refresh tokens)
 │   └── responses.go             # PaginationMeta helper
 ├── migrations/                  # Goose migrations (SQLite), embedded in the binaries
 └── Makefile                     # Development commands (make help)
@@ -64,8 +62,6 @@ gogo/
 - Go 1.25+
 - Gin
 - SQLite (modernc.org/sqlite, pure Go: no cgo)
-- Redis
-- go-redis/v9 - Redis client
 - sqlc - Type-safe SQL code generation
 - Goose - Database migrations
 - Swaggo - Swagger documentation
@@ -107,7 +103,7 @@ When adding new modules:
 - `internal/example/policy.go` and `internal/users/policy.go` are the references; `tests/unit/policy_test.go` shows how to test one.
 
 ## Factories and seed data
-- `internal/factory` creates records with defaults. In a test it is `app.Create`: `app.Create.User()`, `app.Create.User(factory.Admin(), factory.Unverified())`, `app.Create.Example(user.ID, factory.WithTitle("..."))`, `app.Create.Examples(user.ID, 25, "Sample")`, `app.Create.Upload(user.ID)`. Elsewhere: `factory.New(t, conn)`.
+- `internal/factory` creates records with defaults. In a test it is `app.Create`: `app.Create.User()`, `app.Create.User(factory.Admin(), factory.Unverified())`, `app.Create.Example(user.ID, factory.WithTitle("..."))`, `app.Create.Examples(user.ID, 25, "Sample")`. Elsewhere: `factory.New(t, conn)`.
 - Every new table gets a factory. Tests never write `INSERT` statements by hand.
 - Users from a factory have the password `factory.DefaultPassword` and a verified email unless `factory.Unverified()` is passed.
 - `make seed` fills an empty development database through the same factories (`cmd/cli/internal/commands/seed.go`); add a new module's sample data there.
@@ -130,11 +126,12 @@ Transactions take SQLite's write lock when they begin (`_txlock=immediate`), so 
 - Registration is a 403 unless `ALLOW_REGISTRATION=true`.
 - Pass every email that enters the system through `internal.NormalizeEmail` before storing or looking it up.
 - Refresh tokens and emailed tokens are stored as hashes (`hashToken`); the raw value exists only in the response or the email.
-- `/health` reports the database and any cache that implements `cache.Pinger`. Add a check there for each new dependency the API cannot serve without.
+- `/health` reports the database. Add a check there for each new dependency the API cannot serve without.
 
-## Uploads
-- Go through `UploadService`; file bytes go through the `Storage` interface (`LocalStorage` by default). Never build disk paths from request data yourself: `LocalStorage.Resolve` is the traversal guard.
-- New allowed extensions go in `DefaultUploadConfig`; `matchesContent` decides what content an extension must have.
+## Scheduler
+- By default the API process runs the cron jobs: `cmd/api/main.go` starts `internal/scheduler` on boot and stops it on shutdown.
+- `ENABLE_SCHEDULER=false` turns that off, and `cmd/cron` (`bin/gogo-cron`) runs the same jobs as its own process. Run one or the other, never both.
+- `testkit` never starts it; test a job by calling its `Execute` (`docs/recipes/add-scheduled-job.md`).
 
 ## Database
 - One SQLite file at `DATABASE_PATH` (default `./data/gogobackup.db`). Every connection turns on foreign keys, WAL and a 5 s busy timeout (`internal/db/connection.go`).
@@ -211,7 +208,7 @@ make cli-create-user EMAIL=a@b.c PASSWORD=secret123   # Create a user (default r
 make migrate-up       # Apply migrations
 make sqlc             # Generate sqlc code
 make swagger          # Generate API docs (then run `make api-types` in `../frontend`)
-make up / make down   # Redis and Mailpit in Docker
+make up / make down   # Mailpit in Docker
 ```
 
 ## Code Conventions
@@ -237,9 +234,9 @@ make up / make down   # Redis and Mailpit in Docker
 ### Laravel-Style Database Testing
 - **A database per test** - `testkit.New` copies a migrated SQLite file into `t.TempDir()`; the schema is migrated once per test binary. Nothing to set up and nothing shared between tests.
 - **Real Database Testing** - Uses actual SQLite (no mocking)
-- **Test Database Guard** - `config.AssertTestDatabasePath` refuses a `TEST_DATABASE_PATH` whose file name does not end in `_test.db`. It guards `--test-db` (api, cron) and `--test` (cli), which the frontend E2E suite uses.
+- **Test Database Guard** - `config.AssertTestDatabasePath` refuses a `TEST_DATABASE_PATH` whose file name does not end in `_test.db`. It guards `--test-db` (api) and `--test` (cli), which the frontend E2E suite uses.
 - **Same wiring as production** - the test server uses `server.NewEngine` and `server.RegisterRoutes`, and starts on the first request
-- **MemoryCache** - Tests use in-memory cache (no Redis required)
+- **MemoryCache** - Tests get their own empty cache, as the API does on every start
 - **MemorySender** - Tests collect mail in memory (`app.Mail.Sent()`)
 
 ### Test Patterns

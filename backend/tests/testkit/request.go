@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
-	"net/textproto"
 	"strings"
 )
 
@@ -64,41 +62,6 @@ func format(path string, args []any) string {
 		return path
 	}
 	return fmt.Sprintf(path, args...)
-}
-
-// File is one uploaded file of a multipart request.
-type File struct {
-	Name    string
-	Content []byte
-	// ContentType is what the client claims the file is. Empty means application/octet-stream.
-	ContentType string
-}
-
-// POSTFile uploads a file as multipart/form-data under the given form field.
-func (c *Client) POSTFile(path, field string, file File) *Response {
-	c.app.t.Helper()
-
-	contentType := file.ContentType
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-	header := textproto.MIMEHeader{}
-	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, field, file.Name))
-	header.Set("Content-Type", contentType)
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreatePart(header)
-	if err == nil {
-		_, err = part.Write(file.Content)
-	}
-	if err == nil {
-		err = writer.Close()
-	}
-	if err != nil {
-		c.app.t.Fatalf("testkit: build multipart body: %v", err)
-	}
-	return c.send(http.MethodPost, path, body, writer.FormDataContentType())
 }
 
 // client returns a redirect as the response instead of following it, so a test can assert on it.

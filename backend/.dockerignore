@@ -5,7 +5,6 @@
 bin
 tmp
 logs
-uploads
 docs/screenshots
 *.md
 data

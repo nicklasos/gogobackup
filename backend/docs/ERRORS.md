@@ -70,7 +70,7 @@ const (
 )
 ```
 
-Keys are grouped by module (`auth.*`, `users.*`, `examples.*`, `uploads.*`, `validation.*`). Clients translate them, so treat a key as part of the API contract.
+Keys are grouped by module (`auth.*`, `users.*`, `examples.*`, `validation.*`). Clients translate them, so treat a key as part of the API contract.
 
 Validation failures have their own shape and always return 400:
 

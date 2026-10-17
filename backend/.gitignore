@@ -40,9 +40,6 @@ logs/*
 # Temporary files and build artifacts
 tmp/
 
-# Local file storage (UPLOAD_FOLDER)
-/uploads/
-
 # SQLite database files (DATABASE_PATH, TEST_DATABASE_PATH)
 /data/
 *.db

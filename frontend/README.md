@@ -75,7 +75,6 @@ The E2E run starts its own gogo API against the test database and its own Vite s
 - **Profile**: name, email, language and password
 - **Examples module**: a server-paginated list and an editor with an unsaved-changes guard, as the pattern to copy
 - **Markdown editor**: a WYSIWYG editor (headings, lists, quotes, links, phone and email links) that saves markdown, plus a safe viewer
-- **Files**: upload with type and size checks, thumbnails, paginated list
 - **Generated API types**: `make api-types` turns the backend's OpenAPI file into `src/api/schema.ts`
 - **Typed API client**: `ApiError`, server validation errors mapped onto form fields, translated error keys
 - **Resilient**: a page that crashes shows an error screen inside the shell instead of blanking the app, unknown URLs get a not-found page, and every page is a lazily loaded chunk
@@ -135,7 +134,7 @@ src/
   auth/       authStore (persist key: gogo-auth), roles, guards, LoginPage
   layout/     AppShell, nav registry
   shared/     components, hooks, utils, lib/unsavedChanges
-  features/   dashboard, examples, uploads, users, account
+  features/   dashboard, examples, users, account
   locales/{en,uk}/
 tests/e2e/    Playwright specs, page objects, helpers
 ```
@@ -161,7 +160,7 @@ The image is the production build behind nginx. With `VITE_API_BASE_URL` left em
 
 ## CI
 
-`.github/workflows/ci.yml` checks out this repository and the backend side by side, starts Redis, and runs `make api-types-check`, `make test` and the build. The backend repository is named in the workflow; change it when you copy the skeleton.
+`.github/workflows/ci.yml` checks out this repository and the backend side by side and runs `make api-types-check`, `make test` and the build. The backend repository is named in the workflow; change it when you copy the skeleton.
 
 ## Roadmap
 

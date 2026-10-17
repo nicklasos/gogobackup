@@ -66,24 +66,16 @@ func (s *Scheduler) Start() {
 	defer s.mu.Unlock()
 
 	s.cron.Start()
-	s.deps.Logger.Info("Scheduler started successfully")
+	s.deps.Logger.Info("Scheduler started", "jobs", len(s.cron.Entries()))
 }
 
-// Stop gracefully shuts down the scheduler
+// Stop stops scheduling new runs and waits for the jobs already running to finish
 func (s *Scheduler) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.cron.Stop()
-	s.deps.Logger.Info("Scheduler stopped gracefully")
-}
-
-// GetEntries returns all scheduled cron entries
-func (s *Scheduler) GetEntries() []cron.Entry {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.cron.Entries()
+	<-s.cron.Stop().Done()
+	s.deps.Logger.Info("Scheduler stopped")
 }
 
 func (s *Scheduler) registerCleanupRefreshTokensJob() error {

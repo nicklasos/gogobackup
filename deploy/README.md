@@ -4,7 +4,7 @@ Ansible playbooks that turn a fresh Ubuntu server into a running deployment, and
 
 | Playbook | What it does |
 |---|---|
-| `provision.yml` | Everything, from an empty server: packages, firewall, Redis, Go, Node.js, the application, nginx, TLS, backups. Safe to run again. |
+| `provision.yml` | Everything, from an empty server: packages, firewall, Go, Node.js, the application, nginx, TLS, backups. Safe to run again. |
 | `deploy.yml` | Releases new code: pull, build, migrate, restart, health check. |
 | `install.yml` | Adds the application to a server that already has everything. Installs no packages. |
 
@@ -22,18 +22,17 @@ A server that already runs other applications gets `install.yml` instead: see [O
   backend  -> repo/backend     Go API; binaries in backend/bin
   frontend -> repo/frontend    admin panel; nginx serves frontend/dist
   backup   -> repo/backup      backup scripts, run by cron
-  shared/uploads/              uploaded files, outside the checkout
   shared/database/<app>.db     the SQLite database, outside the checkout
-/var/log/<app>/                api.log, api-error.log, cron.log, cron-error.log
+/var/log/<app>/                api.log, api-error.log
 /var/backups/<app>/            local backups (when backup_storage includes "local")
 /etc/supervisor/conf.d/<app>.conf
 /etc/nginx/sites-available/<app>.conf
 ```
 
-- **Processes**: supervisor runs `<app>-api` and, when `enable_scheduler` is true, `<app>-cron`, both as the unprivileged `deploy` user.
+- **Processes**: supervisor runs `<app>-api` as the unprivileged `deploy` user. The API runs the scheduled jobs itself. Set `scheduler_in_api: false` to run them in a separate `<app>-cron` program.
 - **nginx**: `domain` serves the admin panel and proxies `/api/` and `/health` to the API on `127.0.0.1:8181`. An optional `api_domain` proxies everything to the API.
-- **SQLite** is a file the API opens directly; there is no database server. **Redis** listens on localhost only. The firewall allows SSH, 80 and 443.
-- **Backups**: cron runs the database and uploaded-files backups every night.
+- **SQLite** is a file the API opens directly; there is no database server. The firewall allows SSH, 80 and 443.
+- **Backups**: cron runs the database backup every night.
 
 ## Requirements
 
@@ -113,7 +112,7 @@ sudo -u deploy /var/www/<app>/backup/backup_db.sh   # a backup right now
 
 ## On a server that already has everything
 
-For a server that already runs other applications, with Go, Node.js, nginx, Redis and
+For a server that already runs other applications, with Go, Node.js, nginx and
 supervisor installed. `provision.yml` is not for it: it installs packages and a firewall, replaces
 nginx's default site. `install.yml` only adds this application:
 clone into `/var/www/<app>` (no `repo/` folder and links), the two `.env` files, build, migrations
@@ -128,7 +127,7 @@ cp secrets.example.yml group_vars/all/secrets.yml           # jwt_secret
 ansible-playbook install.yml                                # or, from the project root: make install-remote
 ```
 
-- The API runs as `www-data` (`install_user`) and runs the scheduled jobs itself (`ENABLE_SCHEDULER=true`); there is no cron program.
+- The API runs as `www-data` (`install_user`) and runs the scheduled jobs itself (`scheduler_in_api: true`, the default).
 - `tls_mode` is `cloudflare` or `none`: the site listens on port 80 and certificates are not handled.
 - `install_nginx: print` shows the nginx site instead of writing it, to paste into a file nginx already loads, such as `sites-enabled/default`. Add `cloudflare_real_ip: false` when that file already has the `set_real_ip_from` lines.
 - root clones the repository, so root on the server needs access to it.

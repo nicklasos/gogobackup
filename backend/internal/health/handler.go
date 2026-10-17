@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"app/config"
-	"app/internal/cache"
 	"app/internal/db"
 	"app/internal/logger"
 
@@ -22,13 +21,12 @@ const (
 
 type Handler struct {
 	queries *db.Queries
-	cache   cache.Cache
 	cfg     *config.Config
 	logger  *logger.Logger
 }
 
-func NewHandler(queries *db.Queries, cache cache.Cache, cfg *config.Config, logger *logger.Logger) *Handler {
-	return &Handler{queries: queries, cache: cache, cfg: cfg, logger: logger}
+func NewHandler(queries *db.Queries, cfg *config.Config, logger *logger.Logger) *Handler {
+	return &Handler{queries: queries, cfg: cfg, logger: logger}
 }
 
 // Check reports every dependency the API cannot serve requests without. It answers 503
@@ -38,9 +36,6 @@ func (h *Handler) Check(c *gin.Context) {
 	defer cancel()
 
 	checks := gin.H{"database": h.status(ctx, "database", h.queries.Healthcheck(ctx))}
-	if pinger, ok := h.cache.(cache.Pinger); ok {
-		checks["cache"] = h.status(ctx, "cache", pinger.Ping(ctx))
-	}
 
 	healthy := true
 	for _, status := range checks {

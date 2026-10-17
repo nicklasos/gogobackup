@@ -2,7 +2,6 @@ import {
   AppstoreOutlined,
   CrownOutlined,
   DashboardOutlined,
-  FolderOpenOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
@@ -26,14 +25,6 @@ export const MAIN_NAV: NavItem[] = [
     testId: 'nav-examples',
     roles: 'all',
     path: '/examples',
-  },
-  {
-    key: 'files',
-    labelKey: 'navigation.files',
-    icon: <FolderOpenOutlined />,
-    testId: 'nav-files',
-    roles: 'all',
-    path: '/files',
   },
   {
     key: 'users',

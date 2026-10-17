@@ -16,7 +16,7 @@ else
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
 
-up: ## Start Redis and Mailpit in Docker for local development
+up: ## Start Mailpit in Docker for local development
 	$(MAKE) -C backend up
 
 down: ## Stop them
@@ -39,7 +39,7 @@ deploy-setup: ## Install the Ansible collections the playbooks need
 provision: ## Set up a new server and deploy to it
 	cd deploy && ansible-playbook provision.yml
 
-install-remote: ## Add the application to a server that already has Go, nginx, Redis (deploy/README.md)
+install-remote: ## Add the application to a server that already has Go, nginx, supervisor (deploy/README.md)
 	cd deploy && ansible-playbook install.yml
 
 deploy-remote: ## Release the current code to the server with Ansible, from your machine

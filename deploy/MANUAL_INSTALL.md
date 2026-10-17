@@ -1,6 +1,6 @@
 # Manual install
 
-Installing by hand on a server that already has Go, Node.js, nginx, Redis and supervisor,
+Installing by hand on a server that already has Go, Node.js, nginx and supervisor,
 and usually other applications too. `ansible-playbook install.yml` does exactly this for you (see
 [README.md](README.md)); this page is for doing it, or checking it, without Ansible.
 
@@ -13,8 +13,8 @@ Once, as root:
 git clone git@github.com:nicklasos/gogobackup.git /var/www/gogobackup
 cd /var/www/gogobackup
 
-mkdir -p shared/uploads shared/database /var/log/gogobackup
-chown www-data: shared/uploads shared/database
+mkdir -p shared/database /var/log/gogobackup
+chown www-data: shared/database
 
 cp backend/.env.example backend/.env        # then apply deploy/examples/backend.env
 chgrp www-data backend/.env && chmod 640 backend/.env
@@ -43,4 +43,4 @@ cd /var/www/gogobackup && make deploy
 ```
 
 It pulls, builds the API and the CLI, applies new migrations, builds the panel and restarts `gogobackup-api`.
-There is no cron program: with `ENABLE_SCHEDULER=true` in `backend/.env` the API runs the scheduled jobs itself.
+The API runs the scheduled jobs itself (`ENABLE_SCHEDULER=true`). To run them as their own process, set it to false, build `bin/gogo-cron` and add a second supervisor program for it.

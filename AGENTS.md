@@ -7,9 +7,9 @@ backups and server provisioning in one repository.
 
 | Folder | What it is |
 |---|---|
-| `backend/` | Go API: Gin, SQLite through sqlc, Redis, JWT auth with roles |
+| `backend/` | Go API: Gin, SQLite through sqlc, an in-process cache and scheduler, JWT auth with roles |
 | `frontend/` | Admin panel: React, TypeScript, Ant Design, TanStack Query |
-| `backup/` | Shell scripts that back up the database and uploaded files |
+| `backup/` | Shell scripts that back up a database or a folder of files; deploy schedules only the database one |
 | `deploy/` | Ansible: provision a server or install on an existing one, deploy and update the application |
 
 Each folder has its own `AGENTS.md` (or README) with its conventions. Read the one for the folder you are working in.
@@ -24,14 +24,14 @@ This project owns all four folders: edit them directly. There is no sync with th
   are in `backend/docs/recipes/`.
 - The frontend's E2E suite starts the API from `../backend`, so `make test` in `frontend/` tests both halves together.
 - `deploy/` reads nothing from the other folders except their structure: `backend/cmd/{api,cron,cli}`,
-  `backend/migrations`, `frontend/dist`, `backup/backup_db.sh` and `backup/backup_images.sh`. Renaming
+  `backend/migrations`, `frontend/dist` and `backup/backup_db.sh`. Renaming
   any of those means updating `deploy/roles/`.
 
 ## Commands
 
 ```bash
 make help            # everything below
-make up              # local Redis and Mailpit
+make up              # local Mailpit
 make cli migrate up  # a console command; flags go after -- (make cli -- create-user --email a@b.c --password secret123)
 make test            # backend tests, then frontend typecheck, lint, unit and Playwright
 make provision       # set up a new server (see deploy/README.md)

@@ -6,14 +6,13 @@
 
 <p align="center">
   A lightweight Go API starter kit: the parts every project needs, wired together and tested.<br>
-  Gin, SQLite, sqlc, Goose, Redis, JWT auth with roles.
+  Gin, SQLite, sqlc, Goose, JWT auth with roles.
 </p>
 
 <p align="center">
   <img alt="Go" src="https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go&logoColor=white">
   <img alt="Gin" src="https://img.shields.io/badge/Gin-1.10-008ECF?logo=gin&logoColor=white">
   <img alt="SQLite" src="https://img.shields.io/badge/SQLite-pure%20Go-003B57?logo=sqlite&logoColor=white">
-  <img alt="Redis" src="https://img.shields.io/badge/Redis-6+-FF4438?logo=redis&logoColor=white">
   <img alt="sqlc" src="https://img.shields.io/badge/sqlc-type--safe%20SQL-2F7D95">
   <img alt="Swagger" src="https://img.shields.io/badge/docs-Swagger-85EA2D?logo=swagger&logoColor=black">
   <a href="LICENSE.md"><img alt="License" src="https://img.shields.io/badge/license-WTFPL-lightgrey"></a>
@@ -40,7 +39,7 @@ It pairs with **[gogo-front](https://github.com/nicklasos/gogo-front)**, a React
 ## Quick Start
 
 ### Prerequisites
-- Go 1.25+, Redis 6+, Make. The database is a SQLite file; no server and no cgo.
+- Go 1.25+, Make. The database is a SQLite file; no server and no cgo.
 
 ### Setup
 ```bash
@@ -53,7 +52,7 @@ make sqlc-install air-install
 # Configuration (JWT_SECRET is required)
 cp .env.example .env
 
-# Redis and a mail catcher in Docker. Skip this if you run Redis yourself.
+# A mail catcher in Docker. Skip this if you do not need to read sent mail.
 make up
 
 # Creates the database file at DATABASE_PATH (./data/gogobackup.db)
@@ -91,21 +90,19 @@ Run the tests with `make test`. They need no database setup: each test gets its 
 - **Transactions**: `app.Tx.WithTx(ctx, func(q *db.Queries) error { ... })`
 - **Request ID**: `X-Request-ID` on every response and in every `*Context` log line
 - **Graceful shutdown** and env-driven CORS
-- **CRUD Example**: Complete example module with Redis `Remember` caching
+- **CRUD Example**: Complete example module with `Remember` caching
 - **Pagination**: `?page` / `?page_size` parsing and a `pagination` block on every list
 - **Type Safety**: SQLC for type-safe database operations
 - **Swagger**: Auto-generated API documentation
-- **Uploads**: content-checked file upload behind a `Storage` interface, paginated list, and file serving without directory listings
 - **Docker and CI**: `docker-compose.yml` for local services, a production `Dockerfile`, and a GitHub Actions workflow
-- **Healthcheck**: `/health` checks the database and Redis and answers 503 when either is down
-- **Scheduler**: Optional cron jobs (refresh-token cleanup)
+- **Healthcheck**: `/health` checks the database and answers 503 when it is down
+- **Scheduler**: cron jobs inside the API process, or in `cmd/cron` with `ENABLE_SCHEDULER=false` (refresh-token cleanup)
 
 ## Tech Stack
 
 - **Go 1.25+** + **Gin** - API framework
 - **SQLite** + **modernc.org/sqlite** - Database in one file, pure Go driver
 - **SQLC** - Type-safe SQL code generation
-- **Redis** + **go-redis/v9** - Caching
 - **Goose** - Database migrations
 - **JWT** - Authentication
 - **Swaggo** - API documentation
@@ -115,7 +112,6 @@ Run the tests with `make test`. They need no database setup: each test gets its 
 ```
 gogo/
 ├── cmd/api/main.go              # Application entry point (--port, --test-db)
-├── cmd/cron/main.go             # Standalone scheduler
 ├── cmd/cli/main.go              # CLI (migrate, create-user, test)
 ├── internal/
 │   ├── app.go                   # App context with DB, Tx, Cache, Logger, Mail
@@ -123,10 +119,9 @@ gogo/
 │   ├── auth/                    # Authentication module
 │   ├── users/                   # User management
 │   ├── example/                 # Example CRUD module (cache demo)
-│   ├── uploads/                 # File uploads
 │   ├── db/queries/              # SQL queries (sqlc)
 │   ├── middleware/              # JWT, roles, CORS, request ID, pagination, recovery
-│   ├── cache/                   # Redis + MemoryCache
+│   ├── cache/                   # In-process cache with TTLs
 │   ├── mail/                    # SMTP mail service + MemorySender
 │   ├── errs/                    # Domain errors
 │   └── scheduler/               # Cron jobs
@@ -184,15 +179,8 @@ Admins can only manage accounts whose role is `user`; anything else returns 403 
 - `PUT /api/v1/examples/:id` - Update example (protected)
 - `DELETE /api/v1/examples/:id` - Delete example (protected)
 
-### Uploads
-- `POST /api/v1/uploads` - Upload a file (protected)
-- `GET /api/v1/uploads` - List uploads with pagination (protected)
-- `GET /api/v1/uploads/:id` - Get upload (protected)
-- `DELETE /api/v1/uploads/:id` - Delete upload (protected)
-- `GET /api/files/*` - Serve uploaded files (public)
-
 ### Other
-- `GET /health` - Health check (database and cache); 503 with a per-dependency `checks` map when one is down
+- `GET /health` - Health check (database); 503 with a per-dependency `checks` map when one is down
 - `GET /api/v1/health` - Same health check under API prefix
 - `GET /swagger/*` - API documentation
 
@@ -201,7 +189,6 @@ Admins can only manage accounts whose role is `user`; anything else returns 403 
 ```bash
 DATABASE_PATH=./data/gogobackup.db            # SQLite file; the directory is created on start
 TEST_DATABASE_PATH=./data/gogobackup_test.db  # for --test-db and cli --test; must end in _test.db
-REDIS_URL=redis://localhost:6379/0
 JWT_SECRET=your-secret-key-here   # production needs 32+ random characters: openssl rand -hex 32
 JWT_ACCESS_TOKEN_TTL=1h
 JWT_REFRESH_TOKEN_TTL=720h
@@ -211,11 +198,10 @@ FRONTEND_URL=http://localhost:5173   # base of the links in emails
 TRUSTED_PROXIES=127.0.0.1,::1     # whose X-Forwarded-For to believe for the client IP
 PORT=8181
 APP_ENV=development
-APP_NAME=Gogobackup                 # also the Redis cache key prefix
+APP_NAME=Gogobackup
 CORS_ALLOWED_ORIGINS=          # comma-separated; empty or * allows any origin
 MAIL_HOST=                     # plus MAIL_PORT, MAIL_SCHEME, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS, MAIL_FROM_NAME
 LOG_LEVEL=info
-ENABLE_SCHEDULER=false
 ```
 
 ## Patterns
@@ -239,7 +225,7 @@ page, ok := middleware.Page(c)              // 400 when ?page / ?page_size are i
 
 ### Cache Pattern
 - Use `cache.Remember` for short-lived list responses (see `example` module)
-- Use `cache.MemoryCache` in tests (no Redis required)
+- The cache is `cache.MemoryCache`, in the API process: it starts empty on every restart
 - Invalidate on create/update/delete
 
 ## Auth
@@ -269,29 +255,6 @@ err := s.mail.Send(ctx, mail.Message{
 - `make cli -- mail -to you@example.com` sends a real test email, even in debug mode. `make cli-mail TO=you@example.com` is the same command.
 - In tests, `testkit.New` wires a `mail.MemorySender`; assert on `app.Mail.Sent()`.
 
-## Uploads Module
-
-The uploads module allows users to upload files (images, videos, documents, audio) and stores metadata in the database. Files are served from `/api/files/...`.
-
-- The extension must be on the allow list, and the first bytes must agree with it: an image extension needs image content, `.pdf` needs a PDF, and nothing may be HTML. The stored MIME type is the detected one, not the client's.
-- Files get random names; the original name is kept only as metadata.
-- Bytes go through the `Storage` interface. `LocalStorage` (the default) writes under `UPLOAD_FOLDER` and cannot be made to leave it. Set `UploadConfig.Storage` to your own implementation for S3 or GCS.
-- `/api/files/*` serves files only (no directory listings) with `nosniff` and a sandboxing CSP.
-
-### Configuration
-
-```go
-config := &uploads.UploadConfig{
-    UploadFolder: "./uploads",
-    BaseURL:      "http://localhost:8181/api/files",
-    MaxFileSize:  50 * 1024 * 1024, // 50MB
-    AllowedTypes: []string{".jpg", ".png", ".pdf"},
-    GetFolderID: func(ctx context.Context, userID int64) (int64, error) {
-        return userID, nil
-    },
-}
-```
-
 ## Adding New Modules
 
 Follow [docs/recipes/add-module.md](docs/recipes/add-module.md). In short:
@@ -306,19 +269,19 @@ Follow [docs/recipes/add-module.md](docs/recipes/add-module.md). In short:
 ## Docker
 
 ```bash
-make up            # Redis, Mailpit
+make up            # Mailpit
 make down
-make docker-build  # production image: api, cron and cli binaries
+make docker-build  # production image: api and cli binaries
 docker compose --profile app up --build   # everything, API included
 ```
 
-The image keeps the database at `/data/db/gogobackup.db` (mount a volume there) and runs `cli migrate up` before the API starts (`RUN_MIGRATIONS=false` turns that off). Run the scheduler from the same image with the command `/app/cron`.
+The image keeps the database at `/data/db/gogobackup.db` (mount a volume there) and runs `cli migrate up` before the API starts (`RUN_MIGRATIONS=false` turns that off). The API runs the scheduled jobs itself unless `ENABLE_SCHEDULER=false`, in which case run `/app/cron` as a second container.
 
 ## Test database
 
 `go test` needs no database: every test copies a migrated SQLite file into its own temporary directory.
 
-`TEST_DATABASE_PATH` is the database of `--test-db` (api, cron) and `--test` (cli), which the frontend E2E suite runs against (`make test-db-setup` migrates it). Its file name must end in `_test.db`; anything else is refused.
+`TEST_DATABASE_PATH` is the database of `--test-db` (api) and `--test` (cli), which the frontend E2E suite runs against (`make test-db-setup` migrates it). Its file name must end in `_test.db`; anything else is refused.
 
 ## Error Handling
 

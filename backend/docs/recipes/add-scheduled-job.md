@@ -1,7 +1,8 @@
 # Add a scheduled job
 
-Jobs run on a cron schedule, inside the API process when `ENABLE_SCHEDULER=true` or in the
-separate `cmd/cron` binary. Run them in one place only, or every job runs twice.
+Jobs run on a cron schedule inside the API process: `cmd/api/main.go` starts the scheduler on boot
+and stops it on shutdown, waiting for running jobs. With `ENABLE_SCHEDULER=false` the API skips it and
+`cmd/cron` runs the same jobs as its own process. Tests (`testkit`) never start it.
 
 1. **The job**: `internal/scheduler/jobs/<name>.go`, modelled on `cleanup_refresh_tokens.go`.
    A struct holding what it needs (`*db.Queries`, the logger, config) with `Execute(ctx context.Context) error`.
@@ -15,4 +16,4 @@ separate `cmd/cron` binary. Run them in one place only, or every job runs twice.
 6. `make test`.
 
 A job that needs a new dependency (mail, cache) gets it through `scheduler.Dependencies`,
-which is filled in `cmd/api/main.go` and `cmd/cron/main.go`: update both.
+which is filled in `cmd/api/main.go`.

@@ -34,7 +34,7 @@ run-cron-test-db:
 run-test-db:
 	go run ./cmd/api --test-db
 
-# Local Redis and Mailpit in Docker (see docker-compose.yml)
+# Local Mailpit in Docker (see docker-compose.yml)
 up:
 	docker compose up -d --wait
 
@@ -167,14 +167,14 @@ help:
 	@echo "Gogo API Template - available targets:"
 	@echo ""
 	@echo "  Development:"
-	@echo "    up                  Start Redis and Mailpit in Docker"
+	@echo "    up                  Start Mailpit in Docker"
 	@echo "    down                Stop them"
 	@echo "    docker-build        Build the API image"
 	@echo "    run                 Start API server"
 	@echo "    run-test-db         Start API with TEST_DATABASE_PATH"
 	@echo "    dev                 Hot reload (air)"
 	@echo "    build               Build API binary"
-	@echo "    build-cron          Build cron binary"
+	@echo "    build-cron          Build cron binary (only when ENABLE_SCHEDULER=false)"
 	@echo "    build-cli           Build CLI binary"
 	@echo "    fmt                 Format Go code"
 	@echo "    tidy                go mod tidy"
@@ -203,7 +203,7 @@ help:
 	@echo ""
 	@echo "  Docs / Cron / Deploy:"
 	@echo "    swagger             Generate Swagger docs"
-	@echo "    run-cron            Run standalone cron"
+	@echo "    run-cron            Run the scheduler as its own process"
 	@echo "    supervisor-restart  Restart supervisord program"
 	@echo "    help                Show this help"
 

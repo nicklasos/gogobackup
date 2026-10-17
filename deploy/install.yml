@@ -1,5 +1,5 @@
 # Installs the application on a server that already runs other things and already has Go,
-# Node.js, nginx, Redis and supervisor. Unlike provision.yml it installs no packages
+# Node.js, nginx and supervisor. Unlike provision.yml it installs no packages
 # and touches nothing but this application's own files. Safe to run again.
 #
 #   ansible-playbook install.yml
@@ -11,9 +11,6 @@
   vars:
     # The account the API runs as. The checkout stays with root, who also builds and pulls.
     app_user: "{{ install_user | default('www-data') }}"
-    # The API runs the scheduled jobs itself, so there is no cron program
-    enable_scheduler: false
-    scheduler_in_api: true
     nginx_hide_server_header: false
     tls_ready: false
   pre_tasks:
@@ -55,7 +52,6 @@
         mode: "0755"
       loop:
         - { path: "{{ app_root }}/shared", owner: root }
-        - { path: "{{ uploads_dir }}", owner: "{{ app_user }}" }
         - { path: "{{ database_path | dirname }}", owner: "{{ app_user }}" }
         - { path: "{{ log_dir }}", owner: root }
 
@@ -117,7 +113,6 @@
       when: install_nginx | default('write') == 'write'
       vars: &nginx_vars
         cloudflare_ips: "{{ nginx_defaults.cloudflare_ips }}"
-        nginx_client_max_body_size: "{{ nginx_defaults.nginx_client_max_body_size }}"
       block:
         - name: Write the nginx site
           ansible.builtin.template:

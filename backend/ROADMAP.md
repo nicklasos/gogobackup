@@ -6,7 +6,7 @@ What is worth adding to the skeleton next, in priority order. Each item names th
 
 | Item | Why | Port from |
 |---|---|---|
-| Background jobs | Mail and other slow work run inside the request today; a Redis-backed queue such as asynq fits the stack | — |
+| Background jobs | Mail and other slow work run inside the request today | — |
 | golangci-lint | CI runs `gofmt`, `go vet` and the tests; a linter config would catch more | — |
 | WebSocket authentication | Tokens are no longer accepted in the URL; a project with WebSockets needs a short-lived ticket endpoint instead | — |
 
@@ -14,8 +14,6 @@ What is worth adding to the skeleton next, in priority order. Each item names th
 
 | Item | Why | Port from |
 |---|---|---|
-| S3 / GCS storage | The `Storage` interface is in place with a local implementation only | — |
-| Image crop and resize | Useful once a project has avatars or galleries; needs an imaging library | `smartcity-backoffice-api/internal/uploads/crop.go` |
 | Role editing | Roles are fixed at creation today; add `UpdateUserRoles` with a last-super-admin guard when a project needs it | — |
 | Pagination, sort and filter conventions | Only page parsing exists; every list endpoint reinvents filters | `smartcity-backoffice-api/internal/pagination/` |
 | Constraint registry | Table-driven unique / foreign key constraint → error key, instead of string matching | — |
@@ -31,6 +29,6 @@ What is worth adding to the skeleton next, in priority order. Each item names th
 
 ## Left out on purpose
 
-- **Queue / background jobs**: cron plus goroutines cover a skeleton; pick a queue per project (asynq runs on the Redis already here).
+- **Queue / background jobs**: cron plus goroutines cover a skeleton; pick a queue per project.
 - **Keyed lock**: in-process only, misleading once there is more than one instance.
 - **Per-module permissions (JSON columns)** and **multi-tenancy**: project-specific; roles are enough here.

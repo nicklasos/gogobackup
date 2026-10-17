@@ -70,7 +70,6 @@ func TestExampleService_GetExample(t *testing.T) {
 
 - `app.GET(path, args...)`, `app.DELETE(path, args...)`
 - `app.POST(path, body, args...)`, `PUT`, `PATCH` — the body is a struct, a map or a string of raw JSON; `nil` sends none
-- `app.POSTFile(path, field, testkit.File{Name: "a.jpg", Content: testkit.JPEG})`
 - `app.As(user)` — the same verbs, logged in as the user
 - `app.WithToken(token)`, `app.WithHeader(key, value)`
 
@@ -99,7 +98,6 @@ Every `Assert` stops the test on failure, prints the response body, and returns 
 | `app.Create.User()` | `WithEmail`, `WithName`, `WithPassword`, `WithRoles`, `Admin()`, `SuperAdmin()`, `Unverified()` |
 | `app.Create.Example(userID)` | `WithTitle`, `WithDescription` |
 | `app.Create.Examples(userID, count, prefix)` | |
-| `app.Create.Upload(userID)` | |
 
 A user has the password `factory.DefaultPassword`. Tests never write `INSERT` by hand: a new table gets a factory.
 

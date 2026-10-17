@@ -67,21 +67,13 @@
     "profile": "Профіль",
     "adminMenu": "Адмін-меню",
     "superAdmins": "Супер-адміни",
-    "admins": "Адміни",
-    "files": "Файли"
+    "admins": "Адміни"
   },
   "enums": {
     "role": {
       "super-admin": "Супер-адмін",
       "admin": "Адмін",
       "user": "Користувач"
-    },
-    "uploadType": {
-      "image": "Зображення",
-      "video": "Відео",
-      "audio": "Аудіо",
-      "document": "Документ",
-      "other": "Інше"
     }
   },
   "dashboard": {
@@ -176,7 +168,6 @@
     "users.forbidden_role": "Ви не можете керувати користувачами з цією роллю",
     "users.cannot_delete_self": "Ви не можете видалити себе",
     "examples.not_found": "Приклад не знайдено",
-    "uploads.not_found": "Файл не знайдено",
     "validation.failed": "Помилка валідації",
     "validation.required": "Обовʼязкове поле",
     "validation.email": "Некоректний email",
@@ -192,26 +183,10 @@
     "auth.registration_disabled": "Реєстрацію вимкнено",
     "auth.invalid_or_expired_link": "Посилання недійсне або термін його дії минув",
     "auth.email_already_verified": "Ваш email уже підтверджено",
-    "uploads.type_not_allowed": "Цей тип файлу не дозволено",
-    "uploads.too_large": "Файл завеликий",
-    "uploads.empty": "Файл порожній",
     "validation.error": "Некоректний запит",
     "crashTitle": "На цій сторінці сталася помилка",
     "crashHint": "Решта застосунку працює. Спробуйте ще раз або перезавантажте сторінку.",
     "reloadPage": "Перезавантажити сторінку"
-  },
-  "uploads": {
-    "title": "Файли",
-    "hint": "Зображення, документи, аудіо та відео до {{max}} МБ.",
-    "upload": "Завантажити",
-    "uploaded": "Файл завантажено",
-    "deleted": "Файл видалено",
-    "deleteConfirm": "Видалити цей файл?",
-    "empty": "Файлів ще немає",
-    "name": "Назва",
-    "type": "Тип",
-    "size": "Розмір",
-    "tooLarge": "Файл більший за {{max}} МБ"
   },
   "editor": {
     "placeholder": "Введіть текст",

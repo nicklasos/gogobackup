@@ -76,11 +76,9 @@ func New(t *testing.T, configure ...func(*config.Config)) *App {
 	}
 
 	cfg := &config.Config{
-		UploadFolder: t.TempDir(),
-		FilesBaseURL: "http://localhost:8181/api/files",
-		JWTSecret:    JWTSecret,
-		AppName:      "TestApp",
-		FrontendURL:  "http://localhost:5173",
+		JWTSecret:   JWTSecret,
+		AppName:     "TestApp",
+		FrontendURL: "http://localhost:5173",
 
 		AllowRegistration: true,
 		AuthRateLimit:     true,
@@ -169,9 +167,3 @@ func (a *App) baseURL() string {
 func Actor(user *db.User) middleware.Actor {
 	return middleware.Actor{ID: user.ID, Roles: user.Roles}
 }
-
-// JPEG is a minimal payload that is recognised as a JPEG image by content sniffing.
-var JPEG = append([]byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 'J', 'F', 'I', 'F', 0x00}, []byte("test image content")...)
-
-// PDF is a minimal payload that is recognised as a PDF document.
-var PDF = []byte("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n")

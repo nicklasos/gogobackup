@@ -8,7 +8,6 @@ import (
 	"app/internal/health"
 	"app/internal/logger"
 	"app/internal/middleware"
-	"app/internal/uploads"
 	"app/internal/users"
 
 	"github.com/gin-gonic/gin"
@@ -39,7 +38,5 @@ func RegisterRoutes(r *gin.Engine, app *internal.App) {
 	auth.RegisterRoutes(app)
 	users.RegisterRoutes(app)
 	example.RegisterRoutes(app)
-	uploads.RegisterRoutes(app)
-	uploads.RegisterPublicRoutes(r, app)
 	health.RegisterRoutes(r, app)
 }
