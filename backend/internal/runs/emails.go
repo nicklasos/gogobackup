@@ -44,7 +44,7 @@ func (w *Worker) alert(ctx context.Context, run db.Run, plan *db.Plan, runErr er
 		Plan:  plan.Name,
 		Error: runErr.Error(),
 		Log:   log.Tail(alertLogLines),
-		Link:  fmt.Sprintf("%s/plans/%d/edit", w.frontendURL, plan.ID),
+		Link:  fmt.Sprintf("%s/plans/%d", w.frontendURL, plan.ID),
 	}
 	var html bytes.Buffer
 	if err := failureHTML.Execute(&html, content); err != nil {

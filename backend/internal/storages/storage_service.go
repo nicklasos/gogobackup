@@ -211,16 +211,17 @@ func (s *StorageService) ListObjects(ctx context.Context, id int64, prefix strin
 
 	d, err := s.Driver(ctx, storage)
 	if err != nil {
-		return nil, unreachable(err)
+		return nil, Unreachable(err)
 	}
+	defer d.Close()
 	entries, err := d.List(ctx, prefix)
 	if err != nil {
-		return nil, unreachable(err)
+		return nil, Unreachable(err)
 	}
 	return entries, nil
 }
 
-// Driver opens a saved storage. The runner (phase 5) and restores (phase 7) go through it too.
+// Driver opens a saved storage for the runner, downloads and restores. The caller closes it.
 func (s *StorageService) Driver(ctx context.Context, storage *db.Storage) (driver.Driver, error) {
 	secret, err := s.unseal(storage)
 	if err != nil {
@@ -237,6 +238,7 @@ func (s *StorageService) probe(ctx context.Context, kind Kind, config, secret []
 	if err != nil {
 		return connectFailed(err)
 	}
+	defer d.Close()
 	var failure *driver.ProbeError
 	errors.As(driver.Probe(ctx, d), &failure)
 	return &TestResult{Failure: failure}
@@ -320,7 +322,8 @@ func connectFailed(err error) *TestResult {
 	return &TestResult{Failure: &driver.ProbeError{Step: driver.StepConnect, Err: err}}
 }
 
-func unreachable(err error) error {
+// Unreachable is the 502 for a storage that failed: details.reason says why.
+func Unreachable(err error) error {
 	return errs.WrapDomainError(errs.ErrKeyStoragesUnreachable, "The storage could not be reached", http.StatusBadGateway, err).
 		WithDetails(map[string]interface{}{"reason": err.Error()})
 }

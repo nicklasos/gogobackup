@@ -16,6 +16,7 @@ type runAttrs struct {
 	status       runs.Status
 	startedAt    sql.NullTime
 	finishedAt   sql.NullTime
+	sizeBytes    sql.NullInt64
 	errText      sql.NullString
 }
 
@@ -32,6 +33,19 @@ func ScheduledFor(slot time.Time) RunOption {
 	}
 }
 
+// StartedAt backdates the run's start; a finished run ends a minute later.
+func StartedAt(at time.Time) RunOption {
+	return func(a *runAttrs) {
+		a.startedAt = sql.NullTime{Time: at.UTC(), Valid: true}
+		a.finishedAt = sql.NullTime{Time: at.UTC().Add(time.Minute), Valid: true}
+	}
+}
+
+// RunSize is the size of what the run stored.
+func RunSize(bytes int64) RunOption {
+	return func(a *runAttrs) { a.sizeBytes = sql.NullInt64{Int64: bytes, Valid: true} }
+}
+
 // Run creates a run of the plan: a queued manual one unless options say otherwise.
 func (f *Factory) Run(plan *db.Plan, opts ...RunOption) *db.Run {
 	f.t.Helper()
@@ -44,8 +58,12 @@ func (f *Factory) Run(plan *db.Plan, opts ...RunOption) *db.Run {
 	if attrs.status != runs.StatusQueued && !attrs.startedAt.Valid {
 		attrs.startedAt = now
 	}
-	if (attrs.status == runs.StatusSucceeded || attrs.status == runs.StatusFailed) && !attrs.finishedAt.Valid {
+	finished := attrs.status == runs.StatusSucceeded || attrs.status == runs.StatusFailed
+	if finished && !attrs.finishedAt.Valid {
 		attrs.finishedAt = now
+	}
+	if !finished {
+		attrs.finishedAt = sql.NullTime{}
 	}
 	if attrs.status == runs.StatusFailed && !attrs.errText.Valid {
 		attrs.errText = sql.NullString{String: "factory: failed", Valid: true}
@@ -53,10 +71,10 @@ func (f *Factory) Run(plan *db.Plan, opts ...RunOption) *db.Run {
 
 	var run db.Run
 	err := f.conn.QueryRowContext(ctx,
-		`INSERT INTO runs (plan_id, trigger, scheduled_for, status, started_at, finished_at, error)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO runs (plan_id, trigger, scheduled_for, status, started_at, finished_at, size_bytes, error)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		 RETURNING id, plan_id, trigger, scheduled_for, status, started_at, finished_at, size_bytes, log, error, created_at`,
-		plan.ID, string(attrs.trigger), attrs.scheduledFor, string(attrs.status), attrs.startedAt, attrs.finishedAt, attrs.errText,
+		plan.ID, string(attrs.trigger), attrs.scheduledFor, string(attrs.status), attrs.startedAt, attrs.finishedAt, attrs.sizeBytes, attrs.errText,
 	).Scan(&run.ID, &run.PlanID, &run.Trigger, &run.ScheduledFor, &run.Status, &run.StartedAt, &run.FinishedAt,
 		&run.SizeBytes, &run.Log, &run.Error, &run.CreatedAt)
 	if err != nil {
@@ -69,6 +87,7 @@ type archiveAttrs struct {
 	key       string
 	content   []byte
 	createdAt time.Time
+	deletedAt sql.NullTime
 }
 
 type ArchiveOption func(*archiveAttrs)
@@ -86,6 +105,11 @@ func ArchiveCreatedAt(at time.Time) ArchiveOption {
 	return func(a *archiveAttrs) { a.createdAt = at.UTC() }
 }
 
+// ArchiveDeleted makes it an archive that retention removed.
+func ArchiveDeleted() ArchiveOption {
+	return func(a *archiveAttrs) { a.deletedAt = sql.NullTime{Time: time.Now().UTC(), Valid: true} }
+}
+
 // Archive records an archive of the run on the storage, created now unless an option says otherwise.
 func (f *Factory) Archive(run *db.Run, storage *db.Storage, opts ...ArchiveOption) *db.Archive {
 	f.t.Helper()
@@ -98,10 +122,10 @@ func (f *Factory) Archive(run *db.Run, storage *db.Storage, opts ...ArchiveOptio
 
 	var archive db.Archive
 	err := f.conn.QueryRowContext(ctx,
-		`INSERT INTO archives (run_id, plan_id, storage_id, object_key, size_bytes, sha256, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO archives (run_id, plan_id, storage_id, object_key, size_bytes, sha256, created_at, deleted_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		 RETURNING id, run_id, plan_id, storage_id, object_key, size_bytes, sha256, created_at, deleted_at`,
-		run.ID, run.PlanID, storage.ID, attrs.key, len(attrs.content), hex.EncodeToString(sum[:]), attrs.createdAt,
+		run.ID, run.PlanID, storage.ID, attrs.key, len(attrs.content), hex.EncodeToString(sum[:]), attrs.createdAt, attrs.deletedAt,
 	).Scan(&archive.ID, &archive.RunID, &archive.PlanID, &archive.StorageID, &archive.ObjectKey, &archive.SizeBytes,
 		&archive.Sha256, &archive.CreatedAt, &archive.DeletedAt)
 	if err != nil {

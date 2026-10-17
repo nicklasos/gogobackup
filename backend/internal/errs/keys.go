@@ -54,6 +54,12 @@ const (
 	ErrKeyRunsNotFound = "runs.not_found"
 )
 
+// Archives error keys
+const (
+	ErrKeyArchivesNotFound    = "archives.not_found"
+	ErrKeyArchivesInvalidLink = "archives.invalid_link"
+)
+
 // Validation error keys
 const (
 	ErrKeyValidationFailed       = "validation.failed"

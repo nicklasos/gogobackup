@@ -164,6 +164,9 @@ func (l *Local) Delete(_ context.Context, key string) error {
 	return nil
 }
 
+// Close has nothing to release: every call opens and closes the directory itself.
+func (l *Local) Close() error { return nil }
+
 func randomSuffix() string {
 	b := make([]byte, 6)
 	rand.Read(b)

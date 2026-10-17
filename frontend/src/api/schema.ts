@@ -123,6 +123,48 @@ export interface InternalPaginationMeta {
   total: number;
 }
 
+export interface InternalPlansDashboardDataResponse {
+  data: InternalPlansDashboardResponse;
+}
+
+export interface InternalPlansDashboardPlanResponse {
+  created_at: string;
+  days: InternalPlansDayResponse[];
+  enabled: boolean;
+  files?: InternalPlansFilesConfig;
+  folder: string;
+  health: "running" | "failed" | "paused" | "overdue" | "never" | "ok";
+  id: number;
+  keep_monthly: number;
+  keep_weekly: number;
+  last_run?: InternalPlansLastRunResponse | null;
+  last_size_bytes?: number | null;
+  last_success_at?: string | null;
+  max_age_days: number;
+  mysql?: InternalPlansMySQLConfig;
+  name: string;
+  next_run_at?: string | null;
+  postgres?: InternalPlansPostgresConfig;
+  schedules: InternalPlansSchedule[];
+  secret_set: boolean;
+  source_kind: "postgres" | "mysql" | "sqlite" | "files";
+  sqlite?: InternalPlansSQLiteConfig;
+  storages: InternalPlansPlanStorageResponse[];
+  updated_at: string;
+}
+
+export interface InternalPlansDashboardResponse {
+  plans: InternalPlansDashboardPlanResponse[];
+  summary: InternalPlansHealthSummaryResponse;
+}
+
+export interface InternalPlansDayResponse {
+  /** @example "2026-10-17" */
+  date: string;
+  failed: number;
+  succeeded: number;
+}
+
 export interface InternalPlansFilesConfig {
   excludes: string[];
   paths: string[];
@@ -132,6 +174,23 @@ export interface InternalPlansFilesInput {
   excludes?: string[];
   /** @minItems 1 */
   paths: string[];
+}
+
+export type InternalPlansHealth =
+  | "running"
+  | "failed"
+  | "paused"
+  | "overdue"
+  | "never"
+  | "ok";
+
+export interface InternalPlansHealthSummaryResponse {
+  failed: number;
+  never: number;
+  ok: number;
+  overdue: number;
+  paused: number;
+  running: number;
 }
 
 export interface InternalPlansLastRunResponse {
@@ -207,10 +266,13 @@ export interface InternalPlansPlanResponse {
   created_at: string;
   enabled: boolean;
   files?: InternalPlansFilesConfig;
+  folder: string;
+  health: "running" | "failed" | "paused" | "overdue" | "never" | "ok";
   id: number;
   keep_monthly: number;
   keep_weekly: number;
   last_run?: InternalPlansLastRunResponse | null;
+  last_size_bytes?: number | null;
   last_success_at?: string | null;
   max_age_days: number;
   mysql?: InternalPlansMySQLConfig;
@@ -273,6 +335,10 @@ export interface InternalPlansScheduleInput {
   time: string;
 }
 
+export interface InternalPlansSetEnabledRequest {
+  enabled: boolean;
+}
+
 export type InternalPlansSourceKind = "postgres" | "mysql" | "sqlite" | "files";
 
 export interface InternalPlansSourceRequest {
@@ -324,6 +390,15 @@ export interface InternalRunsArchiveResponse {
   storage_name: string;
 }
 
+export interface InternalRunsDownloadLinkDataResponse {
+  data: InternalRunsDownloadLinkResponse;
+}
+
+export interface InternalRunsDownloadLinkResponse {
+  expires_at: string;
+  token: string;
+}
+
 export interface InternalRunsPaginatedArchivesResponse {
   data: InternalRunsArchiveResponse[];
   pagination: InternalPaginationMeta;
@@ -345,6 +420,7 @@ export interface InternalRunsRunDetailDataResponse {
 export interface InternalRunsRunDetailResponse {
   archives: InternalRunsArchiveResponse[];
   created_at: string;
+  duration_ms?: number | null;
   error?: string | null;
   finished_at?: string | null;
   id: number;
@@ -359,6 +435,7 @@ export interface InternalRunsRunDetailResponse {
 
 export interface InternalRunsRunResponse {
   created_at: string;
+  duration_ms?: number | null;
   error?: string | null;
   finished_at?: string | null;
   id: number;

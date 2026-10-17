@@ -74,13 +74,26 @@ FROM runs
 WHERE id IN (SELECT MAX(r.id) FROM runs AS r WHERE r.plan_id IN (sqlc.slice(plan_ids)) GROUP BY r.plan_id);
 
 -- name: LatestSuccessesOfPlans :many
-SELECT id, plan_id, finished_at
+SELECT id, plan_id, finished_at, size_bytes
 FROM runs
 WHERE id IN (
     SELECT MAX(r.id) FROM runs AS r
     WHERE r.plan_id IN (sqlc.slice(plan_ids)) AND r.status = 'succeeded'
     GROUP BY r.plan_id
 );
+
+-- One row per plan and UTC day with a finished run on or after the day `since` (YYYY-MM-DD), for
+-- the dashboard's strip of days. A run counts on the day it started.
+-- name: CountFinishedRunsPerDay :many
+SELECT plan_id,
+       CAST(date(started_at) AS TEXT) AS day,
+       CAST(SUM(status = 'succeeded') AS INTEGER) AS succeeded,
+       CAST(SUM(status = 'failed') AS INTEGER) AS failed
+FROM runs
+WHERE status IN ('succeeded', 'failed')
+  AND date(started_at) >= CAST(sqlc.arg(since) AS TEXT)
+GROUP BY plan_id, day
+ORDER BY plan_id, day;
 
 -- name: ListEnabledPlans :many
 SELECT * FROM plans
@@ -138,3 +151,7 @@ ORDER BY created_at, id;
 -- name: MarkArchiveDeleted :exec
 UPDATE archives SET deleted_at = ?2
 WHERE id = ?1 AND deleted_at IS NULL;
+
+-- name: GetArchiveByID :one
+SELECT * FROM archives
+WHERE id = ?1 LIMIT 1;

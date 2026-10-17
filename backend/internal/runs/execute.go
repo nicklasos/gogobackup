@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"regexp"
 	"strings"
 	"time"
 
@@ -72,6 +71,7 @@ func (w *Worker) perform(ctx context.Context, run db.Run, log *runlog.Log) (*db.
 			failures = append(failures, fmt.Sprintf("%s: %v", storage.Name, err))
 			continue
 		}
+		defer d.Close()
 		open = append(open, opened{storage: storage, driver: d})
 	}
 	if len(open) == 0 {
@@ -223,16 +223,11 @@ func (w *Worker) flushWhileRunning(ctx context.Context, id int64, log *runlog.Lo
 	}
 }
 
-var notSlug = regexp.MustCompile(`[^a-z0-9]+`)
-
-// ObjectKey is where a run's archive goes in each storage: a folder per plan, and a name with
+// ObjectKey is where a run's archive goes in each storage: the plan's folder, and a name with
 // the plan, the start time in UTC and the run, so two runs never write the same object.
 func ObjectKey(planName string, runID int64, started time.Time, extension string) string {
-	slug := strings.Trim(notSlug.ReplaceAllString(strings.ToLower(planName), "-"), "-")
-	if slug == "" {
-		slug = "plan"
-	}
-	return fmt.Sprintf("%s/%s-%s-%d.%s", slug, slug, started.UTC().Format("20060102T150405Z"), runID, extension)
+	slug := plans.Slug(planName)
+	return fmt.Sprintf("%s%s-%s-%d.%s", plans.Folder(planName), slug, started.UTC().Format("20060102T150405Z"), runID, extension)
 }
 
 func formatBytes(n int64) string {

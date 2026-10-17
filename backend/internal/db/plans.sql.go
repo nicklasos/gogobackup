@@ -155,6 +155,47 @@ func (q *Queries) GetPlanByID(ctx context.Context, id int64) (Plan, error) {
 	return i, err
 }
 
+const listPlans = `-- name: ListPlans :many
+SELECT id, name, source_kind, source_config, source_secret, schedules, max_age_days, keep_weekly, keep_monthly, enabled, created_at, updated_at FROM plans
+ORDER BY name COLLATE NOCASE, id
+`
+
+func (q *Queries) ListPlans(ctx context.Context) ([]Plan, error) {
+	rows, err := q.db.QueryContext(ctx, listPlans)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Plan
+	for rows.Next() {
+		var i Plan
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.SourceKind,
+			&i.SourceConfig,
+			&i.SourceSecret,
+			&i.Schedules,
+			&i.MaxAgeDays,
+			&i.KeepWeekly,
+			&i.KeepMonthly,
+			&i.Enabled,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPlansPaginated = `-- name: ListPlansPaginated :many
 SELECT id, name, source_kind, source_config, source_secret, schedules, max_age_days, keep_weekly, keep_monthly, enabled, created_at, updated_at FROM plans
 ORDER BY name COLLATE NOCASE, id
@@ -253,6 +294,41 @@ func (q *Queries) ListStoragesOfPlans(ctx context.Context, planIds []int64) ([]L
 		return nil, err
 	}
 	return items, nil
+}
+
+const setPlanEnabled = `-- name: SetPlanEnabled :one
+UPDATE plans
+SET enabled = ?1,
+    updated_at = CASE WHEN enabled = ?1 THEN updated_at ELSE CURRENT_TIMESTAMP END
+WHERE id = ?2
+RETURNING id, name, source_kind, source_config, source_secret, schedules, max_age_days, keep_weekly, keep_monthly, enabled, created_at, updated_at
+`
+
+type SetPlanEnabledParams struct {
+	Enabled bool  `db:"enabled" json:"enabled"`
+	ID      int64 `db:"id" json:"id"`
+}
+
+// Only a change counts as a save: the scheduler skips slots from before the last save, so
+// resuming a plan never starts the backup it missed while paused.
+func (q *Queries) SetPlanEnabled(ctx context.Context, arg SetPlanEnabledParams) (Plan, error) {
+	row := q.db.QueryRowContext(ctx, setPlanEnabled, arg.Enabled, arg.ID)
+	var i Plan
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.SourceKind,
+		&i.SourceConfig,
+		&i.SourceSecret,
+		&i.Schedules,
+		&i.MaxAgeDays,
+		&i.KeepWeekly,
+		&i.KeepMonthly,
+		&i.Enabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updatePlan = `-- name: UpdatePlan :one

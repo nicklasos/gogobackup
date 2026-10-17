@@ -12,7 +12,9 @@ import (
 	"google.golang.org/api/option"
 )
 
+// GCS owns its client: Close closes it.
 type GCS struct {
+	client *storage.Client
 	bucket *storage.BucketHandle
 	prefix string
 }
@@ -24,8 +26,10 @@ func NewGCSClient(ctx context.Context, credentialsJSON []byte) (*storage.Client,
 }
 
 func NewGCS(client *storage.Client, bucket, prefix string) *GCS {
-	return &GCS{bucket: client.Bucket(bucket), prefix: prefix}
+	return &GCS{client: client, bucket: client.Bucket(bucket), prefix: prefix}
 }
+
+func (g *GCS) Close() error { return g.client.Close() }
 
 func (g *GCS) Put(ctx context.Context, key string, r io.Reader) error {
 	key, err := CleanKey(key)

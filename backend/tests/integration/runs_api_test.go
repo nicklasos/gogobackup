@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"database/sql"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -60,6 +61,7 @@ func readObject(t *testing.T, app *testkit.App, storage *db.Storage, key string)
 	t.Helper()
 	d, err := storages.NewStorageService(app.Queries, app.Secrets).Driver(app.Ctx, storage)
 	require.NoError(t, err)
+	defer d.Close()
 	r, err := d.Open(app.Ctx, key)
 	require.NoError(t, err)
 	defer r.Close()
@@ -95,6 +97,8 @@ func TestRunsAPI_SQLitePlanToLocalAndS3(t *testing.T) {
 	assert.Nil(t, run.Error)
 	require.NotNil(t, run.StartedAt)
 	require.NotNil(t, run.FinishedAt)
+	require.NotNil(t, run.DurationMs)
+	assert.GreaterOrEqual(t, *run.DurationMs, int64(0))
 	require.Len(t, run.Archives, 2)
 	assert.Contains(t, run.Log, "Disk: stored")
 	assert.Contains(t, run.Log, "Bucket: stored")
@@ -233,7 +237,7 @@ func TestRunsAPI_OneStorageFails(t *testing.T) {
 		assert.Equal(t, "Backup failed: Shop", msg.Subject)
 		assert.Contains(t, msg.Text, *run.Error)
 		assert.Contains(t, msg.Text, "Gone: upload failed", "quotes the end of the log")
-		assert.Contains(t, msg.Text, "http://localhost:5173/plans/")
+		assert.Contains(t, msg.Text, fmt.Sprintf("http://localhost:5173/plans/%d\n", plan.ID), "links to the plan's page")
 		assert.Contains(t, msg.HTML, "Open the plan")
 	}
 	slices.Sort(to)

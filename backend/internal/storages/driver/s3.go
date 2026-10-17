@@ -152,6 +152,9 @@ func (s *S3) Delete(ctx context.Context, key string) error {
 	return err
 }
 
+// Close has nothing to release: minio-go keeps no connection of its own beyond the HTTP pool.
+func (s *S3) Close() error { return nil }
+
 func s3Error(err error) error {
 	if err == nil {
 		return nil

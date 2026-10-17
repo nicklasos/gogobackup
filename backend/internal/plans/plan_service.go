@@ -21,13 +21,14 @@ var (
 	errSecretMissing   = errors.New("the stored password is missing")
 )
 
-// Plan is a plan with the storages it uploads to, its latest run (nil before the first) and
-// when it last succeeded.
+// Plan is a plan with the storages it uploads to, its latest run (nil before the first), and
+// when its last successful run finished and the size of what it stored.
 type Plan struct {
 	db.Plan
-	Storages      []db.ListStoragesOfPlansRow
-	LastRun       *db.Run
-	LastSuccessAt sql.NullTime
+	Storages        []db.ListStoragesOfPlansRow
+	LastRun         *db.Run
+	LastSuccessAt   sql.NullTime
+	LastSuccessSize sql.NullInt64
 }
 
 // PaginatedPlansResult is one page of plans
@@ -178,6 +179,15 @@ func (s *PlanService) UpdatePlan(ctx context.Context, id int64, req *PlanRequest
 	return s.GetPlan(ctx, id)
 }
 
+// SetEnabled pauses or resumes a plan. Resuming counts as a save, so the scheduler starts with
+// the next slot, not the ones missed while paused.
+func (s *PlanService) SetEnabled(ctx context.Context, id int64, enabled bool) (*Plan, error) {
+	if _, err := s.queries.SetPlanEnabled(ctx, db.SetPlanEnabledParams{ID: id, Enabled: enabled}); err != nil {
+		return nil, notFoundOr(err)
+	}
+	return s.GetPlan(ctx, id)
+}
+
 // DeletePlan removes a plan and its links to storages. The storages and what is in them stay.
 func (s *PlanService) DeletePlan(ctx context.Context, id int64) error {
 	if _, err := s.queries.GetPlanByID(ctx, id); err != nil {
@@ -263,6 +273,7 @@ func (s *PlanService) withRelations(ctx context.Context, rows []db.Plan) ([]Plan
 	}
 	for _, row := range successes {
 		plans[index[row.PlanID]].LastSuccessAt = row.FinishedAt
+		plans[index[row.PlanID]].LastSuccessSize = row.SizeBytes
 	}
 	return plans, nil
 }
