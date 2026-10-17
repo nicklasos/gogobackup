@@ -20,7 +20,7 @@ export function RestoresTab({ planId, onOpen }: { planId: number; onOpen: (resto
   const status = (restore: Restore) => <RunStatusTag status={restore.status} testId={`restore-status-${restore.id}`} />
   const archive = (restore: Restore) =>
     restore.archive ? (
-      <span style={{ wordBreak: 'break-all' }}>
+      <span style={{ overflowWrap: 'anywhere' }}>
         {objectName(restore.archive.object_key)}
         <Typography.Text type="secondary"> · {restore.archive.storage_name}</Typography.Text>
       </span>
@@ -28,7 +28,7 @@ export function RestoresTab({ planId, onOpen }: { planId: number; onOpen: (resto
       <Typography.Text type="secondary">{t('restores.archiveGone')}</Typography.Text>
     )
   const target = (restore: Restore) => (
-    <Typography.Text code style={{ wordBreak: 'break-all' }}>
+    <Typography.Text code style={{ overflowWrap: 'anywhere' }}>
       {targetSummary(restore.target) ?? t('restores.originalLocationsShort')}
     </Typography.Text>
   )
