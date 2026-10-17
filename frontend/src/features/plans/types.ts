@@ -1,4 +1,6 @@
 import type {
+  AppInternalPlansRestoreRequest,
+  AppInternalPlansRestoreTarget,
   InternalPlansDashboardPlanResponse,
   InternalPlansDashboardResponse,
   InternalPlansDayResponse,
@@ -14,6 +16,8 @@ import type {
   InternalPlansWeekday,
   InternalRunsArchiveResponse,
   InternalRunsDownloadLinkResponse,
+  InternalRunsRestoreDetailResponse,
+  InternalRunsRestoreResponse,
   InternalRunsRunDetailResponse,
   InternalRunsRunResponse,
 } from '@/api/schema'
@@ -36,6 +40,10 @@ export type HealthSummary = InternalPlansHealthSummaryResponse
 export type Dashboard = InternalPlansDashboardResponse
 export type DashboardPlan = InternalPlansDashboardPlanResponse
 export type Day = InternalPlansDayResponse
+export type Restore = InternalRunsRestoreResponse
+export type RestoreDetail = InternalRunsRestoreDetailResponse
+export type RestoreTarget = AppInternalPlansRestoreTarget
+export type RestoreRequest = AppInternalPlansRestoreRequest
 
 export const SOURCE_KINDS: readonly SourceKind[] = ['postgres', 'mysql', 'sqlite', 'files']
 

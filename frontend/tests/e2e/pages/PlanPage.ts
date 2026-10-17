@@ -1,7 +1,7 @@
 import { expect, type Locator } from '@playwright/test'
 import { BasePage } from './BasePage'
 
-export type PlanTab = 'runs' | 'archives' | 'storages'
+export type PlanTab = 'runs' | 'archives' | 'restores' | 'storages'
 
 export class PlanPage extends BasePage {
   get root(): Locator {
@@ -59,6 +59,44 @@ export class PlanPage extends BasePage {
 
   get archiveRows(): Locator {
     return this.page.getByTestId('plan-archives-table').locator('tr[data-row-key]')
+  }
+
+  get restoreButtons(): Locator {
+    return this.page.locator('[data-testid^="archive-restore-button-"]')
+  }
+
+  get restoreDrawer(): Locator {
+    return this.page.getByTestId('restore-drawer')
+  }
+
+  get restoreSQLitePath(): Locator {
+    return this.page.getByTestId('restore-sqlite-path-input')
+  }
+
+  /** Shown, with the confirm input, when the target is the plan's own source. */
+  get restoreOwnWarning(): Locator {
+    return this.page.getByTestId('restore-own-warning')
+  }
+
+  get restoreConfirm(): Locator {
+    return this.page.getByTestId('restore-confirm-input')
+  }
+
+  get restoreStart(): Locator {
+    return this.page.getByTestId('restore-start-button')
+  }
+
+  /** The restore's status tag in the drawer; `data-status` carries the value. */
+  get restoreStatus(): Locator {
+    return this.page.getByTestId('restore-drawer-status')
+  }
+
+  get restoreLog(): Locator {
+    return this.page.getByTestId('restore-log')
+  }
+
+  get restoreRows(): Locator {
+    return this.page.getByTestId('plan-restores-table').locator('tr[data-row-key]')
   }
 
   runRow(runId: number): Locator {

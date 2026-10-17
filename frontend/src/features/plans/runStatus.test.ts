@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { anyRunActive, dashboardPollMs, DASHBOARD_POLL_MS, isRunActive } from './runStatus'
+import { anyRunActive, dashboardPollMs, DASHBOARD_POLL_MS, isPlanBusy, isRunActive } from './runStatus'
 import type { Dashboard, DashboardPlan, Health, RunStatus } from './types'
 
 const run = (status: RunStatus) => ({ status })
@@ -27,5 +27,13 @@ describe('run status', () => {
     assert.equal(dashboardPollMs(undefined), DASHBOARD_POLL_MS.idle)
     assert.equal(dashboardPollMs(dashboard('ok', 'failed', 'overdue')), DASHBOARD_POLL_MS.idle)
     assert.equal(dashboardPollMs(dashboard('ok', 'running')), DASHBOARD_POLL_MS.active)
+    assert.equal(dashboardPollMs(dashboard('ok', 'restoring')), DASHBOARD_POLL_MS.active, 'and while one is restored')
+  })
+
+  it('counts a plan busy while it runs or is restored', () => {
+    assert.equal(isPlanBusy(undefined), false)
+    assert.equal(isPlanBusy({ health: 'ok', last_run: run('succeeded') }), false)
+    assert.equal(isPlanBusy({ health: 'running', last_run: run('queued') }), true)
+    assert.equal(isPlanBusy({ health: 'restoring', last_run: run('succeeded') }), true)
   })
 })

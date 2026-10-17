@@ -1,7 +1,21 @@
 import { API_BASE_URL, api } from '@/api/client'
 import type { InternalStoragesStorageResponse } from '@/api/schema'
 import type { ID, MessageResponse, PageParams } from '@/api/types'
-import type { Archive, Dashboard, DownloadLink, Plan, PlanRequest, Run, RunDetail, SourceRequest, SourceTestResult } from './types'
+import type {
+  Archive,
+  Dashboard,
+  DownloadLink,
+  Plan,
+  PlanRequest,
+  Restore,
+  RestoreDetail,
+  RestoreRequest,
+  RestoreTarget,
+  Run,
+  RunDetail,
+  SourceRequest,
+  SourceTestResult,
+} from './types'
 
 /** The storages a plan can upload to: the first page of them, which is all of them in practice. */
 export const STORAGE_CHOICES: PageParams = { page: 1, page_size: 100 }
@@ -23,6 +37,12 @@ export const plansApi = {
     api.getPage<Archive>(`/plans/${id}/archives`, { query: { ...params, storage_id: storageId } }),
   downloadLink: (archiveId: ID) => api.post<DownloadLink>(`/archives/${archiveId}/download-link`),
   storages: () => api.getPage<InternalStoragesStorageResponse>('/storages', { query: STORAGE_CHOICES }),
+  /** The target a restore of the archive starts from: the plan's own source. */
+  restoreTarget: (archiveId: ID) => api.get<RestoreTarget>(`/archives/${archiveId}/restore-target`),
+  /** Queues a restore; a 409 `restores.in_progress` when the plan has one queued or running. */
+  restore: (archiveId: ID, body: RestoreRequest) => api.post<RestoreDetail>(`/archives/${archiveId}/restore`, body),
+  getRestore: (id: ID) => api.get<RestoreDetail>(`/restores/${id}`),
+  restores: (planId: ID, params: PageParams) => api.getPage<Restore>(`/plans/${planId}/restores`, { query: params }),
 }
 
 /** Where the browser downloads an archive with a link's token: no session needed. */

@@ -13,6 +13,10 @@ export const qk = {
     runs: (id: ID, params: PageParams) => ['plans', 'runs', id, params] as const,
     run: (id: ID) => ['plans', 'run', id] as const,
     archives: (id: ID, params: PageParams, storageId?: ID) => ['plans', 'archives', id, params, storageId ?? null] as const,
+    restoresOf: (id: ID) => ['plans', 'restores', id] as const,
+    restores: (id: ID, params: PageParams) => ['plans', 'restores', id, params] as const,
+    restore: (id: ID) => ['plans', 'restore', id] as const,
+    restoreTarget: (archiveId: ID) => ['plans', 'restore-target', archiveId] as const,
   },
   storages: {
     all: ['storages'] as const,

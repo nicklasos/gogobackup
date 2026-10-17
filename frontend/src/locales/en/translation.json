@@ -123,7 +123,8 @@
       "overdue": "Overdue",
       "running": "Running",
       "paused": "Paused",
-      "never": "Never run"
+      "never": "Never run",
+      "restoring": "Restoring"
     }
   },
   "dashboard": {
@@ -144,7 +145,8 @@
       "running": "{{count}} running",
       "ok": "{{count}} ok",
       "paused": "{{count}} paused",
-      "never": "{{count}} never ran"
+      "never": "{{count}} never ran",
+      "restoring": "{{count}} restoring"
     }
   },
   "plans": {
@@ -261,7 +263,8 @@
       "keep": "Keep",
       "paused": "Plan paused",
       "resumed": "Plan resumed",
-      "browseFolder": "Open the plan's folder"
+      "browseFolder": "Open the plan's folder",
+      "restores": "Restores"
     }
   },
   "storages": {
@@ -438,7 +441,13 @@
     "validation.storage_ids.min": "Choose at least one storage",
     "validation.storage_ids.required": "Choose at least one storage",
     "archives.not_found": "This archive is no longer kept",
-    "archives.invalid_link": "The download link has expired. Try again."
+    "archives.invalid_link": "The download link has expired. Try again.",
+    "restores.not_found": "Restore not found",
+    "restores.in_progress": "This plan already has a restore queued or running",
+    "restores.kind_changed": "This archive was made while the plan backed up another kind of source",
+    "restores.confirm_mismatch": "Type it exactly as shown to confirm",
+    "restores.own_database": "This is Gogobackup's own database: restore it with the service stopped",
+    "validation.files.directory.invalid": "Use an absolute path other than /"
   },
   "runs": {
     "chart": "Last 30 runs: height is the archive size",
@@ -468,5 +477,37 @@
     "empty": "No archives kept",
     "allStorages": "All storages",
     "deleted": "Deleted by retention"
+  },
+  "restores": {
+    "restore": "Restore",
+    "formTitle": "Restore an archive",
+    "drawerTitle": "Restore #{{id}}",
+    "database": "Database to restore into",
+    "databaseHint": "The plan's own database by default. Type another name to restore a copy next to it.",
+    "createDatabase": "Create the database if it does not exist",
+    "otherServer": "Different server",
+    "otherServerHint": "Restore to another server or as another user. A blank field is the plan's.",
+    "passwordKeep": "Leave blank to use the plan's password",
+    "sqlitePath": "Database file to restore to",
+    "sqlitePathHint": "An absolute path in an existing directory. A file already there is kept as <file>.before-restore-<time>.",
+    "directory": "Directory to extract into",
+    "directoryHint": "An absolute path. Files go under it at their full original paths.",
+    "originalLocations": "Restore to the original locations",
+    "originalLocationsShort": "original locations",
+    "originalPaths": "Files go back to:",
+    "own": {
+      "title": "This replaces the plan's own data",
+      "postgres": "Every table in the archive is dropped and restored from it in this database. Changes made since the backup are lost.",
+      "mysql": "The archive runs against this database: its tables are dropped and created again. Changes made since the backup are lost.",
+      "sqlite": "The file is replaced. The current one is kept next to it as a .before-restore copy. Stop the application that uses it first.",
+      "files": "Files are written back to the paths the plan backs up and overwrite what is there.",
+      "type": "To confirm, type"
+    },
+    "start": "Start restore",
+    "target": "Target",
+    "archive": "Archive",
+    "by": "By",
+    "empty": "No restores yet",
+    "archiveGone": "The archive is gone"
   }
 }
