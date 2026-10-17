@@ -84,6 +84,7 @@ Run the tests with `make test`. They need no database setup: each test gets its 
 - **Roles**: `super-admin`, `admin`, `user` with `RequireRole` middleware; roles are read from the database on every request
 - **User management**: super admins manage super admins and admins, admins manage users
 - **Backup plans**: what to back up (Postgres, MySQL, SQLite or files), when (UTC times on chosen weekdays), where to (storages) and how long to keep it, with a source test that also checks the dump program on PATH
+- **Runner**: plans run on their schedules and by "Run now". One dump streams to every storage of the plan at once, each run keeps its log, retention prunes old archives, and a failed run emails the admins
 - **Storages**: where backups go (a local directory, S3-compatible or Google Cloud Storage), with a connection test and a browser. Credentials are encrypted with `ENCRYPTION_KEY` and never returned
 - **Mail**: SMTP service (`app.Mail`), logged instead of sent in debug mode, with an in-memory sender for tests
 - **Policies**: who may do what to a record, one small `policy.go` per module
@@ -97,7 +98,7 @@ Run the tests with `make test`. They need no database setup: each test gets its 
 - **Swagger**: Auto-generated API documentation
 - **Docker and CI**: `docker-compose.yml` for local services, a production `Dockerfile`, and a GitHub Actions workflow
 - **Healthcheck**: `/health` checks the database and answers 503 when it is down
-- **Scheduler**: cron jobs inside the API process, or in `cmd/cron` with `ENABLE_SCHEDULER=false` (refresh-token cleanup)
+- **Scheduler**: cron jobs and the backup worker inside the API process, or in `cmd/cron` with `ENABLE_SCHEDULER=false` (queueing scheduled runs, refresh-token cleanup)
 
 ## Tech Stack
 
