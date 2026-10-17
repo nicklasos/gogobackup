@@ -19,7 +19,9 @@ import (
 // shutdown is recorded as failed, with the writes done after the stop.
 func (w *Worker) execute(ctx context.Context, run db.Run) {
 	log := runlog.New()
-	stopFlushing := w.flushWhileRunning(ctx, run.ID, log)
+	stopFlushing := w.flushWhileRunning(ctx, log, func(ctx context.Context, text string) error {
+		return w.queries.UpdateRunLog(ctx, db.UpdateRunLogParams{ID: run.ID, Log: text})
+	})
 	plan, size, err := w.perform(ctx, run, log)
 	if err != nil && ctx.Err() != nil {
 		err = errors.New(ErrInterruptedStop)
@@ -38,7 +40,7 @@ func (w *Worker) execute(ctx context.Context, run db.Run) {
 		w.logger.Error("Could not record the end of a run", "run", run.ID, "error", ferr)
 	}
 	if err != nil && plan != nil {
-		w.alert(finishCtx, run, plan, err, log)
+		w.alert(finishCtx, backupFailed, plan, fmt.Sprintf("/plans/%d", plan.ID), err, log)
 	}
 }
 
@@ -188,9 +190,9 @@ func (w *Worker) prune(ctx context.Context, plan *db.Plan, o opened, policy Rete
 	log.Printf("%s: retention kept %d archive(s), deleted %d", o.storage.Name, len(rows)-deleted, deleted)
 }
 
-// flushWhileRunning writes the log to the run every few seconds until the returned func is
-// called, so the log can be followed while the run goes on.
-func (w *Worker) flushWhileRunning(ctx context.Context, id int64, log *runlog.Log) (stop func()) {
+// flushWhileRunning writes the log of a job with write every few seconds until the returned
+// func is called, so the log can be followed while the job goes on.
+func (w *Worker) flushWhileRunning(ctx context.Context, log *runlog.Log, write func(ctx context.Context, text string) error) (stop func()) {
 	done := make(chan struct{})
 	finished := make(chan struct{})
 	go func() {
@@ -209,8 +211,8 @@ func (w *Worker) flushWhileRunning(ctx context.Context, id int64, log *runlog.Lo
 				if version == written {
 					continue
 				}
-				if err := w.queries.UpdateRunLog(ctx, db.UpdateRunLogParams{ID: id, Log: text}); err != nil {
-					w.logger.Warn("Could not write a run's log", "run", id, "error", err)
+				if err := write(ctx, text); err != nil {
+					w.logger.Warn("Could not write a job's log", "error", err)
 					continue
 				}
 				written = version

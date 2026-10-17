@@ -34,6 +34,178 @@ definitions:
     - errors
     - message
     type: object
+  app_internal_plans.FilesTarget:
+    properties:
+      directory:
+        type: string
+      original_locations:
+        type: boolean
+    required:
+    - directory
+    - original_locations
+    type: object
+  app_internal_plans.FilesTargetInput:
+    properties:
+      directory:
+        type: string
+      original_locations:
+        type: boolean
+    type: object
+  app_internal_plans.MySQLTarget:
+    properties:
+      create_database:
+        type: boolean
+      database:
+        type: string
+      host:
+        type: string
+      port:
+        type: integer
+      user:
+        type: string
+    required:
+    - create_database
+    - database
+    - host
+    - port
+    - user
+    type: object
+  app_internal_plans.MySQLTargetInput:
+    properties:
+      create_database:
+        type: boolean
+      database:
+        maxLength: 255
+        type: string
+      host:
+        maxLength: 255
+        type: string
+      password:
+        type: string
+      port:
+        maximum: 65535
+        minimum: 1
+        type: integer
+      user:
+        maxLength: 255
+        type: string
+    required:
+    - database
+    type: object
+  app_internal_plans.PostgresTarget:
+    properties:
+      create_database:
+        type: boolean
+      database:
+        type: string
+      host:
+        type: string
+      port:
+        type: integer
+      ssl_mode:
+        enum:
+        - disable
+        - require
+        - verify-full
+        type: string
+      user:
+        type: string
+    required:
+    - create_database
+    - database
+    - host
+    - port
+    - ssl_mode
+    - user
+    type: object
+  app_internal_plans.PostgresTargetInput:
+    properties:
+      create_database:
+        type: boolean
+      database:
+        maxLength: 255
+        type: string
+      host:
+        maxLength: 255
+        type: string
+      password:
+        type: string
+      port:
+        maximum: 65535
+        minimum: 1
+        type: integer
+      ssl_mode:
+        enum:
+        - disable
+        - require
+        - verify-full
+        type: string
+      user:
+        maxLength: 255
+        type: string
+    required:
+    - database
+    type: object
+  app_internal_plans.RestoreRequest:
+    properties:
+      confirm:
+        type: string
+      files:
+        $ref: '#/definitions/app_internal_plans.FilesTargetInput'
+      mysql:
+        $ref: '#/definitions/app_internal_plans.MySQLTargetInput'
+      postgres:
+        $ref: '#/definitions/app_internal_plans.PostgresTargetInput'
+      sqlite:
+        $ref: '#/definitions/app_internal_plans.SQLiteTargetInput'
+    type: object
+  app_internal_plans.RestoreTarget:
+    properties:
+      files:
+        $ref: '#/definitions/app_internal_plans.FilesTarget'
+      mysql:
+        $ref: '#/definitions/app_internal_plans.MySQLTarget'
+      postgres:
+        $ref: '#/definitions/app_internal_plans.PostgresTarget'
+      source_kind:
+        allOf:
+        - $ref: '#/definitions/app_internal_plans.SourceKind'
+        enum:
+        - postgres
+        - mysql
+        - sqlite
+        - files
+      sqlite:
+        $ref: '#/definitions/app_internal_plans.SQLiteTarget'
+    required:
+    - source_kind
+    type: object
+  app_internal_plans.SQLiteTarget:
+    properties:
+      path:
+        type: string
+    required:
+    - path
+    type: object
+  app_internal_plans.SQLiteTargetInput:
+    properties:
+      path:
+        type: string
+    required:
+    - path
+    type: object
+  app_internal_plans.SourceKind:
+    enum:
+    - postgres
+    - mysql
+    - sqlite
+    - files
+    type: string
+    x-enum-varnames:
+    - SourcePostgres
+    - SourceMySQL
+    - SourceSQLite
+    - SourceFiles
   app_internal_storages.Kind:
     enum:
     - local
@@ -261,6 +433,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/internal_plans.Health'
         enum:
+        - restoring
         - running
         - failed
         - paused
@@ -393,6 +566,7 @@ definitions:
     type: object
   internal_plans.Health:
     enum:
+    - restoring
     - running
     - failed
     - paused
@@ -401,6 +575,7 @@ definitions:
     - ok
     type: string
     x-enum-varnames:
+    - HealthRestoring
     - HealthRunning
     - HealthFailed
     - HealthPaused
@@ -419,6 +594,8 @@ definitions:
         type: integer
       paused:
         type: integer
+      restoring:
+        type: integer
       running:
         type: integer
     required:
@@ -427,6 +604,7 @@ definitions:
     - ok
     - overdue
     - paused
+    - restoring
     - running
     type: object
   internal_plans.LastRunResponse:
@@ -587,6 +765,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/internal_plans.Health'
         enum:
+        - restoring
         - running
         - failed
         - paused
@@ -953,6 +1132,18 @@ definitions:
     - data
     - pagination
     type: object
+  internal_runs.PaginatedRestoresResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_runs.RestoreResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/internal.PaginationMeta'
+    required:
+    - data
+    - pagination
+    type: object
   internal_runs.PaginatedRunsResponse:
     properties:
       data:
@@ -964,6 +1155,168 @@ definitions:
     required:
     - data
     - pagination
+    type: object
+  internal_runs.RestoreArchiveResponse:
+    properties:
+      created_at:
+        type: string
+      object_key:
+        type: string
+      size_bytes:
+        type: integer
+      storage_name:
+        type: string
+    required:
+    - created_at
+    - object_key
+    - size_bytes
+    - storage_name
+    type: object
+  internal_runs.RestoreDetailDataResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_runs.RestoreDetailResponse'
+    required:
+    - data
+    type: object
+  internal_runs.RestoreDetailResponse:
+    properties:
+      archive:
+        allOf:
+        - $ref: '#/definitions/internal_runs.RestoreArchiveResponse'
+        x-nullable: true
+      archive_id:
+        type: integer
+        x-nullable: true
+      created_at:
+        type: string
+      created_by:
+        allOf:
+        - $ref: '#/definitions/internal_runs.RestoreUserResponse'
+        x-nullable: true
+      duration_ms:
+        type: integer
+        x-nullable: true
+      error:
+        type: string
+        x-nullable: true
+      finished_at:
+        type: string
+        x-nullable: true
+      id:
+        type: integer
+      log:
+        type: string
+      plan_id:
+        type: integer
+      secret_set:
+        type: boolean
+      started_at:
+        type: string
+        x-nullable: true
+      status:
+        allOf:
+        - $ref: '#/definitions/internal_runs.Status'
+        enum:
+        - queued
+        - running
+        - succeeded
+        - failed
+      target:
+        $ref: '#/definitions/app_internal_plans.RestoreTarget'
+    required:
+    - archive
+    - archive_id
+    - created_at
+    - created_by
+    - duration_ms
+    - error
+    - finished_at
+    - id
+    - log
+    - plan_id
+    - secret_set
+    - started_at
+    - status
+    - target
+    type: object
+  internal_runs.RestoreResponse:
+    properties:
+      archive:
+        allOf:
+        - $ref: '#/definitions/internal_runs.RestoreArchiveResponse'
+        x-nullable: true
+      archive_id:
+        type: integer
+        x-nullable: true
+      created_at:
+        type: string
+      created_by:
+        allOf:
+        - $ref: '#/definitions/internal_runs.RestoreUserResponse'
+        x-nullable: true
+      duration_ms:
+        type: integer
+        x-nullable: true
+      error:
+        type: string
+        x-nullable: true
+      finished_at:
+        type: string
+        x-nullable: true
+      id:
+        type: integer
+      plan_id:
+        type: integer
+      secret_set:
+        type: boolean
+      started_at:
+        type: string
+        x-nullable: true
+      status:
+        allOf:
+        - $ref: '#/definitions/internal_runs.Status'
+        enum:
+        - queued
+        - running
+        - succeeded
+        - failed
+      target:
+        $ref: '#/definitions/app_internal_plans.RestoreTarget'
+    required:
+    - archive
+    - archive_id
+    - created_at
+    - created_by
+    - duration_ms
+    - error
+    - finished_at
+    - id
+    - plan_id
+    - secret_set
+    - started_at
+    - status
+    - target
+    type: object
+  internal_runs.RestoreTargetDataResponse:
+    properties:
+      data:
+        $ref: '#/definitions/app_internal_plans.RestoreTarget'
+    required:
+    - data
+    type: object
+  internal_runs.RestoreUserResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    required:
+    - email
+    - id
+    - name
     type: object
   internal_runs.RunDataResponse:
     properties:
@@ -1509,6 +1862,117 @@ paths:
       summary: Make a download link for an archive
       tags:
       - runs
+  /api/v1/archives/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Queues a restore of the archive into the target in the block of
+        the plan's source kind. Blank database connection fields and a blank password
+        are the plan's. A target that is the plan's own source (the same server and
+        database, the same SQLite path, or files to their original locations) needs
+        confirm set to the database name, the path or "original locations", or it
+        is a 400 restores.confirm_mismatch on confirm. The worker starts it once no
+        run or other restore of the plan is running; a plan with a restore queued
+        or running already is a 409 restores.in_progress. A deleted archive is a 404
+        archives.not_found. Admins only.
+      parameters:
+      - description: Archive ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Restore target
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/app_internal_plans.RestoreRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/internal_runs.RestoreDetailDataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ValidationErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore an archive
+      tags:
+      - restores
+  /api/v1/archives/{id}/restore-target:
+    get:
+      consumes:
+      - application/json
+      description: 'The plan''s own source, in the block of its kind, for a restore
+        form to start from: for a database its server and database, for SQLite its
+        path, for files a new directory in the work directory. Restoring over the
+        plan''s own source needs confirm. Admins only.'
+      parameters:
+      - description: Archive ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_runs.RestoreTargetDataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get the default target of a restore
+      tags:
+      - restores
   /api/v1/auth/forgot-password:
     post:
       consumes:
@@ -2244,6 +2708,59 @@ paths:
       summary: Pause or resume a backup plan
       tags:
       - plans
+  /api/v1/plans/{id}/restores:
+    get:
+      consumes:
+      - application/json
+      description: Newest first, without logs. Admins only.
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 'Page size (default: 20, min: 1, max: 100)'
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_runs.PaginatedRestoresResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List the restores of a plan (paginated)
+      tags:
+      - restores
   /api/v1/plans/{id}/run:
     post:
       consumes:
@@ -2442,6 +2959,50 @@ paths:
       summary: Test an unsaved source
       tags:
       - plans
+  /api/v1/restores/{id}:
+    get:
+      consumes:
+      - application/json
+      description: The log is written while the restore goes on, every few seconds,
+        so polling this shows it live. Admins only.
+      parameters:
+      - description: Restore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_runs.RestoreDetailDataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a restore with its log
+      tags:
+      - restores
   /api/v1/runs/{id}:
     get:
       consumes:

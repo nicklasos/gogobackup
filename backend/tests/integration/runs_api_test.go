@@ -411,7 +411,8 @@ echo "mysqldump: [Warning] a note on stderr" >&2
 	assert.Contains(t, out, "[client]\nprotocol=TCP\nhost=\"db.internal\"\nport=\"3307\"\nuser=\"shop\"\npassword='pa#ss\"word'\n")
 	assert.Contains(t, out, "args: --single-transaction --routines --triggers --events --hex-blob --no-tablespaces shop_prod")
 	assert.NotContains(t, run.Log, "pa#ss", "the password is not in the log")
-	assert.Contains(t, run.Log, "mysqldump: mysqldump: [Warning] a note on stderr")
+	assert.Contains(t, run.Log, " mysqldump: [Warning] a note on stderr\n")
+	assert.NotContains(t, run.Log, "mysqldump: mysqldump:", "a tool that names itself is not named twice")
 
 	defaults := strings.TrimPrefix(strings.SplitN(out, "\n", 2)[0], "file: ")
 	_, err = os.Stat(defaults)

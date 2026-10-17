@@ -54,11 +54,18 @@ func dumpTool(ctx context.Context, finder tools.Finder, name string, log *runlog
 	return tool, nil
 }
 
-// runTool runs a dump program with stdout going to w and stderr to the log. env is added to
-// this process's environment, so a password never appears in the program's arguments.
-func runTool(ctx context.Context, tool tools.Tool, args, env []string, w io.Writer, log *runlog.Log) error {
+// runTool runs a dump or restore program with stdin read from in (nil for none), stdout going
+// to w and stderr to the log. env is added to this process's environment, so a password never
+// appears in the program's arguments. When in fails, that is the error: the program only saw
+// its input end early.
+func runTool(ctx context.Context, tool tools.Tool, args, env []string, in io.Reader, w io.Writer, log *runlog.Log) error {
 	cmd := exec.CommandContext(ctx, tool.Path, args...)
 	cmd.Env = append(os.Environ(), env...)
+	var input *recordingReader
+	if in != nil {
+		input = &recordingReader{r: in}
+		cmd.Stdin = input
+	}
 	cmd.Stdout = w
 	stderr := log.Writer(tool.Name + ": ")
 	cmd.Stderr = stderr
@@ -68,10 +75,27 @@ func runTool(ctx context.Context, tool tools.Tool, args, env []string, w io.Writ
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
+	if input != nil && input.err != nil {
+		return input.err
+	}
 	if err != nil {
 		return fmt.Errorf("%s failed: %w", tool.Name, err)
 	}
 	return nil
+}
+
+// recordingReader keeps the first error other than io.EOF that its reader returned.
+type recordingReader struct {
+	r   io.Reader
+	err error
+}
+
+func (r *recordingReader) Read(p []byte) (int, error) {
+	n, err := r.r.Read(p)
+	if err != nil && !errors.Is(err, io.EOF) && r.err == nil {
+		r.err = err
+	}
+	return n, err
 }
 
 func dumpPostgres(ctx context.Context, config, secret []byte, finder tools.Finder, w io.Writer, log *runlog.Log) error {
@@ -93,22 +117,26 @@ func dumpPostgres(ctx context.Context, config, secret []byte, finder tools.Finde
 		return err
 	}
 	args, env := PgDumpCommand(c, s.Password)
-	return runTool(ctx, tool, args, env, w, log)
+	return runTool(ctx, tool, args, env, nil, w, log)
 }
 
 // PgDumpCommand is the arguments and the added environment of pg_dump for a database. The
 // custom format is compressed already and is what pg_restore reads, in parallel too.
 func PgDumpCommand(c PostgresConfig, password string) (args, env []string) {
-	args = []string{
-		"--format=custom", "--no-owner", "--no-acl", "--no-password",
-		"--host=" + c.Host, "--port=" + strconv.Itoa(c.Port), "--username=" + c.User, "--dbname=" + c.Database,
-	}
-	env = []string{
+	args = append([]string{"--format=custom", "--no-owner", "--no-acl"}, pgConnectionArgs(c)...)
+	return args, pgEnv(c, password)
+}
+
+func pgConnectionArgs(c PostgresConfig) []string {
+	return []string{"--no-password", "--host=" + c.Host, "--port=" + strconv.Itoa(c.Port), "--username=" + c.User, "--dbname=" + c.Database}
+}
+
+func pgEnv(c PostgresConfig, password string) []string {
+	return []string{
 		"PGPASSWORD=" + password,
 		"PGSSLMODE=" + c.SSLMode,
 		"PGCONNECT_TIMEOUT=" + strconv.Itoa(int(connectTimeout.Seconds())),
 	}
-	return args, env
 }
 
 func dumpMySQL(ctx context.Context, config, secret []byte, finder tools.Finder, w io.Writer, log *runlog.Log) error {
@@ -133,7 +161,7 @@ func dumpMySQL(ctx context.Context, config, secret []byte, finder tools.Finder, 
 
 	log.Printf("Dumping database %s from %s:%d", c.Database, c.Host, c.Port)
 	gz := gzip.NewWriter(w)
-	if err := runTool(ctx, tool, MySQLDumpArgs(path, c), nil, gz, log); err != nil {
+	if err := runTool(ctx, tool, MySQLDumpArgs(path, c), nil, nil, gz, log); err != nil {
 		return err
 	}
 	return gz.Close()
@@ -228,7 +256,7 @@ func dumpSQLite(ctx context.Context, config, _ []byte, finder tools.Finder, w io
 	copyPath := filepath.Join(dir, "backup.db")
 	log.Printf("Copying %s (%s)", c.Path, version)
 	command := ".backup main '" + strings.ReplaceAll(copyPath, "'", "''") + "'"
-	if err := runTool(ctx, tool, []string{"-bail", c.Path, command}, nil, io.Discard, log); err != nil {
+	if err := runTool(ctx, tool, []string{"-bail", c.Path, command}, nil, nil, io.Discard, log); err != nil {
 		return err
 	}
 

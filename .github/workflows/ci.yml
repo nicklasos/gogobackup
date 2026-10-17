@@ -58,7 +58,7 @@ jobs:
           echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
 
       - name: Dump tool versions
-        run: pg_dump --version && pg_restore --version && mysqldump --version && sqlite3 --version
+        run: pg_dump --version && pg_restore --version && mysqldump --version && mysql --version && sqlite3 --version
 
       - name: Formatting
         run: test -z "$(gofmt -l cmd config internal tests | grep -v '^internal/db/.*\.sql\.go$')"

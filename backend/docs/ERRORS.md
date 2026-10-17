@@ -73,7 +73,7 @@ const (
 )
 ```
 
-Keys are grouped by module (`auth.*`, `users.*`, `storages.*`, `plans.*`, `runs.*`, `validation.*`). Clients translate them, so treat a key as part of the API contract.
+Keys are grouped by module (`auth.*`, `users.*`, `storages.*`, `plans.*`, `runs.*`, `archives.*`, `restores.*`, `validation.*`). Clients translate them, so treat a key as part of the API contract.
 
 | Key | Status | When |
 |---|---|---|
@@ -89,6 +89,13 @@ Keys are grouped by module (`auth.*`, `users.*`, `storages.*`, `plans.*`, `runs.
 | `plans.keep_needs_max_age` | 400, as a field error on `keep_weekly` / `keep_monthly` | Keeping weekly or monthly archives needs `max_age_days` |
 | `plans.run_in_progress` | 409 | Run now while the plan already has a queued or running run |
 | `runs.not_found` | 404 | No run with this ID |
+| `archives.not_found` | 404 | No archive with this ID, or retention deleted it (download, restore) |
+| `archives.invalid_link` | 403 | A download link that is malformed or expired |
+| `restores.not_found` | 404 | No restore with this ID |
+| `restores.in_progress` | 409 | Restoring an archive of a plan that already has a restore queued or running |
+| `restores.kind_changed` | 409 | Restoring an archive made while the plan backed up another kind of source |
+| `restores.confirm_mismatch` | 400, as a field error on `confirm` | The target is the plan's own source and `confirm` is not its database name, its path or `original locations` |
+| `restores.own_database` | 400, as a field error on `sqlite.path` | The SQLite target is this service's own database, which it cannot replace while it runs |
 
 Validation failures have their own shape and always return 400:
 

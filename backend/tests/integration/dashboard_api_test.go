@@ -49,10 +49,14 @@ func TestDashboardAPI(t *testing.T) {
 	app.Create.Plan(factory.WithPlanName("E paused"), factory.Disabled(), factory.CreatedAt(longAgo))
 	app.Create.Plan(factory.WithPlanName("F never"), factory.WithSchedules())
 
+	restoring := app.Create.Plan(factory.WithPlanName("G restoring"), factory.WithStorages(storage), factory.CreatedAt(longAgo))
+	backup := app.Create.Run(restoring, factory.WithRunStatus(runs.StatusSucceeded), factory.StartedAt(now.Add(-time.Hour)))
+	app.Create.Restore(app.Create.Archive(backup, storage), factory.WithRestoreStatus(runs.StatusRunning))
+
 	resp := app.As(admin).GET("/api/v1/dashboard").
 		AssertOK().
-		AssertJSONCount("data.plans", 6).
-		AssertJSONPath("data.summary", map[string]any{"ok": 1, "failed": 1, "overdue": 1, "running": 1, "paused": 1, "never": 1})
+		AssertJSONCount("data.plans", 7).
+		AssertJSONPath("data.summary", map[string]any{"ok": 1, "failed": 1, "overdue": 1, "restoring": 1, "running": 1, "paused": 1, "never": 1})
 	dashboard := testkit.Decode[plans.DashboardDataResponse](resp).Data
 
 	health := map[string]plans.Health{}
@@ -65,6 +69,7 @@ func TestDashboardAPI(t *testing.T) {
 	assert.Equal(t, map[string]plans.Health{
 		"A failed": plans.HealthFailed, "B healthy": plans.HealthOK, "C overdue": plans.HealthOverdue,
 		"D running": plans.HealthRunning, "E paused": plans.HealthPaused, "F never": plans.HealthNever,
+		"G restoring": plans.HealthRestoring,
 	}, health)
 	assert.Equal(t, "A failed", dashboard.Plans[0].Name, "by name")
 

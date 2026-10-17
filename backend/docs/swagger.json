@@ -155,6 +155,161 @@
                 }
             }
         },
+        "/api/v1/archives/{id}/restore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Queues a restore of the archive into the target in the block of the plan's source kind. Blank database connection fields and a blank password are the plan's. A target that is the plan's own source (the same server and database, the same SQLite path, or files to their original locations) needs confirm set to the database name, the path or \"original locations\", or it is a 400 restores.confirm_mismatch on confirm. The worker starts it once no run or other restore of the plan is running; a plan with a restore queued or running already is a 409 restores.in_progress. A deleted archive is a 404 archives.not_found. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "restores"
+                ],
+                "summary": "Restore an archive",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Archive ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Restore target",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_plans.RestoreRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/internal_runs.RestoreDetailDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/archives/{id}/restore-target": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The plan's own source, in the block of its kind, for a restore form to start from: for a database its server and database, for SQLite its path, for files a new directory in the work directory. Restoring over the plan's own source needs confirm. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "restores"
+                ],
+                "summary": "Get the default target of a restore",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Archive ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_runs.RestoreTargetDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/forgot-password": {
             "post": {
                 "description": "Emails a single-use reset link when the address belongs to an account. Always answers 200, so it does not reveal which emails are registered.",
@@ -1347,6 +1502,87 @@
                 }
             }
         },
+        "/api/v1/plans/{id}/restores": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Newest first, without logs. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "restores"
+                ],
+                "summary": "List the restores of a plan (paginated)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Page size (default: 20, min: 1, max: 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_runs.PaginatedRestoresResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/plans/{id}/run": {
             "post": {
                 "security": [
@@ -1533,6 +1769,73 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_plans.SourceTestDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/restores/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The log is written while the restore goes on, every few seconds, so polling this shows it live. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "restores"
+                ],
+                "summary": "Get a restore with its log",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Restore ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_runs.RestoreDetailDataResponse"
                         }
                     },
                     "400": {
@@ -2607,6 +2910,255 @@
                 }
             }
         },
+        "app_internal_plans.FilesTarget": {
+            "type": "object",
+            "required": [
+                "directory",
+                "original_locations"
+            ],
+            "properties": {
+                "directory": {
+                    "type": "string"
+                },
+                "original_locations": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "app_internal_plans.FilesTargetInput": {
+            "type": "object",
+            "properties": {
+                "directory": {
+                    "type": "string"
+                },
+                "original_locations": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "app_internal_plans.MySQLTarget": {
+            "type": "object",
+            "required": [
+                "create_database",
+                "database",
+                "host",
+                "port",
+                "user"
+            ],
+            "properties": {
+                "create_database": {
+                    "type": "boolean"
+                },
+                "database": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "user": {
+                    "type": "string"
+                }
+            }
+        },
+        "app_internal_plans.MySQLTargetInput": {
+            "type": "object",
+            "required": [
+                "database"
+            ],
+            "properties": {
+                "create_database": {
+                    "type": "boolean"
+                },
+                "database": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "host": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "password": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1
+                },
+                "user": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "app_internal_plans.PostgresTarget": {
+            "type": "object",
+            "required": [
+                "create_database",
+                "database",
+                "host",
+                "port",
+                "ssl_mode",
+                "user"
+            ],
+            "properties": {
+                "create_database": {
+                    "type": "boolean"
+                },
+                "database": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "ssl_mode": {
+                    "type": "string",
+                    "enum": [
+                        "disable",
+                        "require",
+                        "verify-full"
+                    ]
+                },
+                "user": {
+                    "type": "string"
+                }
+            }
+        },
+        "app_internal_plans.PostgresTargetInput": {
+            "type": "object",
+            "required": [
+                "database"
+            ],
+            "properties": {
+                "create_database": {
+                    "type": "boolean"
+                },
+                "database": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "host": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "password": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1
+                },
+                "ssl_mode": {
+                    "type": "string",
+                    "enum": [
+                        "disable",
+                        "require",
+                        "verify-full"
+                    ]
+                },
+                "user": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "app_internal_plans.RestoreRequest": {
+            "type": "object",
+            "properties": {
+                "confirm": {
+                    "type": "string"
+                },
+                "files": {
+                    "$ref": "#/definitions/app_internal_plans.FilesTargetInput"
+                },
+                "mysql": {
+                    "$ref": "#/definitions/app_internal_plans.MySQLTargetInput"
+                },
+                "postgres": {
+                    "$ref": "#/definitions/app_internal_plans.PostgresTargetInput"
+                },
+                "sqlite": {
+                    "$ref": "#/definitions/app_internal_plans.SQLiteTargetInput"
+                }
+            }
+        },
+        "app_internal_plans.RestoreTarget": {
+            "type": "object",
+            "required": [
+                "source_kind"
+            ],
+            "properties": {
+                "files": {
+                    "$ref": "#/definitions/app_internal_plans.FilesTarget"
+                },
+                "mysql": {
+                    "$ref": "#/definitions/app_internal_plans.MySQLTarget"
+                },
+                "postgres": {
+                    "$ref": "#/definitions/app_internal_plans.PostgresTarget"
+                },
+                "source_kind": {
+                    "enum": [
+                        "postgres",
+                        "mysql",
+                        "sqlite",
+                        "files"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/app_internal_plans.SourceKind"
+                        }
+                    ]
+                },
+                "sqlite": {
+                    "$ref": "#/definitions/app_internal_plans.SQLiteTarget"
+                }
+            }
+        },
+        "app_internal_plans.SQLiteTarget": {
+            "type": "object",
+            "required": [
+                "path"
+            ],
+            "properties": {
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "app_internal_plans.SQLiteTargetInput": {
+            "type": "object",
+            "required": [
+                "path"
+            ],
+            "properties": {
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "app_internal_plans.SourceKind": {
+            "type": "string",
+            "enum": [
+                "postgres",
+                "mysql",
+                "sqlite",
+                "files"
+            ],
+            "x-enum-varnames": [
+                "SourcePostgres",
+                "SourceMySQL",
+                "SourceSQLite",
+                "SourceFiles"
+            ]
+        },
         "app_internal_storages.Kind": {
             "type": "string",
             "enum": [
@@ -2962,6 +3514,7 @@
                 },
                 "health": {
                     "enum": [
+                        "restoring",
                         "running",
                         "failed",
                         "paused",
@@ -3135,6 +3688,7 @@
         "internal_plans.Health": {
             "type": "string",
             "enum": [
+                "restoring",
                 "running",
                 "failed",
                 "paused",
@@ -3143,6 +3697,7 @@
                 "ok"
             ],
             "x-enum-varnames": [
+                "HealthRestoring",
                 "HealthRunning",
                 "HealthFailed",
                 "HealthPaused",
@@ -3159,6 +3714,7 @@
                 "ok",
                 "overdue",
                 "paused",
+                "restoring",
                 "running"
             ],
             "properties": {
@@ -3175,6 +3731,9 @@
                     "type": "integer"
                 },
                 "paused": {
+                    "type": "integer"
+                },
+                "restoring": {
                     "type": "integer"
                 },
                 "running": {
@@ -3420,6 +3979,7 @@
                 },
                 "health": {
                     "enum": [
+                        "restoring",
                         "running",
                         "failed",
                         "paused",
@@ -3926,6 +4486,24 @@
                 }
             }
         },
+        "internal_runs.PaginatedRestoresResponse": {
+            "type": "object",
+            "required": [
+                "data",
+                "pagination"
+            ],
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_runs.RestoreResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/internal.PaginationMeta"
+                }
+            }
+        },
         "internal_runs.PaginatedRunsResponse": {
             "type": "object",
             "required": [
@@ -3941,6 +4519,242 @@
                 },
                 "pagination": {
                     "$ref": "#/definitions/internal.PaginationMeta"
+                }
+            }
+        },
+        "internal_runs.RestoreArchiveResponse": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "object_key",
+                "size_bytes",
+                "storage_name"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "object_key": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "storage_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_runs.RestoreDetailDataResponse": {
+            "type": "object",
+            "required": [
+                "data"
+            ],
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_runs.RestoreDetailResponse"
+                }
+            }
+        },
+        "internal_runs.RestoreDetailResponse": {
+            "type": "object",
+            "required": [
+                "archive",
+                "archive_id",
+                "created_at",
+                "created_by",
+                "duration_ms",
+                "error",
+                "finished_at",
+                "id",
+                "log",
+                "plan_id",
+                "secret_set",
+                "started_at",
+                "status",
+                "target"
+            ],
+            "properties": {
+                "archive": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_runs.RestoreArchiveResponse"
+                        }
+                    ],
+                    "x-nullable": true
+                },
+                "archive_id": {
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_runs.RestoreUserResponse"
+                        }
+                    ],
+                    "x-nullable": true
+                },
+                "duration_ms": {
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "error": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "finished_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "log": {
+                    "type": "string"
+                },
+                "plan_id": {
+                    "type": "integer"
+                },
+                "secret_set": {
+                    "type": "boolean"
+                },
+                "started_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "status": {
+                    "enum": [
+                        "queued",
+                        "running",
+                        "succeeded",
+                        "failed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_runs.Status"
+                        }
+                    ]
+                },
+                "target": {
+                    "$ref": "#/definitions/app_internal_plans.RestoreTarget"
+                }
+            }
+        },
+        "internal_runs.RestoreResponse": {
+            "type": "object",
+            "required": [
+                "archive",
+                "archive_id",
+                "created_at",
+                "created_by",
+                "duration_ms",
+                "error",
+                "finished_at",
+                "id",
+                "plan_id",
+                "secret_set",
+                "started_at",
+                "status",
+                "target"
+            ],
+            "properties": {
+                "archive": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_runs.RestoreArchiveResponse"
+                        }
+                    ],
+                    "x-nullable": true
+                },
+                "archive_id": {
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_runs.RestoreUserResponse"
+                        }
+                    ],
+                    "x-nullable": true
+                },
+                "duration_ms": {
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "error": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "finished_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "plan_id": {
+                    "type": "integer"
+                },
+                "secret_set": {
+                    "type": "boolean"
+                },
+                "started_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "status": {
+                    "enum": [
+                        "queued",
+                        "running",
+                        "succeeded",
+                        "failed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_runs.Status"
+                        }
+                    ]
+                },
+                "target": {
+                    "$ref": "#/definitions/app_internal_plans.RestoreTarget"
+                }
+            }
+        },
+        "internal_runs.RestoreTargetDataResponse": {
+            "type": "object",
+            "required": [
+                "data"
+            ],
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/app_internal_plans.RestoreTarget"
+                }
+            }
+        },
+        "internal_runs.RestoreUserResponse": {
+            "type": "object",
+            "required": [
+                "email",
+                "id",
+                "name"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

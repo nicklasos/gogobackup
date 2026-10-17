@@ -33,33 +33,38 @@ func TestPlanHealth(t *testing.T) {
 		schedules   []plans.Schedule
 		savedAt     time.Time
 		lastRun     *db.Run
+		restoring   bool
 		lastSuccess sql.NullTime
 		now         time.Time
 		want        plans.Health
 	}{
-		{"ran today's slot", true, daily3, saved, run("succeeded"), success("2026-10-17T03:02:00Z"), now, plans.HealthOK},
-		{"a manual plan that succeeded", true, nil, saved, run("succeeded"), success("2026-10-02T09:00:00Z"), now, plans.HealthOK},
-		{"missed today's slot", true, daily3, saved, run("succeeded"), success("2026-10-16T03:02:00Z"), now, plans.HealthOverdue},
-		{"a slot less than an hour old is not missed yet", true, daily3, saved, run("succeeded"), success("2026-10-16T03:02:00Z"), at("2026-10-17T03:59:00Z"), plans.HealthOK},
-		{"a slot exactly an hour old is missed", true, daily3, saved, run("succeeded"), success("2026-10-16T03:02:00Z"), at("2026-10-17T04:00:00Z"), plans.HealthOverdue},
-		{"a success at the slot itself counts", true, daily3, saved, run("succeeded"), success("2026-10-17T03:00:00Z"), now, plans.HealthOK},
-		{"a manual success after the slot covers it", true, daily3, saved, run("succeeded"), success("2026-10-17T08:00:00Z"), now, plans.HealthOK},
-		{"weekdays only: Friday's slot was run, Saturday has none", true, []plans.Schedule{{Time: 3 * 60, Days: []plans.Weekday{plans.Monday, plans.Tuesday, plans.Wednesday, plans.Thursday, plans.Friday}}}, saved, run("succeeded"), success("2026-10-16T03:05:00Z"), now, plans.HealthOK},
-		{"never ran, but a slot after the save has passed", true, daily3, saved, nil, sql.NullTime{}, now, plans.HealthOverdue},
-		{"never ran, saved after the last slot", true, daily3, at("2026-10-17T05:00:00Z"), nil, sql.NullTime{}, now, plans.HealthNever},
-		{"never ran, saved within the hour before the slot", true, daily3, at("2026-10-17T02:59:00Z"), nil, sql.NullTime{}, at("2026-10-17T03:30:00Z"), plans.HealthNever},
-		{"never ran and has no schedules", true, nil, saved, nil, sql.NullTime{}, now, plans.HealthNever},
-		{"a slot from before the last save does not count", true, daily3, at("2026-10-17T05:00:00Z"), run("succeeded"), success("2026-10-10T03:02:00Z"), now, plans.HealthOK},
-		{"queued", true, daily3, saved, run("queued"), success("2026-10-10T03:02:00Z"), now, plans.HealthRunning},
-		{"running beats paused", false, daily3, saved, run("running"), sql.NullTime{}, now, plans.HealthRunning},
-		{"failed beats overdue", true, daily3, saved, run("failed"), success("2026-10-10T03:02:00Z"), now, plans.HealthFailed},
-		{"failed beats paused", false, daily3, saved, run("failed"), sql.NullTime{}, now, plans.HealthFailed},
-		{"paused beats overdue", false, daily3, saved, run("succeeded"), success("2026-10-10T03:02:00Z"), now, plans.HealthPaused},
-		{"paused and never ran", false, daily3, saved, nil, sql.NullTime{}, now, plans.HealthPaused},
+		{"ran today's slot", true, daily3, saved, run("succeeded"), false, success("2026-10-17T03:02:00Z"), now, plans.HealthOK},
+		{"a manual plan that succeeded", true, nil, saved, run("succeeded"), false, success("2026-10-02T09:00:00Z"), now, plans.HealthOK},
+		{"missed today's slot", true, daily3, saved, run("succeeded"), false, success("2026-10-16T03:02:00Z"), now, plans.HealthOverdue},
+		{"a slot less than an hour old is not missed yet", true, daily3, saved, run("succeeded"), false, success("2026-10-16T03:02:00Z"), at("2026-10-17T03:59:00Z"), plans.HealthOK},
+		{"a slot exactly an hour old is missed", true, daily3, saved, run("succeeded"), false, success("2026-10-16T03:02:00Z"), at("2026-10-17T04:00:00Z"), plans.HealthOverdue},
+		{"a success at the slot itself counts", true, daily3, saved, run("succeeded"), false, success("2026-10-17T03:00:00Z"), now, plans.HealthOK},
+		{"a manual success after the slot covers it", true, daily3, saved, run("succeeded"), false, success("2026-10-17T08:00:00Z"), now, plans.HealthOK},
+		{"weekdays only: Friday's slot was run, Saturday has none", true, []plans.Schedule{{Time: 3 * 60, Days: []plans.Weekday{plans.Monday, plans.Tuesday, plans.Wednesday, plans.Thursday, plans.Friday}}}, saved, run("succeeded"), false, success("2026-10-16T03:05:00Z"), now, plans.HealthOK},
+		{"never ran, but a slot after the save has passed", true, daily3, saved, nil, false, sql.NullTime{}, now, plans.HealthOverdue},
+		{"never ran, saved after the last slot", true, daily3, at("2026-10-17T05:00:00Z"), nil, false, sql.NullTime{}, now, plans.HealthNever},
+		{"never ran, saved within the hour before the slot", true, daily3, at("2026-10-17T02:59:00Z"), nil, false, sql.NullTime{}, at("2026-10-17T03:30:00Z"), plans.HealthNever},
+		{"never ran and has no schedules", true, nil, saved, nil, false, sql.NullTime{}, now, plans.HealthNever},
+		{"a slot from before the last save does not count", true, daily3, at("2026-10-17T05:00:00Z"), run("succeeded"), false, success("2026-10-10T03:02:00Z"), now, plans.HealthOK},
+		{"queued", true, daily3, saved, run("queued"), false, success("2026-10-10T03:02:00Z"), now, plans.HealthRunning},
+		{"running beats paused", false, daily3, saved, run("running"), false, sql.NullTime{}, now, plans.HealthRunning},
+		{"failed beats overdue", true, daily3, saved, run("failed"), false, success("2026-10-10T03:02:00Z"), now, plans.HealthFailed},
+		{"failed beats paused", false, daily3, saved, run("failed"), false, sql.NullTime{}, now, plans.HealthFailed},
+		{"paused beats overdue", false, daily3, saved, run("succeeded"), false, success("2026-10-10T03:02:00Z"), now, plans.HealthPaused},
+		{"paused and never ran", false, daily3, saved, nil, false, sql.NullTime{}, now, plans.HealthPaused},
+		{"restoring", true, daily3, saved, run("succeeded"), true, success("2026-10-17T03:02:00Z"), now, plans.HealthRestoring},
+		{"restoring beats running", true, daily3, saved, run("running"), true, success("2026-10-17T03:02:00Z"), now, plans.HealthRestoring},
+		{"restoring beats failed", true, daily3, saved, run("failed"), true, sql.NullTime{}, now, plans.HealthRestoring},
+		{"restoring beats paused", false, daily3, saved, nil, true, sql.NullTime{}, now, plans.HealthRestoring},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, plans.PlanHealth(tc.enabled, tc.schedules, tc.savedAt, tc.lastRun, tc.lastSuccess, tc.now))
+			assert.Equal(t, tc.want, plans.PlanHealth(tc.enabled, tc.schedules, tc.savedAt, tc.lastRun, tc.restoring, tc.lastSuccess, tc.now))
 		})
 	}
 }

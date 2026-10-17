@@ -57,12 +57,9 @@ func NewArchiveService(queries *db.Queries, storageService *storages.StorageServ
 // Open opens a live archive's object in its storage. An archive that retention deleted is a 404;
 // a storage that fails, or no longer has the object, a 502.
 func (s *ArchiveService) Open(ctx context.Context, id int64) (*Download, error) {
-	archive, err := s.queries.GetArchiveByID(ctx, id)
-	if errors.Is(err, sql.ErrNoRows) || (err == nil && archive.DeletedAt.Valid) {
-		return nil, ErrArchiveNotFound
-	}
+	archive, err := liveArchive(ctx, s.queries, id)
 	if err != nil {
-		return nil, errs.WrapDatabaseError(err)
+		return nil, err
 	}
 	storage, err := s.storages.GetStorage(ctx, archive.StorageID)
 	if err != nil {
@@ -80,17 +77,25 @@ func (s *ArchiveService) Open(ctx context.Context, id int64) (*Download, error) 
 	return &Download{Name: path.Base(archive.ObjectKey), Size: archive.SizeBytes, body: body, d: d}, nil
 }
 
+// liveArchive is an archive that retention has not deleted, or a 404.
+func liveArchive(ctx context.Context, q *db.Queries, id int64) (db.Archive, error) {
+	archive, err := q.GetArchiveByID(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && archive.DeletedAt.Valid) {
+		return db.Archive{}, ErrArchiveNotFound
+	}
+	if err != nil {
+		return db.Archive{}, errs.WrapDatabaseError(err)
+	}
+	return archive, nil
+}
+
 // Link is a token that downloads the archive without a session until DownloadLinkTTL from now,
 // so a browser can save a large archive straight to disk instead of holding it in memory. It
 // is sealed with the key that seals credentials: it cannot be forged or changed to name
 // another archive.
 func (s *ArchiveService) Link(ctx context.Context, id int64, now time.Time) (string, time.Time, error) {
-	archive, err := s.queries.GetArchiveByID(ctx, id)
-	if errors.Is(err, sql.ErrNoRows) || (err == nil && archive.DeletedAt.Valid) {
-		return "", time.Time{}, ErrArchiveNotFound
-	}
-	if err != nil {
-		return "", time.Time{}, errs.WrapDatabaseError(err)
+	if _, err := liveArchive(ctx, s.queries, id); err != nil {
+		return "", time.Time{}, err
 	}
 	expires := now.Add(DownloadLinkTTL).UTC().Truncate(time.Second)
 	plain := fmt.Sprintf("%s:%d:%d", downloadLinkPurpose, id, expires.Unix())

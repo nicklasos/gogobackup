@@ -105,6 +105,8 @@ func New(t *testing.T, configure ...func(*config.Config)) *App {
 		AuthRateLimit:     true,
 		TrustedProxies:    []string{"127.0.0.1", "::1"},
 		RunnerConcurrency: 2,
+		WorkDir:           t.TempDir(),
+		RestoreJobs:       2,
 	}
 	for _, fn := range configure {
 		fn(cfg)

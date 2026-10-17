@@ -94,7 +94,15 @@ func testPostgres(ctx context.Context, config, secret []byte, finder tools.Finde
 func postgresVersion(ctx context.Context, c PostgresConfig, password string) (postgresServer, error) {
 	ctx, cancel := context.WithTimeout(ctx, connectTimeout)
 	defer cancel()
+	conn, err := connectPostgres(ctx, c, password)
+	if err != nil {
+		return postgresServer{}, err
+	}
+	defer conn.Close(context.Background())
+	return queryPostgresVersion(ctx, conn)
+}
 
+func connectPostgres(ctx context.Context, c PostgresConfig, password string) (*pgx.Conn, error) {
 	dsn := url.URL{
 		Scheme:   "postgres",
 		User:     url.UserPassword(c.User, password),
@@ -104,18 +112,16 @@ func postgresVersion(ctx context.Context, c PostgresConfig, password string) (po
 	}
 	cfg, err := pgx.ParseConfig(dsn.String())
 	if err != nil {
-		return postgresServer{}, err
+		return nil, err
 	}
 	cfg.ConnectTimeout = connectTimeout
-	conn, err := pgx.ConnectConfig(ctx, cfg)
-	if err != nil {
-		return postgresServer{}, err
-	}
-	defer conn.Close(context.Background())
+	return pgx.ConnectConfig(ctx, cfg)
+}
 
+func queryPostgresVersion(ctx context.Context, conn *pgx.Conn) (postgresServer, error) {
 	var server postgresServer
 	var number int
-	err = conn.QueryRow(ctx, "SELECT current_setting('server_version'), current_setting('server_version_num')::int").Scan(&server.version, &number)
+	err := conn.QueryRow(ctx, "SELECT current_setting('server_version'), current_setting('server_version_num')::int").Scan(&server.version, &number)
 	if err != nil {
 		return postgresServer{}, err
 	}
@@ -177,22 +183,33 @@ func testMySQL(ctx context.Context, config, secret []byte, finder tools.Finder) 
 func mysqlVersion(ctx context.Context, c MySQLConfig, password string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, connectTimeout)
 	defer cancel()
+	conn, err := openMySQL(c, password, c.Database)
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+	return queryMySQLVersion(ctx, conn)
+}
 
+// openMySQL is a pool of one connection to the server of c, using database (none when empty).
+func openMySQL(c MySQLConfig, password, database string) (*sql.DB, error) {
 	cfg := mysql.NewConfig()
 	cfg.User = c.User
 	cfg.Passwd = password
 	cfg.Net = "tcp"
 	cfg.Addr = net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
-	cfg.DBName = c.Database
+	cfg.DBName = database
 	cfg.Timeout = connectTimeout
 	connector, err := mysql.NewConnector(cfg)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	conn := sql.OpenDB(connector)
-	defer conn.Close()
 	conn.SetMaxOpenConns(1)
+	return conn, nil
+}
 
+func queryMySQLVersion(ctx context.Context, conn *sql.DB) (string, error) {
 	var version string
 	if err := conn.QueryRowContext(ctx, "SELECT VERSION()").Scan(&version); err != nil {
 		return "", err

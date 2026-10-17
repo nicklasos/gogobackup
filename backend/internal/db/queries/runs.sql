@@ -21,21 +21,31 @@ LIMIT 1;
 SELECT COUNT(*) FROM runs
 WHERE plan_id = ?1 AND status IN ('queued', 'running');
 
--- name: ListClaimableRuns :many
-SELECT * FROM runs
+-- The queue of the worker: queued runs and restores, oldest first, whose plan has neither a run
+-- nor a restore running. A plan runs one job at a time, so a backup never reads a database that
+-- is half restored.
+-- name: ListClaimableJobs :many
+SELECT CAST('run' AS TEXT) AS kind, runs.id, runs.created_at FROM runs
 WHERE runs.status = 'queued'
   AND NOT EXISTS (SELECT 1 FROM runs AS other WHERE other.plan_id = runs.plan_id AND other.status = 'running')
-ORDER BY runs.id
+  AND NOT EXISTS (SELECT 1 FROM restores WHERE restores.plan_id = runs.plan_id AND restores.status = 'running')
+UNION ALL
+SELECT CAST('restore' AS TEXT) AS kind, restores.id, restores.created_at FROM restores
+WHERE restores.status = 'queued'
+  AND NOT EXISTS (SELECT 1 FROM restores AS other WHERE other.plan_id = restores.plan_id AND other.status = 'running')
+  AND NOT EXISTS (SELECT 1 FROM runs WHERE runs.plan_id = restores.plan_id AND runs.status = 'running')
+ORDER BY created_at, kind, id
 LIMIT ?1;
 
--- A run is claimed only while queued and while no other run of its plan is running, in one
--- statement, so neither two workers nor two processes can start it twice.
+-- A run is claimed only while queued and while its plan has no other run and no restore running,
+-- in one statement, so neither two workers nor two processes can start it twice.
 -- name: ClaimRun :execrows
 UPDATE runs
 SET status = 'running', started_at = sqlc.arg(started_at)
 WHERE runs.id = sqlc.arg(id)
   AND runs.status = 'queued'
-  AND NOT EXISTS (SELECT 1 FROM runs AS other WHERE other.plan_id = runs.plan_id AND other.status = 'running');
+  AND NOT EXISTS (SELECT 1 FROM runs AS other WHERE other.plan_id = runs.plan_id AND other.status = 'running')
+  AND NOT EXISTS (SELECT 1 FROM restores WHERE restores.plan_id = runs.plan_id AND restores.status = 'running');
 
 -- name: FinishRun :execrows
 UPDATE runs

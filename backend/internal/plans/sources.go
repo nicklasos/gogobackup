@@ -39,6 +39,8 @@ type source struct {
 	dump func(ctx context.Context, config, secret []byte, finder tools.Finder, w io.Writer, log *runlog.Log) error
 	// extension ends the name of every archive of the kind.
 	extension string
+	// restoreKind is how an archive of the kind is put back (restore.go).
+	restoreKind restoreKind
 }
 
 // sourceBlock is one kind's block of a request.
@@ -56,6 +58,13 @@ var sources = map[SourceKind]source{
 		test:         testPostgres,
 		dump:         dumpPostgres,
 		extension:    "dump",
+		restoreKind: restoreKind{
+			block:    func(r *RestoreRequest) (targetBlock, bool) { return r.Postgres, r.Postgres != nil },
+			defaults: postgresDefaults,
+			respond:  func(target []byte, r *RestoreTarget) error { return json.Unmarshal(target, &r.Postgres) },
+			own:      ownDatabase,
+			restore:  restorePostgres,
+		},
 	},
 	SourceMySQL: {
 		block:        func(r *SourceRequest) (sourceBlock, bool) { return r.MySQL, r.MySQL != nil },
@@ -64,6 +73,13 @@ var sources = map[SourceKind]source{
 		test:         testMySQL,
 		dump:         dumpMySQL,
 		extension:    "sql.gz",
+		restoreKind: restoreKind{
+			block:    func(r *RestoreRequest) (targetBlock, bool) { return r.MySQL, r.MySQL != nil },
+			defaults: mysqlDefaults,
+			respond:  func(target []byte, r *RestoreTarget) error { return json.Unmarshal(target, &r.MySQL) },
+			own:      ownDatabase,
+			restore:  restoreMySQL,
+		},
 	},
 	SourceSQLite: {
 		block:     func(r *SourceRequest) (sourceBlock, bool) { return r.SQLite, r.SQLite != nil },
@@ -71,6 +87,13 @@ var sources = map[SourceKind]source{
 		test:      testSQLite,
 		dump:      dumpSQLite,
 		extension: "db.gz",
+		restoreKind: restoreKind{
+			block:    func(r *RestoreRequest) (targetBlock, bool) { return r.SQLite, r.SQLite != nil },
+			defaults: sqliteDefaults,
+			respond:  func(target []byte, r *RestoreTarget) error { return json.Unmarshal(target, &r.SQLite) },
+			own:      ownSQLite,
+			restore:  restoreSQLite,
+		},
 	},
 	SourceFiles: {
 		block:     func(r *SourceRequest) (sourceBlock, bool) { return r.Files, r.Files != nil },
@@ -78,6 +101,13 @@ var sources = map[SourceKind]source{
 		test:      testFiles,
 		dump:      dumpFiles,
 		extension: "tar.gz",
+		restoreKind: restoreKind{
+			block:    func(r *RestoreRequest) (targetBlock, bool) { return r.Files, r.Files != nil },
+			defaults: filesDefaults,
+			respond:  func(target []byte, r *RestoreTarget) error { return json.Unmarshal(target, &r.Files) },
+			own:      ownFiles,
+			restore:  restoreFiles,
+		},
 	},
 }
 
