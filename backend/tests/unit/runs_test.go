@@ -80,6 +80,7 @@ func TestDue(t *testing.T) {
 		{"days of downtime run only the latest slot", daily, true, created, ptr(utc("2026-10-10T03:00:00Z")), utc("2026-10-14T05:00:00Z"), &slot},
 		{"not before the next slot", daily, true, created, &slot, utc("2026-10-15T02:59:59Z"), nil},
 		{"a slot before the plan existed", daily, true, utc("2026-10-14T04:00:00Z"), nil, utc("2026-10-14T05:00:00Z"), nil},
+		{"a slot before the plan was re-enabled", daily, true, utc("2026-10-14T04:00:00Z"), &yesterday, utc("2026-10-14T05:00:00Z"), nil},
 		{"disabled", daily, false, created, &yesterday, utc("2026-10-14T03:00:30Z"), nil},
 		{"no schedules", []plans.Schedule{}, true, created, nil, utc("2026-10-14T03:00:30Z"), nil},
 	}

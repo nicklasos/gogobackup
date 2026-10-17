@@ -94,7 +94,7 @@ func (s *RunService) EnqueueDue(ctx context.Context, now time.Time) (int, error)
 			problems = append(problems, err)
 			continue
 		}
-		slot, ok := Due(schedules, plan.Enabled, plan.CreatedAt.Time, last, now)
+		slot, ok := Due(schedules, plan.Enabled, plan.UpdatedAt.Time, last, now)
 		if !ok {
 			continue
 		}

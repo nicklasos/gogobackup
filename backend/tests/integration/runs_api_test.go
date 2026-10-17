@@ -515,6 +515,21 @@ func TestRuns_EnqueueDue(t *testing.T) {
 	assert.Zero(t, n, "another process enqueuing the same slot adds nothing")
 }
 
+func TestRuns_SavingAPlanDoesNotRunAPassedSlot(t *testing.T) {
+	app := testkit.New(t)
+	now := time.Now().UTC()
+	plan := app.Create.Plan(factory.CreatedAt(now.AddDate(0, 0, -30)), factory.Disabled())
+	service := runs.NewRunService(app.Queries, app.TxRunner, nil)
+
+	_, err := app.DB.ExecContext(app.Ctx, `UPDATE plans SET enabled = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, plan.ID)
+	require.NoError(t, err)
+
+	n, err := service.EnqueueDue(app.Ctx, now.Add(time.Second))
+	require.NoError(t, err)
+	assert.Zero(t, n, "today's 03:00 passed before the plan was re-enabled")
+	app.AssertDatabaseCount("runs", 0, testkit.Row{"plan_id": plan.ID})
+}
+
 func utcTime(t *testing.T, s string) time.Time {
 	t.Helper()
 	at, err := time.Parse(time.RFC3339, s)

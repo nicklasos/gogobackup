@@ -78,7 +78,8 @@ func WithStorages(storages ...*db.Storage) PlanOption {
 	}
 }
 
-// CreatedAt backdates the plan. The scheduler runs no slot from before a plan existed.
+// CreatedAt backdates the plan, its creation and its last save. The scheduler runs no slot from
+// before the plan was last saved.
 func CreatedAt(at time.Time) PlanOption {
 	return func(a *planAttrs) { utc := at.UTC(); a.createdAt = &utc }
 }
@@ -126,8 +127,8 @@ func (f *Factory) Plan(opts ...PlanOption) *db.Plan {
 
 	var plan db.Plan
 	err = f.conn.QueryRowContext(ctx,
-		`INSERT INTO plans (name, source_kind, source_config, source_secret, schedules, max_age_days, keep_weekly, keep_monthly, enabled, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
+		`INSERT INTO plans (name, source_kind, source_config, source_secret, schedules, max_age_days, keep_weekly, keep_monthly, enabled, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?10, CURRENT_TIMESTAMP), COALESCE(?10, CURRENT_TIMESTAMP))
 		 RETURNING id, name, source_kind, source_config, source_secret, schedules, max_age_days, keep_weekly, keep_monthly, enabled, created_at, updated_at`,
 		attrs.name, string(attrs.kind), string(config), secret, string(schedules),
 		attrs.maxAgeDays, attrs.keepWeekly, attrs.keepMonthly, attrs.enabled, attrs.createdAt,
