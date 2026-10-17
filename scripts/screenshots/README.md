@@ -1,0 +1,2 @@
+`node scripts/screenshots/shoot.mjs` from the repository root rebuilds the API and the admin panel, seeds a throwaway database in `/tmp` (`backend/cmd/screenshots-seed`) and writes the README screenshots to `docs/images`.
+It needs Go, `sqlite3` and the frontend's `node_modules` with Playwright's Chromium (`make playwright-browsers` in `frontend/`), and takes about a minute because it waits for the scheduler's tick.

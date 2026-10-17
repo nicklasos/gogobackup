@@ -18,6 +18,7 @@ type runAttrs struct {
 	finishedAt   sql.NullTime
 	sizeBytes    sql.NullInt64
 	errText      sql.NullString
+	took         time.Duration
 }
 
 type RunOption func(*runAttrs)
@@ -41,6 +42,14 @@ func StartedAt(at time.Time) RunOption {
 	}
 }
 
+// FinishedAfter makes a finished run end this long after it started, instead of a minute.
+func FinishedAfter(d time.Duration) RunOption { return func(a *runAttrs) { a.took = d } }
+
+// RunError is why a failed run failed.
+func RunError(text string) RunOption {
+	return func(a *runAttrs) { a.errText = sql.NullString{String: text, Valid: true} }
+}
+
 // RunSize is the size of what the run stored.
 func RunSize(bytes int64) RunOption {
 	return func(a *runAttrs) { a.sizeBytes = sql.NullInt64{Int64: bytes, Valid: true} }
@@ -61,6 +70,9 @@ func (f *Factory) Run(plan *db.Plan, opts ...RunOption) *db.Run {
 	finished := attrs.status == runs.StatusSucceeded || attrs.status == runs.StatusFailed
 	if finished && !attrs.finishedAt.Valid {
 		attrs.finishedAt = now
+	}
+	if finished && attrs.took > 0 {
+		attrs.finishedAt = sql.NullTime{Time: attrs.startedAt.Time.Add(attrs.took), Valid: true}
 	}
 	if !finished {
 		attrs.finishedAt = sql.NullTime{}
@@ -88,6 +100,7 @@ func (f *Factory) Run(plan *db.Plan, opts ...RunOption) *db.Run {
 type archiveAttrs struct {
 	key       string
 	content   []byte
+	size      int64
 	createdAt time.Time
 	deletedAt sql.NullTime
 }
@@ -102,6 +115,9 @@ func ArchiveKey(key string) ArchiveOption { return func(a *archiveAttrs) { a.key
 func ArchiveContent(content []byte) ArchiveOption {
 	return func(a *archiveAttrs) { a.content = content }
 }
+
+// ArchiveSize records this size instead of the content's, for an archive too large to hold.
+func ArchiveSize(bytes int64) ArchiveOption { return func(a *archiveAttrs) { a.size = bytes } }
 
 func ArchiveCreatedAt(at time.Time) ArchiveOption {
 	return func(a *archiveAttrs) { a.createdAt = at.UTC() }
@@ -121,13 +137,16 @@ func (f *Factory) Archive(run *db.Run, storage *db.Storage, opts ...ArchiveOptio
 		opt(&attrs)
 	}
 	sum := sha256.Sum256(attrs.content)
+	if attrs.size == 0 {
+		attrs.size = int64(len(attrs.content))
+	}
 
 	archive, err := f.queries.FactoryCreateArchive(ctx, db.FactoryCreateArchiveParams{
 		RunID:     run.ID,
 		PlanID:    run.PlanID,
 		StorageID: storage.ID,
 		ObjectKey: attrs.key,
-		SizeBytes: int64(len(attrs.content)),
+		SizeBytes: attrs.size,
 		Sha256:    hex.EncodeToString(sum[:]),
 		CreatedAt: attrs.createdAt,
 		DeletedAt: attrs.deletedAt,
