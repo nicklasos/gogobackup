@@ -34,22 +34,6 @@ CREATE TABLE examples (
 CREATE INDEX idx_examples_user_id ON examples(user_id);
 CREATE INDEX idx_examples_created_at ON examples(created_at DESC);
 
-CREATE TABLE uploads (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    folder_id INTEGER NOT NULL,
-    type TEXT NOT NULL CHECK (type IN ('image', 'video', 'document', 'audio', 'other')),
-    relative_path TEXT NOT NULL,
-    original_filename TEXT NOT NULL,
-    file_size INTEGER NOT NULL,
-    mime_type TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_uploads_user_id ON uploads(user_id);
-CREATE INDEX idx_uploads_folder_id ON uploads(folder_id);
-CREATE INDEX idx_uploads_type ON uploads(type);
-
 -- Single-use tokens sent by email (password reset, email verification).
 -- Only the SHA-256 hash is stored, so a database leak does not hand out usable links.
 CREATE TABLE auth_tokens (
@@ -67,7 +51,6 @@ CREATE INDEX idx_auth_tokens_user_purpose ON auth_tokens(user_id, purpose);
 -- +goose Down
 -- +goose StatementBegin
 DROP TABLE IF EXISTS auth_tokens;
-DROP TABLE IF EXISTS uploads;
 DROP TABLE IF EXISTS examples;
 DROP TABLE IF EXISTS refresh_tokens;
 DROP TABLE IF EXISTS users;

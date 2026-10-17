@@ -17,7 +17,6 @@ type Config struct {
 
 	DatabasePath     string
 	TestDatabasePath string
-	RedisURL         string
 	Port             string
 	Environment      string
 	Debug            bool
@@ -26,8 +25,6 @@ type Config struct {
 	LogOutput        string
 	JWTSecret        string
 	AppURL           string
-	FilesBaseURL     string
-	UploadFolder     string
 
 	// Auth
 	AccessTokenTTL       time.Duration
@@ -70,7 +67,6 @@ func Load() (*Config, error) {
 
 		DatabasePath:     getEnv("DATABASE_PATH", "./data/gogobackup.db"),
 		TestDatabasePath: getEnv("TEST_DATABASE_PATH", "./data/gogobackup_test.db"),
-		RedisURL:         getEnv("REDIS_URL", "redis://localhost:6379/1"),
 		Port:             getEnv("PORT", "8181"),
 		Environment:      getEnv("APP_ENV", "development"),
 		Debug:            getEnvBool("APP_DEBUG", false),
@@ -79,8 +75,6 @@ func Load() (*Config, error) {
 		LogOutput:        getEnv("LOG_OUTPUT", "both"),
 		JWTSecret:        getEnv("JWT_SECRET", ""),
 		AppURL:           getEnv("APP_URL", "localhost:8181"),
-		FilesBaseURL:     getEnv("FILES_BASE_URL", fmt.Sprintf("http://localhost:%s/api/files", getEnv("PORT", "8181"))),
-		UploadFolder:     getEnv("UPLOAD_FOLDER", "./uploads"),
 
 		AccessTokenTTL:       getEnvDuration("JWT_ACCESS_TOKEN_TTL", time.Hour),
 		RefreshTokenTTL:      getEnvDuration("JWT_REFRESH_TOKEN_TTL", 30*24*time.Hour),

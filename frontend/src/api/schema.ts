@@ -143,29 +143,6 @@ export interface InternalPaginationMeta {
   total: number;
 }
 
-export interface InternalUploadsPaginatedUploadsResponse {
-  data: InternalUploadsUploadResponse[];
-  pagination: InternalPaginationMeta;
-}
-
-export interface InternalUploadsUploadDataResponse {
-  data: InternalUploadsUploadResponse;
-}
-
-export interface InternalUploadsUploadResponse {
-  created_at: string;
-  file_size: number;
-  folder_id: number;
-  full_url: string;
-  id: number;
-  mime_type: string;
-  original_filename: string;
-  relative_path: string;
-  type: "image" | "video" | "audio" | "document" | "other";
-  updated_at: string;
-  user_id: number;
-}
-
 export interface InternalUsersCreateUserRequest {
   email: string;
   name: string;

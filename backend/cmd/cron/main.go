@@ -70,13 +70,6 @@ func main() {
 
 	cronScheduler.Start()
 
-	entries := cronScheduler.GetEntries()
-	appLogger.Info("Scheduler started with jobs", "job_count", len(entries))
-	for _, entry := range entries {
-		appLogger.Info("Registered cron job",
-			"next_run", entry.Next.Format("2006-01-02 15:04:05"))
-	}
-
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 

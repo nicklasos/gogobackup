@@ -15,7 +15,6 @@ const ProfilePage = lazy(() => import('@/features/account/ProfilePage'))
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'))
 const ExampleEditorPage = lazy(() => import('@/features/examples/pages/ExampleEditorPage'))
 const ExamplesPage = lazy(() => import('@/features/examples/pages/ExamplesPage'))
-const FilesPage = lazy(() => import('@/features/uploads/pages/FilesPage'))
 const AdminsPage = lazy(() => import('@/features/users/pages/AdminsPage'))
 const SuperAdminsPage = lazy(() => import('@/features/users/pages/SuperAdminsPage'))
 const UsersPage = lazy(() => import('@/features/users/pages/UsersPage'))
@@ -50,7 +49,6 @@ export function AppRoutes() {
         <Route path="examples" element={<ExamplesPage />} />
         <Route path="examples/new" element={<ExampleEditorPage />} />
         <Route path="examples/:id/edit" element={<ExampleEditorPage />} />
-        <Route path="files" element={<FilesPage />} />
         <Route
           path="users"
           element={

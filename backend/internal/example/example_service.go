@@ -27,11 +27,11 @@ type PaginatedExamplesResult struct {
 
 type ExampleService struct {
 	queries *db.Queries
-	cache   cache.Cache
+	cache   *cache.MemoryCache
 }
 
 // NewExampleService creates a new example service. cache may be nil (caching skipped).
-func NewExampleService(queries *db.Queries, c cache.Cache) *ExampleService {
+func NewExampleService(queries *db.Queries, c *cache.MemoryCache) *ExampleService {
 	return &ExampleService{
 		queries: queries,
 		cache:   c,

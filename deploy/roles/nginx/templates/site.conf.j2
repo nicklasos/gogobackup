@@ -21,7 +21,6 @@
 {% if nginx_hide_server_header | bool %}
     more_clear_headers Server;
 {% endif %}
-    client_max_body_size {{ nginx_client_max_body_size }};
 {% if tls_mode == 'cloudflare' and cloudflare_real_ip | default(true) | bool %}
 
     # Behind Cloudflare every request arrives from a Cloudflare address. This restores the
@@ -90,7 +89,6 @@ server {
     root {{ frontend_dir }}/dist;
     index index.html;
 
-    # The API also serves uploaded files, under /api/files/
     location ^~ /api/ {
 {{ proxy() }}    }
 

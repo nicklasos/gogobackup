@@ -9,7 +9,7 @@ This file is the plan. Each phase is one pull request that ends with `make test`
 | # | Phase | Ends when |
 |---|---|---|
 | 1 | SQLite instead of PostgreSQL | `make test` passes with no Postgres anywhere: backend, E2E, CI, deploy |
-| 2 | Subtract template weight | One process (API + scheduler), Redis optional, demo modules gone |
+| 2 | Subtract template weight | No Redis, uploads module gone, scheduler in the API by default |
 | 3 | Storages | Local, S3 and GCS storages can be added, tested and browsed in the UI |
 | 4 | Plans | A plan with a source, schedules and retention can be created and edited |
 | 5 | Runner | Scheduled and manual runs produce archives, logs and pruning |
@@ -17,7 +17,7 @@ This file is the plan. Each phase is one pull request that ends with `make test`
 | 7 | Restore | Pick an archive, pick a target, watch the restore log |
 | 8 | Self-deploy | `deploy/` installs Gogobackup and Gogobackup backs up its own database |
 
-Phase 1 also removed the gopulse monitoring dashboard. Phase 2 comes before the features on purpose. The `examples` and `uploads` modules, the separate `cmd/cron` binary and Redis exist for the template, not for a backup service. Removing them first means phases 3 to 7 build on a smaller base. `examples` stays until phase 4 lands, because `backend/AGENTS.md` uses it as the reference module.
+Phase 1 also removed the gopulse monitoring dashboard. Phase 2 comes before the features on purpose. The `uploads` module and Redis existed for the template, not for a backup service. Removing them first means phases 3 to 7 build on a smaller base. The scheduler runs inside the API by default; `ENABLE_SCHEDULER=false` (`scheduler_in_api: false` in deploy) moves it to the separate `cmd/cron` process. `examples` stays until phase 4 lands, because `backend/AGENTS.md` uses it as the reference module.
 
 ## Data model
 
@@ -43,7 +43,7 @@ Every row below is a table in SQLite. Kinds are closed sets, and each kind has i
 - Storages are a registry too: `Put`, `Get`, `List`, `Delete` per kind.
 - A dump streams from the tool through gzip and sha256 straight to storage, with no temp file, when there is one storage. With several storages it writes one temp file and uploads it to each.
 - Retention is a pure function: `Prune(archives, policy, now) (keep, remove)`. It has table tests for the weekly and monthly rules, across month and year boundaries.
-- The scheduler ticks once a minute inside the API process, finds due slots, and inserts a `queued` run. One worker per plan runs them, so a plan never overlaps itself.
+- The scheduler ticks once a minute, in the API process or in `cmd/cron`, finds due slots, and inserts a `queued` run. One worker per plan runs them, so a plan never overlaps itself.
 - A plan card is green when its last run succeeded, red when it failed, grey when it never ran, and amber when the last success is older than its schedule allows.
 
 ## Restore speed

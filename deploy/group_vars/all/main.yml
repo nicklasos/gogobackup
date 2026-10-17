@@ -5,7 +5,7 @@
 # Lower-case letters, digits and dashes.
 app_name: gogobackup
 
-# Shown in emails and in the monitoring dashboard
+# Shown in emails
 app_display_name: Gogobackup
 
 # Where the code comes from. For a private repository use the SSH URL and add the
@@ -41,8 +41,8 @@ node_major: 22
 # --- API --------------------------------------------------------------------
 api_port: 8181
 
-# Run the cron scheduler as its own process next to the API
-enable_scheduler: true
+# The API runs the scheduled jobs. false runs them in a separate <app>-cron supervisor program instead.
+scheduler_in_api: true
 
 # Open POST /auth/register to anyone
 allow_registration: false
@@ -70,8 +70,6 @@ backup_retention_days: 14
 # Cron times (server time zone)
 backup_db_hour: "3"
 backup_db_minute: "15"
-backup_files_hour: "3"
-backup_files_minute: "45"
 
 # Only for gcs: the bucket, and the path on THIS machine of the service account key to upload
 backup_gcs_bucket: ""
@@ -82,7 +80,6 @@ backup_gcs_credentials_file: ""
 database_path: "{{ app_root }}/shared/database/{{ app_name }}.db"
 site_scheme: "{{ 'http' if tls_mode == 'none' else 'https' }}"
 site_url: "{{ site_scheme }}://{{ domain }}"
-uploads_dir: "{{ app_root }}/shared/uploads"
 log_dir: "/var/log/{{ app_name }}"
 backend_dir: "{{ app_root }}/backend"
 frontend_dir: "{{ app_root }}/frontend"

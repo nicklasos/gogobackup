@@ -103,14 +103,12 @@ func TestSQLite_DeletingAUserCascadesToTheirRows(t *testing.T) {
 	owner := app.Create.User()
 	other := app.Create.User()
 	app.Create.Examples(owner.ID, 3, "Owned")
-	app.Create.Upload(owner.ID)
 	app.Create.Example(other.ID)
 
 	app.DB.SetMaxIdleConns(0)
 	require.NoError(t, app.Queries.DeleteUser(app.Ctx, owner.ID))
 
 	app.AssertDatabaseCount("examples", 0, testkit.Row{"user_id": owner.ID})
-	app.AssertDatabaseCount("uploads", 0, testkit.Row{"user_id": owner.ID})
 	app.AssertDatabaseCount("examples", 1, testkit.Row{"user_id": other.ID})
 
 	_, err := app.DB.ExecContext(app.Ctx, "INSERT INTO examples (user_id, title) VALUES (?, 'orphan')", owner.ID)

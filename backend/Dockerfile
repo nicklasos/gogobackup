@@ -11,7 +11,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /out/api ./cmd/api \
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates curl \
   && adduser -D -u 10001 app \
-  && mkdir -p /data/db /data/uploads /app/logs \
+  && mkdir -p /data/db /app/logs \
   && chown -R app /data /app
 WORKDIR /app
 COPY --from=build /out/api /out/cron /out/cli /app/
@@ -19,7 +19,6 @@ COPY docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 USER app
 ENV DATABASE_PATH=/data/db/gogobackup.db \
-    UPLOAD_FOLDER=/data/uploads \
     LOG_OUTPUT=stdout \
     LOG_FORMAT=json
 EXPOSE 8181

@@ -10,7 +10,6 @@
       tags: always
   roles:
     - common
-    - redis
     - golang
     - nodejs
     - app

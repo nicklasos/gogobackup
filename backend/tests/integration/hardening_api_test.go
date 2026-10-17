@@ -1,10 +1,9 @@
 package integration
 
 import (
-	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +11,7 @@ import (
 
 	"app/internal"
 	"app/internal/auth"
-	"app/internal/cache"
+	"app/internal/db"
 	"app/internal/errs"
 	"app/internal/factory"
 	"app/internal/health"
@@ -120,19 +119,13 @@ func TestAuth_TokenInQueryStringIsIgnored(t *testing.T) {
 	app.As(user).GET("/api/v1/auth/me").AssertOK()
 }
 
-type brokenCache struct {
-	*cache.MemoryCache
-}
-
-func (brokenCache) Ping(context.Context) error { return errors.New("connection refused") }
-
 type healthBody struct {
 	Status string            `json:"status"`
 	Checks map[string]string `json:"checks"`
 }
 
 func TestHealth(t *testing.T) {
-	t.Run("reports the database, and the cache only when it has a server behind it", func(t *testing.T) {
+	t.Run("reports the database", func(t *testing.T) {
 		app := testkit.New(t)
 		for _, path := range []string{"/health", "/api/v1/health"} {
 			var body healthBody
@@ -142,11 +135,15 @@ func TestHealth(t *testing.T) {
 		}
 	})
 
-	t.Run("is unhealthy when the cache server is down", func(t *testing.T) {
+	t.Run("is unhealthy when the database is unreachable", func(t *testing.T) {
 		app := testkit.New(t)
+		unreachable, err := sql.Open("sqlite", "file:"+t.TempDir()+"/missing/dir/app.db")
+		require.NoError(t, err)
+		defer unreachable.Close()
+
 		gin.SetMode(gin.TestMode)
 		router := gin.New()
-		handler := health.NewHandler(app.Queries, brokenCache{cache.NewMemoryCache()}, &config.Config{AppName: "TestApp"}, app.Logger)
+		handler := health.NewHandler(db.New(unreachable), &config.Config{AppName: "TestApp"}, app.Logger)
 		router.GET("/health", handler.Check)
 
 		server := httptest.NewServer(router)

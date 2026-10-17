@@ -36,14 +36,6 @@ const (
 	ErrKeyExampleInvalidID = "examples.invalid_id"
 )
 
-// Upload error keys
-const (
-	ErrKeyUploadNotFound       = "uploads.not_found"
-	ErrKeyUploadTypeNotAllowed = "uploads.type_not_allowed"
-	ErrKeyUploadTooLarge       = "uploads.too_large"
-	ErrKeyUploadEmpty          = "uploads.empty"
-)
-
 // Validation error keys
 const (
 	ErrKeyValidationFailed       = "validation.failed"

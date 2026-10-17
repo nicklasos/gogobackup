@@ -63,21 +63,13 @@
     "profile": "Profile",
     "adminMenu": "Admin menu",
     "superAdmins": "Super admins",
-    "admins": "Admins",
-    "files": "Files"
+    "admins": "Admins"
   },
   "enums": {
     "role": {
       "super-admin": "Super admin",
       "admin": "Admin",
       "user": "User"
-    },
-    "uploadType": {
-      "image": "Image",
-      "video": "Video",
-      "audio": "Audio",
-      "document": "Document",
-      "other": "Other"
     }
   },
   "dashboard": {
@@ -172,7 +164,6 @@
     "users.forbidden_role": "You cannot manage users with this role",
     "users.cannot_delete_self": "You cannot delete yourself",
     "examples.not_found": "Example not found",
-    "uploads.not_found": "File not found",
     "validation.failed": "Validation failed",
     "validation.required": "Required field",
     "validation.email": "Invalid email",
@@ -188,26 +179,10 @@
     "auth.registration_disabled": "Registration is disabled",
     "auth.invalid_or_expired_link": "This link is invalid or has expired",
     "auth.email_already_verified": "Your email is already confirmed",
-    "uploads.type_not_allowed": "This file type is not allowed",
-    "uploads.too_large": "The file is too large",
-    "uploads.empty": "The file is empty",
     "validation.error": "Invalid request",
     "crashTitle": "This page ran into a problem",
     "crashHint": "The rest of the app still works. Try again, or reload the page.",
     "reloadPage": "Reload page"
-  },
-  "uploads": {
-    "title": "Files",
-    "hint": "Images, documents, audio and video up to {{max}} MB.",
-    "upload": "Upload",
-    "uploaded": "File uploaded",
-    "deleted": "File deleted",
-    "deleteConfirm": "Delete this file?",
-    "empty": "No files yet",
-    "name": "Name",
-    "type": "Type",
-    "size": "Size",
-    "tooLarge": "The file is larger than {{max}} MB"
   },
   "editor": {
     "placeholder": "Enter content",

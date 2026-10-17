@@ -7,9 +7,7 @@
     mode: "0755"
   loop:
     - "{{ app_root }}"
-    # Outside the checkout on purpose, so uploaded files survive whatever happens to the code
     - "{{ app_root }}/shared"
-    - "{{ uploads_dir }}"
     - "{{ database_path | dirname }}"
     - "{{ log_dir }}"
 
@@ -123,7 +121,7 @@
   when: rebuild_frontend
   changed_when: true
 
-- name: Write the supervisor programs
+- name: Write the supervisor program
   ansible.builtin.template:
     src: supervisor.conf.j2
     dest: "/etc/supervisor/conf.d/{{ app_name }}.conf"

@@ -45,7 +45,7 @@ Import with the `@/` alias. A feature imports from `api`, `auth`, `layout` and `
 6. Add the route to `app/router.tsx` as a `lazy(() => import(...))` page (default export) and the menu entry to `layout/nav.tsx`.
 7. Add locale keys to both `en` and `uk`; a unit test fails when the two files have different keys.
 
-`features/examples` is the reference for a paginated list plus a full-page editor with a markdown field; `features/users` for a table with modal forms; `features/uploads` for file upload.
+`features/examples` is the reference for a paginated list plus a full-page editor with a markdown field; `features/users` for a table with modal forms.
 
 ## API client
 - `api.get/post/put/patch/del<T>()` return the response's `data` field.

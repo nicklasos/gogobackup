@@ -18,7 +18,6 @@ import (
 	"app/internal/db"
 	"app/internal/logger"
 	"app/internal/mail"
-	"app/internal/redis"
 	"app/internal/scheduler"
 	"app/internal/server"
 
@@ -73,12 +72,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	redisClient, err := redis.NewConnection(cfg)
-	if err != nil {
-		log.Fatal("Failed to connect to Redis:", err)
-	}
-	defer redisClient.Close()
-
 	logger, err := logger.New(logger.Config{
 		Level:     cfg.LogLevel,
 		Format:    cfg.LogFormat,
@@ -117,28 +110,25 @@ func main() {
 		DB:      database,
 		Queries: queries,
 		Tx:      db.NewTxRunner(database),
-		Cache:   cache.NewRedisCache(redisClient, cfg.AppName+":"),
+		Cache:   cache.NewMemoryCache(),
 		Logger:  logger,
 		Mail:    mail.NewService(cfg, logger),
 		Api:     r.Group("/api/v1"),
 	}
 
+	// ENABLE_SCHEDULER=false when bin/gogo-cron runs the jobs as its own process instead
 	if cfg.EnableScheduler {
-		deps := &scheduler.Dependencies{
+		cronScheduler := scheduler.NewScheduler(&scheduler.Dependencies{
 			Config:  cfg,
 			DB:      database,
 			Queries: app.Queries,
 			Logger:  logger,
-		}
-
-		cronScheduler := scheduler.NewScheduler(deps)
+		})
 		if err := cronScheduler.RegisterJobs(); err != nil {
 			logger.Error("Failed to register scheduler jobs", "error", err)
 			log.Fatal("Failed to register scheduler jobs:", err)
 		}
-
 		cronScheduler.Start()
-		logger.Info("Scheduler started in integrated mode")
 		defer cronScheduler.Stop()
 	}
 

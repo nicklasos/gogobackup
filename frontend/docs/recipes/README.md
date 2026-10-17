@@ -10,9 +10,8 @@ how to check the result. They are written for coding agents and work as checklis
 | [add-e2e-test.md](add-e2e-test.md) | A flow needs a Playwright test |
 
 `src/features/examples` is the reference feature (paginated list, full-page editor, markdown field,
-policy). `src/features/users` is the reference for a table with modal forms, `src/features/uploads`
-for file upload. When a recipe and the code disagree, the code wins, and the recipe should be fixed
-in the same change.
+policy). `src/features/users` is the reference for a table with modal forms. When a recipe and the
+code disagree, the code wins, and the recipe should be fixed in the same change.
 
 Rules that apply to every recipe:
 

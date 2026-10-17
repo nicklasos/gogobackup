@@ -27,19 +27,6 @@ type RefreshToken struct {
 	IsRevoked sql.NullBool `db:"is_revoked" json:"is_revoked"`
 }
 
-type Upload struct {
-	ID               int64          `db:"id" json:"id"`
-	UserID           int64          `db:"user_id" json:"user_id"`
-	FolderID         int64          `db:"folder_id" json:"folder_id"`
-	Type             string         `db:"type" json:"type"`
-	RelativePath     string         `db:"relative_path" json:"relative_path"`
-	OriginalFilename string         `db:"original_filename" json:"original_filename"`
-	FileSize         int64          `db:"file_size" json:"file_size"`
-	MimeType         sql.NullString `db:"mime_type" json:"mime_type"`
-	CreatedAt        sql.NullTime   `db:"created_at" json:"created_at"`
-	UpdatedAt        sql.NullTime   `db:"updated_at" json:"updated_at"`
-}
-
 type User struct {
 	ID              int64        `db:"id" json:"id"`
 	Email           string       `db:"email" json:"email"`

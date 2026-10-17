@@ -51,9 +51,7 @@ function send(method: string, path: string, body: unknown, options: RequestOptio
   if (token) headers.Authorization = `Bearer ${token}`
 
   let payload: BodyInit | undefined
-  if (body instanceof FormData) {
-    payload = body
-  } else if (body !== undefined) {
+  if (body !== undefined) {
     headers['Content-Type'] = 'application/json'
     payload = JSON.stringify(body)
   }
@@ -101,5 +99,4 @@ export const api = {
   put: <T>(path: string, body?: unknown, options?: RequestOptions) => request<T>('PUT', path, body, options),
   patch: <T>(path: string, body?: unknown, options?: RequestOptions) => request<T>('PATCH', path, body, options),
   del: <T>(path: string, options?: RequestOptions) => request<T>('DELETE', path, undefined, options),
-  postForm: <T>(path: string, form: FormData, options?: RequestOptions) => request<T>('POST', path, form, options),
 }

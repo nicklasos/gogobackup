@@ -51,11 +51,3 @@
     hour: "{{ backup_db_hour }}"
     minute: "{{ backup_db_minute }}"
     job: "{{ backup_dir }}/backup_db.sh >> {{ backup_dir }}/logs/backup_db.log 2>&1"
-
-- name: Schedule the uploaded files backup
-  ansible.builtin.cron:
-    name: "{{ app_name }} files backup"
-    user: "{{ app_user }}"
-    hour: "{{ backup_files_hour }}"
-    minute: "{{ backup_files_minute }}"
-    job: "{{ backup_dir }}/backup_images.sh >> {{ backup_dir }}/logs/backup_images.log 2>&1"

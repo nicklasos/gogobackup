@@ -126,7 +126,7 @@ export class DatabaseHelper {
       .run(count, userId, prefix)
   }
 
-  /** Examples, uploads and refresh tokens go with their user (ON DELETE CASCADE). */
+  /** Examples and refresh tokens go with their user (ON DELETE CASCADE). */
   async cleanupTestData(): Promise<void> {
     this.connection().exec(`DELETE FROM users WHERE email LIKE 'e2e-%@example.com'`)
   }

@@ -1,11 +1,11 @@
 # Gogobackup
 
 Built from [Gogokit](https://github.com/nicklasos/gogokit): a Go API (`backend/`), a React admin panel
-(`frontend/`), database and file backups (`backup/`) and Ansible deployment (`deploy/`).
+(`frontend/`), database backups (`backup/`) and Ansible deployment (`deploy/`).
 
 ## Run it locally
 
-You need Go 1.25+, Node.js 22+, Docker (for Redis and a mail catcher) and Make.
+You need Go 1.25+, Node.js 22+, Docker (for a mail catcher) and Make.
 The database is SQLite: a file under `backend/data/`, created on first run.
 
 ```bash
@@ -15,7 +15,7 @@ git clone git@github.com:nicklasos/gogobackup.git && cd gogobackup
 cd backend
 cp .env.example .env
 make sqlc-install air-install   # once: sqlc, air
-make up                                         # Redis and a mail catcher in Docker
+make up                                         # a mail catcher in Docker
 make migrate-up
 make seed                                       # admin@example.com / password123, and sample data
 make dev                                        # http://localhost:8181
@@ -50,7 +50,7 @@ $EDITOR group_vars/all/main.yml                          # app name, domain, rep
 ansible-playbook provision.yml
 ```
 
-That installs Redis, Go, Node.js, nginx, supervisor and the sqlite3 CLI, creates the directories
+That installs Go, Node.js, nginx, supervisor and the sqlite3 CLI, creates the directories
 (the SQLite database lives in `shared/database/`), builds the API and the admin panel, obtains a
 certificate, and schedules the backups. To release new code afterwards:
 
@@ -60,7 +60,7 @@ ansible-playbook deploy.yml                              # or, from the root: ma
 
 ### A server that already runs other things
 
-When Go, Node.js, nginx, Redis and supervisor are already there, `install.yml` adds only
+When Go, Node.js, nginx and supervisor are already there, `install.yml` adds only
 this application: the checkout in `/var/www/<app>`, the two `.env` files, one supervisor program and
 one nginx site. It installs no packages. The migrations create the SQLite database. Put `jwt_secret` in
 `secrets.yml`, then:

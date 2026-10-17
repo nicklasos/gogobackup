@@ -18,7 +18,7 @@ type App struct {
 	DB      *sql.DB
 	Queries *db.Queries
 	Tx      *db.TxRunner
-	Cache   cache.Cache
+	Cache   *cache.MemoryCache
 	Logger  *logger.Logger
 	Mail    mail.Sender
 	Api     *gin.RouterGroup

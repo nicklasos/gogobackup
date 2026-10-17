@@ -4,9 +4,6 @@ nginx_hide_server_header: true
 nginx_sites_dir: /etc/nginx
 letsencrypt_live_dir: /etc/letsencrypt/live
 
-# The API accepts uploads up to 50 MB; nginx must let them through
-nginx_client_max_body_size: 55m
-
 # https://www.cloudflare.com/ips/ — refresh this list when Cloudflare changes it
 cloudflare_ips:
   - 173.245.48.0/20

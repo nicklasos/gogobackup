@@ -38,17 +38,6 @@ jobs:
       run:
         working-directory: frontend
 
-    services:
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-
     env:
       CI: "true"
 
@@ -73,12 +62,9 @@ jobs:
           cat > .env <<ENV
           DATABASE_PATH=$TEST_DATABASE_PATH
           TEST_DATABASE_PATH=$TEST_DATABASE_PATH
-          REDIS_URL=redis://localhost:6379/0
           JWT_SECRET=ci-only-secret-not-used-anywhere-else
           APP_ENV=test
           LOG_OUTPUT=stdout
-          UPLOAD_FOLDER=./uploads
-          ENABLE_SCHEDULER=false
           ENV
 
       - name: Frontend environment
