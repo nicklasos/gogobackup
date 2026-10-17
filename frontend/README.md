@@ -116,7 +116,7 @@ make playwright-browsers
 | `PORT` | Dev server port (default `5173`) |
 | `TEST_FRONTEND_PORT` | E2E Vite port (default `5175`) |
 | `TEST_BACKEND_PORT` | E2E gogo port (default `8184`) |
-| `VITE_E2E_API_BASE_URL` | API base used by E2E helpers (default `http://localhost:8184/api/v1`) |
+| `VITE_E2E_API_BASE_URL` | API base used by E2E helpers (default `http://localhost:$TEST_BACKEND_PORT/api/v1`) |
 | `TEST_DATABASE_PATH` | gogo's SQLite test database for E2E seeding, relative to `../backend`; the file name must end in `_test.db`. Read from `../backend/.env` unless set here |
 
 The E2E ports are specific to this project so Playwright never attaches to another project's servers. Change them when you copy the skeleton.

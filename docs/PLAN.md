@@ -1,6 +1,6 @@
 # Gogobackup plan
 
-Gogobackup replaces the shell scripts in `backup/` with one service and a web page. You add storages and backup plans in the browser. The service runs each plan on its schedule, keeps the history, prunes old archives and restores them on request. It runs on the same server as the projects it backs up, so it has the dump tools and the network access those projects already have.
+Gogobackup replaces the backup shell scripts this repository started with by one service and a web page. You add storages and backup plans in the browser. The service runs each plan on its schedule, keeps the history, prunes old archives and restores them on request. It runs on the same server as the projects it backs up, so it has the dump tools and the network access those projects already have.
 
 This file is the plan. Each phase is one pull request that ends with `make test` green.
 
@@ -17,7 +17,7 @@ This file is the plan. Each phase is one pull request that ends with `make test`
 | 7 | Restore | Pick an archive, pick a target, watch the restore log |
 | 8 | Self-deploy | `deploy/` installs Gogobackup and Gogobackup backs up its own database |
 
-Phase 1 also removed the gopulse monitoring dashboard. Phase 2 comes before the features on purpose. The `uploads` module and Redis existed for the template, not for a backup service. Removing them first means phases 3 to 7 build on a smaller base. The scheduler runs inside the API by default; `ENABLE_SCHEDULER=false` (`scheduler_in_api: false` in deploy) moves it to the separate `cmd/cron` process. Phase 4 removed the `examples` demo module before adding plans; `internal/storages` is the reference module since.
+Phase 1 also removed the gopulse monitoring dashboard. Phase 2 comes before the features on purpose. The `uploads` module and Redis existed for the template, not for a backup service. Removing them first means phases 3 to 7 build on a smaller base. The scheduler runs inside the API by default; `ENABLE_SCHEDULER=false` (`scheduler_in_api: false` in deploy) moves it to the separate `cmd/cron` process. Phase 4 removed the `examples` demo module before adding plans; `internal/storages` is the reference module since. Phase 8 removed the shell scripts: every deploy runs `gogo-cli self-backup`, which makes sure the plan "Gogobackup itself" backs up the service's own database, instead of their cron job.
 
 ## Data model
 

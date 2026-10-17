@@ -30,7 +30,15 @@ ln -s /etc/nginx/sites-available/gogobackup.conf /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 
 cd backend && ./bin/gogo-cli create-user --email you@example.com --password "a-long-password"
+
+# The plan "Gogobackup itself": the database every day at 03:15 UTC, into shared/backups
+install -d -o www-data -g www-data -m 750 /var/www/gogobackup/shared/backups
+sudo -u www-data ./bin/gogo-cli self-backup --dir /var/www/gogobackup/shared/backups
 ```
+
+`self-backup` is safe to run again: it finds the plan by the database it backs up and leaves it as it is.
+The archives share the server's disk, so add an S3 or GCS storage to the plan in the panel, and keep
+`ENCRYPTION_KEY` somewhere off the server ([README.md](README.md#backing-up-gogobackup-itself)).
 
 The empty `VITE_API_BASE_URL` makes the panel call its own origin, where nginx forwards `/api` to the API.
 The examples assume the API on port 8181, the user `www-data` and Cloudflare in front; change the port in

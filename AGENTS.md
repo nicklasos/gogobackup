@@ -1,7 +1,7 @@
 # Gogobackup – Agent Guide
 
-Gogobackup is built on [Gogokit](https://github.com/nicklasos/gogokit): a Go API, a React admin panel,
-backups and server provisioning in one repository.
+Gogobackup is built on [Gogokit](https://github.com/nicklasos/gogokit): a Go API, a React admin panel
+and server provisioning in one repository.
 
 ## Layout
 
@@ -9,12 +9,11 @@ backups and server provisioning in one repository.
 |---|---|
 | `backend/` | Go API: Gin, SQLite through sqlc, an in-process cache and scheduler, JWT auth with roles |
 | `frontend/` | Admin panel: React, TypeScript, Ant Design, TanStack Query |
-| `backup/` | Shell scripts that back up a database or a folder of files; deploy schedules only the database one |
 | `deploy/` | Ansible: provision a server or install on an existing one, deploy and update the application |
 
 Each folder has its own `AGENTS.md` (or README) with its conventions. Read the one for the folder you are working in.
 
-This project owns all four folders: edit them directly. There is no sync with the Gogokit template.
+This project owns all three folders: edit them directly. There is no sync with the Gogokit template.
 
 ## Working across the folders
 
@@ -24,8 +23,8 @@ This project owns all four folders: edit them directly. There is no sync with th
   are in `backend/docs/recipes/`.
 - The frontend's E2E suite starts the API from `../backend`, so `make test` in `frontend/` tests both halves together.
 - `deploy/` reads nothing from the other folders except their structure: `backend/cmd/{api,cron,cli}`,
-  `backend/migrations`, `frontend/dist` and `backup/backup_db.sh`. Renaming
-  any of those means updating `deploy/roles/`.
+  `backend/migrations` and `frontend/dist`, and the `gogo-cli self-backup` command it runs on every
+  deploy. Renaming any of those means updating `deploy/roles/` and `deploy/install.yml`.
 
 ## Commands
 
