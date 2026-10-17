@@ -75,13 +75,6 @@ Import with the `@/` alias. A feature imports from `api`, `auth`, `layout` and `
 - Route guards (`RequireRole`) are for "this page is for these roles". A policy is for rules that depend on the record.
 - Every policy has cases in `src/features/policies.test.ts`, the same cases as the API's policy test.
 
-## Markdown
-- `shared/components/markdown/MarkdownEditor` is a WYSIWYG editor whose value is markdown text. Use it as a controlled field: `<Form.Item name="body"><MarkdownEditor testId="..." /></Form.Item>`. It loads its code (about 600 kB) only when rendered.
-- `MarkdownViewer` renders markdown. Raw HTML in the content is shown as text, never executed.
-- `markdownToPlainText(md, max)` gives a short plain preview for table cells and cards.
-- The backend stores the markdown as plain text; there is nothing markdown-specific on the API side.
-- In E2E, the writing area is `getByTestId('<testId>').locator('[contenteditable="true"]')`.
-
 ## Crashes and unknown URLs
 - `AppShell` wraps the routed page in an `ErrorBoundary` keyed by path and a `Suspense`: a render error shows `CrashScreen` in the content area, and navigating elsewhere clears it. `App` has a second, full-screen boundary for everything else.
 - A boundary only catches render errors. Failed requests are handled by the query layer (see Errors).

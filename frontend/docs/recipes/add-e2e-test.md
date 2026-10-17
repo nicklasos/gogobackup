@@ -32,7 +32,6 @@ Put locators and multi-step actions in `tests/e2e/pages/<Name>Page.ts`, extendin
 | A row's button | `row.locator('[data-testid^="edit-order-button-"]')` |
 | The delete confirmation | `page.locator('[data-testid^="confirm-delete-order-button-"]')` |
 | A field in error | `expect(input).toHaveAttribute('aria-invalid', 'true')` |
-| The markdown editor's text area | `page.getByTestId('<id>').locator('[contenteditable="true"]')` |
 
 Never assert on visible copy (it is translated) or on Ant Design class names. A `Modal` or `Result` wrapper
 has no visible box of its own: assert on a control inside it.

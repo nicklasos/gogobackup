@@ -35,7 +35,6 @@ Page skeleton: `PageStack` > `Card` > `PageHeader` (title, `mainAction`) + conte
 - **Saving**: in the mutation's `onError`, `applyFormErrors(form, t, error, FIELDS)` puts server validation
   errors under their fields and returns the message for anything else. Mark that mutation `meta: { silent: true }`
   so the global toast does not repeat it.
-- **Rich text**: `MarkdownEditor` as a form field, `MarkdownViewer` to show it, `markdownToPlainText` for previews.
 - Pages call hooks, never `api` or `fetch`.
 - Style with Ant Design components and `theme.useToken()`; no literal colours.
 

@@ -75,7 +75,6 @@ The E2E run starts its own gogo API against the test database and its own Vite s
 - **Profile**: name, email, language and password
 - **Backup plans**: an editor with a source picker, a pasted connection URL filled into the fields, schedule rows with a live next-run line, retention switches and a connection test
 - **Storages**: a server-paginated list and an editor with a kind picker, a connection test and an unsaved-changes guard, as the pattern to copy
-- **Markdown editor**: a WYSIWYG editor (headings, lists, quotes, links, phone and email links) that saves markdown, plus a safe viewer
 - **Generated API types**: `make api-types` turns the backend's OpenAPI file into `src/api/schema.ts`
 - **Typed API client**: `ApiError`, server validation errors mapped onto form fields, translated error keys
 - **Resilient**: a page that crashes shows an error screen inside the shell instead of blanking the app, unknown URLs get a not-found page, and every page is a lazily loaded chunk
