@@ -63,6 +63,7 @@ jobs:
           DATABASE_PATH=$TEST_DATABASE_PATH
           TEST_DATABASE_PATH=$TEST_DATABASE_PATH
           JWT_SECRET=ci-only-secret-not-used-anywhere-else
+          ENCRYPTION_KEY=Y2ktb25seS1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcyE=
           APP_ENV=test
           LOG_OUTPUT=stdout
           ENV

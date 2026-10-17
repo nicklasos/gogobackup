@@ -1,5 +1,6 @@
 import {
   AppstoreOutlined,
+  CloudServerOutlined,
   CrownOutlined,
   DashboardOutlined,
   SafetyCertificateOutlined,
@@ -25,6 +26,14 @@ export const MAIN_NAV: NavItem[] = [
     testId: 'nav-examples',
     roles: 'all',
     path: '/examples',
+  },
+  {
+    key: 'storages',
+    labelKey: 'navigation.storages',
+    icon: <CloudServerOutlined />,
+    testId: 'nav-storages',
+    roles: [ROLE_ADMIN],
+    path: '/storages',
   },
   {
     key: 'users',

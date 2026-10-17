@@ -2,7 +2,7 @@
 // seeding a development database. Every factory takes options for the fields a caller
 // cares about and fills in the rest:
 //
-//	create := factory.New(t, conn)
+//	create := factory.New(t, conn, secrets)
 //	user := create.User()
 //	admin := create.User(factory.WithRoles("admin"), factory.WithEmail("boss@example.com"))
 //	example := create.Example(user.ID, factory.WithTitle("Release notes"))
@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"sync/atomic"
 	"time"
+
+	"app/internal/secretbox"
 )
 
 // DefaultPassword is the password of every user a factory creates, unless WithPassword is used.
@@ -33,14 +35,16 @@ type DB interface {
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
-// Factory creates records on one connection and reports failures to one TB.
+// Factory creates records on one connection and reports failures to one TB. secrets seals
+// the credentials of the storages it creates, as the API does.
 type Factory struct {
-	t    TB
-	conn DB
+	t       TB
+	conn    DB
+	secrets *secretbox.Box
 }
 
-func New(t TB, conn DB) *Factory {
-	return &Factory{t: t, conn: conn}
+func New(t TB, conn DB, secrets *secretbox.Box) *Factory {
+	return &Factory{t: t, conn: conn, secrets: secrets}
 }
 
 var sequence atomic.Int64

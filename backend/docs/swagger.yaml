@@ -17,6 +17,23 @@ definitions:
     - error_key
     - status
     type: object
+  app_internal_errs.ValidationErrorResponse:
+    properties:
+      error_key:
+        type: string
+      errors:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        type: object
+      message:
+        type: string
+    required:
+    - error_key
+    - errors
+    - message
+    type: object
   internal.MessageData:
     properties:
       message:
@@ -267,6 +284,210 @@ definitions:
         type: string
     required:
     - title
+    type: object
+  internal_storages.GCSConfig:
+    properties:
+      bucket:
+        type: string
+      prefix:
+        type: string
+    required:
+    - bucket
+    - prefix
+    type: object
+  internal_storages.GCSInput:
+    properties:
+      bucket:
+        type: string
+      credentials_json:
+        type: string
+      prefix:
+        type: string
+    required:
+    - bucket
+    type: object
+  internal_storages.Kind:
+    enum:
+    - local
+    - s3
+    - gcs
+    type: string
+    x-enum-varnames:
+    - KindLocal
+    - KindS3
+    - KindGCS
+  internal_storages.LocalConfig:
+    properties:
+      path:
+        type: string
+    required:
+    - path
+    type: object
+  internal_storages.LocalInput:
+    properties:
+      path:
+        type: string
+    required:
+    - path
+    type: object
+  internal_storages.ObjectResponse:
+    properties:
+      is_dir:
+        type: boolean
+      modified_at:
+        type: string
+      name:
+        type: string
+      size:
+        type: integer
+    required:
+    - is_dir
+    - name
+    - size
+    type: object
+  internal_storages.ObjectsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_storages.ObjectResponse'
+        type: array
+    required:
+    - data
+    type: object
+  internal_storages.PaginatedStoragesResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_storages.StorageResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/internal.PaginationMeta'
+    required:
+    - data
+    - pagination
+    type: object
+  internal_storages.S3Config:
+    properties:
+      bucket:
+        type: string
+      endpoint:
+        type: string
+      prefix:
+        type: string
+      region:
+        type: string
+      use_path_style:
+        type: boolean
+    required:
+    - bucket
+    - endpoint
+    - prefix
+    - region
+    - use_path_style
+    type: object
+  internal_storages.S3Input:
+    properties:
+      access_key_id:
+        type: string
+      bucket:
+        type: string
+      endpoint:
+        type: string
+      prefix:
+        type: string
+      region:
+        type: string
+      secret_access_key:
+        type: string
+      use_path_style:
+        type: boolean
+    required:
+    - bucket
+    type: object
+  internal_storages.StorageDataResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_storages.StorageResponse'
+    required:
+    - data
+    type: object
+  internal_storages.StorageRequest:
+    properties:
+      gcs:
+        $ref: '#/definitions/internal_storages.GCSInput'
+      kind:
+        allOf:
+        - $ref: '#/definitions/internal_storages.Kind'
+        enum:
+        - local
+        - s3
+        - gcs
+      local:
+        $ref: '#/definitions/internal_storages.LocalInput'
+      name:
+        maxLength: 100
+        type: string
+      s3:
+        $ref: '#/definitions/internal_storages.S3Input'
+    required:
+    - kind
+    - name
+    type: object
+  internal_storages.StorageResponse:
+    properties:
+      created_at:
+        type: string
+      gcs:
+        $ref: '#/definitions/internal_storages.GCSConfig'
+      id:
+        type: integer
+      kind:
+        allOf:
+        - $ref: '#/definitions/internal_storages.Kind'
+        enum:
+        - local
+        - s3
+        - gcs
+      local:
+        $ref: '#/definitions/internal_storages.LocalConfig'
+      name:
+        type: string
+      s3:
+        $ref: '#/definitions/internal_storages.S3Config'
+      secret_set:
+        type: boolean
+      updated_at:
+        type: string
+    required:
+    - created_at
+    - id
+    - kind
+    - name
+    - secret_set
+    - updated_at
+    type: object
+  internal_storages.TestResultDataResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_storages.TestResultResponse'
+    required:
+    - data
+    type: object
+  internal_storages.TestResultResponse:
+    properties:
+      error:
+        type: string
+      ok:
+        type: boolean
+      step:
+        enum:
+        - connect
+        - write
+        - read
+        - delete
+        type: string
+    required:
+    - ok
     type: object
   internal_users.CreateUserRequest:
     properties:
@@ -912,6 +1133,373 @@ paths:
       summary: Update example
       tags:
       - examples
+  /api/v1/storages:
+    get:
+      consumes:
+      - application/json
+      description: Every storage, without credentials. Admins only.
+      parameters:
+      - default: 1
+        description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 'Page size (default: 20, min: 1, max: 100)'
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_storages.PaginatedStoragesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List storages (paginated)
+      tags:
+      - storages
+    post:
+      consumes:
+      - application/json
+      description: Send the block named by kind (local, s3 or gcs) and no other. S3
+        and GCS need credentials. Admins only.
+      parameters:
+      - description: Storage
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_storages.StorageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_storages.StorageDataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ValidationErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create storage
+      tags:
+      - storages
+  /api/v1/storages/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes the storage from Gogobackup. The files in it are not touched.
+        Admins only.
+      parameters:
+      - description: Storage ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete storage
+      tags:
+      - storages
+    get:
+      consumes:
+      - application/json
+      description: 'A storage without its credentials: secret_set says whether they
+        are stored. Admins only.'
+      parameters:
+      - description: Storage ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_storages.StorageDataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get storage
+      tags:
+      - storages
+    put:
+      consumes:
+      - application/json
+      description: Credentials left blank keep the stored ones, unless the kind changes.
+        Admins only.
+      parameters:
+      - description: Storage ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Storage
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_storages.StorageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_storages.StorageDataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ValidationErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update storage
+      tags:
+      - storages
+  /api/v1/storages/{id}/objects:
+    get:
+      consumes:
+      - application/json
+      description: The folders, then the files, directly under prefix (empty for the
+        top). A storage that cannot be reached is a 502 with the reason in details.reason.
+        Admins only.
+      parameters:
+      - description: Storage ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Folder inside the storage, such as nightly/2026/
+        in: query
+        name: prefix
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_storages.ObjectsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Browse a storage
+      tags:
+      - storages
+  /api/v1/storages/{id}/test:
+    post:
+      consumes:
+      - application/json
+      description: Writes a small object, reads it back and deletes it. A failed test
+        is a 200 whose step says what failed. Admins only.
+      parameters:
+      - description: Storage ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_storages.TestResultDataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Test a storage
+      tags:
+      - storages
+  /api/v1/storages/test:
+    post:
+      consumes:
+      - application/json
+      description: Writes a small object, reads it back and deletes it. A failed test
+        is a 200 whose step says what failed. On an edit form, pass storage_id so
+        blank credentials are taken from that storage. Admins only.
+      parameters:
+      - description: The storage being edited, whose credentials a blank form uses
+        in: query
+        name: storage_id
+        type: integer
+      - description: Storage
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_storages.StorageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_storages.TestResultDataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_internal_errs.ValidationErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/app_internal_errs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Test an unsaved storage
+      tags:
+      - storages
   /api/v1/users:
     get:
       consumes:

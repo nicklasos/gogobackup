@@ -36,6 +36,14 @@ const (
 	ErrKeyExampleInvalidID = "examples.invalid_id"
 )
 
+// Storages error keys
+const (
+	ErrKeyStoragesNotFound      = "storages.not_found"
+	ErrKeyStoragesNameTaken     = "storages.name_taken"
+	ErrKeyStoragesInvalidPrefix = "storages.invalid_prefix"
+	ErrKeyStoragesUnreachable   = "storages.unreachable"
+)
+
 // Validation error keys
 const (
 	ErrKeyValidationFailed       = "validation.failed"

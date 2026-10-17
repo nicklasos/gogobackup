@@ -47,7 +47,7 @@ cd deploy
 ansible-galaxy collection install -r requirements.yml
 
 cp inventory/hosts.example.yml inventory/hosts.yml          # the server's address and SSH user
-cp secrets.example.yml group_vars/all/secrets.yml           # generate each value: openssl rand -hex 32
+cp secrets.example.yml group_vars/all/secrets.yml           # jwt_secret: openssl rand -hex 32, encryption_key: openssl rand -base64 32
 $EDITOR group_vars/all/main.yml                             # app_name, domain, repo_url, tls_mode, ...
 
 ansible-playbook provision.yml
@@ -84,7 +84,12 @@ All in `group_vars/all/main.yml`, each with a comment. The ones you will set for
 | `mail_host` and friends | SMTP, for password reset and verification emails |
 | `backup_storage` | `local`, `gcs` or `local,gcs` |
 
-Secrets (`group_vars/all/secrets.yml`): `jwt_secret`, `mail_password`.
+Secrets (`group_vars/all/secrets.yml`): `jwt_secret`, `encryption_key`, `mail_password`.
+
+`encryption_key` encrypts the storage credentials (S3 keys, GCS service-account keys) in the database.
+Keep a copy somewhere other than the server, next to your other secrets. If it is lost or changed, the
+stored credentials cannot be decrypted: every S3 and GCS storage fails its connection test until its keys
+are entered again. Local storages keep working.
 
 ### TLS modes
 
@@ -123,7 +128,7 @@ On your machine:
 ```bash
 cd deploy
 cp inventory/hosts.example.yml inventory/hosts.yml          # address, and domain / api_port / tls_mode for this host
-cp secrets.example.yml group_vars/all/secrets.yml           # jwt_secret
+cp secrets.example.yml group_vars/all/secrets.yml           # jwt_secret, encryption_key
 ansible-playbook install.yml                                # or, from the project root: make install-remote
 ```
 

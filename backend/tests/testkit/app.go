@@ -30,6 +30,7 @@ import (
 	"app/internal/logger"
 	"app/internal/mail"
 	"app/internal/middleware"
+	"app/internal/secretbox"
 	"app/internal/server"
 	"app/tests"
 
@@ -38,6 +39,9 @@ import (
 )
 
 const JWTSecret = "test-secret-key"
+
+// EncryptionKey seals storage credentials in tests.
+var EncryptionKey = []byte("testkit-encryption-key-32-bytes!")
 
 type App struct {
 	// Client sends requests without a token. Use As for an authenticated one.
@@ -58,6 +62,9 @@ type App struct {
 	// Mail collects every message the application sent during the test
 	Mail *mail.MemorySender
 
+	// Secrets seals and opens stored credentials with the test key
+	Secrets *secretbox.Box
+
 	t      *testing.T
 	server *httptest.Server
 }
@@ -76,9 +83,10 @@ func New(t *testing.T, configure ...func(*config.Config)) *App {
 	}
 
 	cfg := &config.Config{
-		JWTSecret:   JWTSecret,
-		AppName:     "TestApp",
-		FrontendURL: "http://localhost:5173",
+		JWTSecret:     JWTSecret,
+		EncryptionKey: EncryptionKey,
+		AppName:       "TestApp",
+		FrontendURL:   "http://localhost:5173",
 
 		AllowRegistration: true,
 		AuthRateLimit:     true,
@@ -87,17 +95,22 @@ func New(t *testing.T, configure ...func(*config.Config)) *App {
 	for _, fn := range configure {
 		fn(cfg)
 	}
+	secrets, err := secretbox.New(cfg.EncryptionKey)
+	if err != nil {
+		t.Fatalf("testkit: %v", err)
+	}
 
 	app := &App{
 		Ctx:      context.Background(),
 		DB:       conn,
 		Queries:  db.New(conn),
-		Create:   factory.New(t, conn),
+		Create:   factory.New(t, conn, secrets),
 		TxRunner: db.NewTxRunner(conn),
 		Config:   cfg,
 		Logger:   log,
 		Cache:    cache.NewMemoryCache(),
 		Mail:     mail.NewMemorySender(),
+		Secrets:  secrets,
 		t:        t,
 	}
 	app.Client = &Client{app: app}
@@ -155,6 +168,7 @@ func (a *App) baseURL() string {
 		Cache:   a.Cache,
 		Logger:  a.Logger,
 		Mail:    a.Mail,
+		Secrets: a.Secrets,
 		Api:     router.Group("/api/v1"),
 	})
 

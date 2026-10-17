@@ -64,6 +64,7 @@ func TestExampleService_GetExample(t *testing.T) {
 - `app.Create` — the factories, below
 - `app.Ctx`, `app.Queries`, `app.DB` (`*sql.DB`, for raw SQL with `?` placeholders), `app.TxRunner`, `app.Config`, `app.Logger`, `app.Cache` — what a service constructor asks for
 - `app.Mail.Sent()` — every email the application sent during the test
+- `app.Secrets` — seals and opens stored credentials with the test key; `testkit.NewFakeS3(t)` and `testkit.NewFakeGCS(t)` are offline storage servers
 - `app.Token(user)`, `testkit.Actor(user)`, `testkit.JPEG`, `testkit.PDF`
 
 ### Requests (`tests/testkit/request.go`)
@@ -98,6 +99,7 @@ Every `Assert` stops the test on failure, prints the response body, and returns 
 | `app.Create.User()` | `WithEmail`, `WithName`, `WithPassword`, `WithRoles`, `Admin()`, `SuperAdmin()`, `Unverified()` |
 | `app.Create.Example(userID)` | `WithTitle`, `WithDescription` |
 | `app.Create.Examples(userID, count, prefix)` | |
+| `app.Create.Storage()` | `WithStorageName`, `LocalStorage(path)`, `S3Storage(config, keyID, secret)`, `GCSStorage(config, credentialsJSON)` |
 
 A user has the password `factory.DefaultPassword`. Tests never write `INSERT` by hand: a new table gets a factory.
 

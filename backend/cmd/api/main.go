@@ -19,6 +19,7 @@ import (
 	"app/internal/logger"
 	"app/internal/mail"
 	"app/internal/scheduler"
+	"app/internal/secretbox"
 	"app/internal/server"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -71,6 +72,13 @@ func main() {
 	if err := cfg.ValidateJWTSecret(); err != nil {
 		log.Fatal(err)
 	}
+	if err := cfg.ValidateEncryptionKey(); err != nil {
+		log.Fatal(err)
+	}
+	secrets, err := secretbox.New(cfg.EncryptionKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	logger, err := logger.New(logger.Config{
 		Level:     cfg.LogLevel,
@@ -93,6 +101,9 @@ func main() {
 	if cfg.JWTSecretIsWeak() {
 		logger.Warn("JWT_SECRET is weak: fine for local development, refused when APP_ENV=production")
 	}
+	if cfg.EncryptionKeyIsInsecure() {
+		logger.Warn("ENCRYPTION_KEY is not set: storage credentials are sealed with the public development key. Set it before storing real credentials (openssl rand -base64 32); refused when APP_ENV=production")
+	}
 
 	database, err := db.NewConnection(cfg)
 	if err != nil {
@@ -113,6 +124,7 @@ func main() {
 		Cache:   cache.NewMemoryCache(),
 		Logger:  logger,
 		Mail:    mail.NewService(cfg, logger),
+		Secrets: secrets,
 		Api:     r.Group("/api/v1"),
 	}
 

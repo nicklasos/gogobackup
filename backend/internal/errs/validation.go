@@ -44,9 +44,12 @@ func FormatValidationError(err error) ValidationErrorResponse {
 	}
 
 	var validatorErrors validator.ValidationErrors
-	if errors.As(err, &validatorErrors) {
+	var fields Fields
+	if errors.As(err, &fields) {
+		validationErrors = fields
+	} else if errors.As(err, &validatorErrors) {
 		for _, fieldError := range validatorErrors {
-			fieldName := fieldError.Field()
+			fieldName := fieldPath(fieldError)
 			validationErrors[fieldName] = append(validationErrors[fieldName], GetFieldValidationErrorKey(fieldName, fieldError.Tag()))
 		}
 	} else {
@@ -58,6 +61,31 @@ func FormatValidationError(err error) ValidationErrorResponse {
 		ErrorKey: ErrKeyValidationFailed,
 		Errors:   validationErrors,
 	}
+}
+
+// Fields is a validation failure found after binding, such as a name that is already taken,
+// in the same shape as a binding failure: field path to error keys.
+type Fields map[string][]string
+
+func (f Fields) Error() string { return "validation failed" }
+
+// Add records a failed rule on a field: validation.{field}.{rule}.
+func (f Fields) Add(field, rule string) {
+	f[field] = append(f[field], GetFieldValidationErrorKey(field, rule))
+}
+
+// FieldError is a Fields with one rule failed on one field: validation.{field}.{rule}.
+func FieldError(field, rule string) Fields {
+	return Fields{field: {GetFieldValidationErrorKey(field, rule)}}
+}
+
+// fieldPath is the field's JSON path in the request: "email", or "s3.bucket" inside a nested block.
+func fieldPath(fieldError validator.FieldError) string {
+	namespace := fieldError.Namespace()
+	if i := strings.Index(namespace, "."); i >= 0 {
+		return namespace[i+1:]
+	}
+	return fieldError.Field()
 }
 
 // handleNonValidationError handles errors that are not validator.ValidationErrors
