@@ -16,11 +16,12 @@ jobs:
         working-directory: backend
 
     # Servers for the tests that dump a real database (tests/integration/database_dumps_test.go)
+    # The tests check these passwords never reach a log, so they must not be words a log uses.
     services:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: pg-ci-secret-41f9
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres"
@@ -28,15 +29,15 @@ jobs:
       mysql:
         image: mysql:8
         env:
-          MYSQL_ROOT_PASSWORD: root
+          MYSQL_ROOT_PASSWORD: my-ci-secret-8c2e
         ports: ["3306:3306"]
         options: >-
-          --health-cmd "mysqladmin ping -h 127.0.0.1 -proot"
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pmy-ci-secret-8c2e"
           --health-interval 5s --health-timeout 5s --health-retries 30
 
     env:
-      TEST_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
-      TEST_MYSQL_URL: mysql://root:root@127.0.0.1:3306/
+      TEST_POSTGRES_URL: postgres://postgres:pg-ci-secret-41f9@127.0.0.1:5432/postgres?sslmode=disable
+      TEST_MYSQL_URL: mysql://root:my-ci-secret-8c2e@127.0.0.1:3306/
 
     steps:
       - uses: actions/checkout@v4
