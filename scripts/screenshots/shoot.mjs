@@ -14,8 +14,12 @@ const frontend = path.join(root, 'frontend')
 const images = path.join(root, 'docs/images')
 const { chromium } = createRequire(path.join(frontend, 'package.json'))('playwright')
 
-// A short path, because the plan's source path shows in the run log and the restore form.
-const tmp = fs.mkdtempSync('/tmp/gogobackup-')
+// The plan's source path and the local storage's folder show in the run log, the storage browser
+// and the restore form, and the API needs them to be real, so the folder gets a short, fixed name
+// instead of a random one. A run starts by clearing what the last one left.
+const tmp = '/tmp/gogobackup-demo'
+fs.rmSync(tmp, { recursive: true, force: true })
+fs.mkdirSync(tmp)
 const children = []
 
 const freePort = () =>
