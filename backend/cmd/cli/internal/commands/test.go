@@ -2,7 +2,6 @@ package commands
 
 import (
 	"app/cmd/cli/internal"
-	"app/internal/example"
 	"context"
 	"flag"
 	"fmt"
@@ -38,11 +37,6 @@ func RunTest(app *internal.CLIApp, args []string) {
 		return
 	}
 	fmt.Println("Database connection successful")
-
-	// Test example service initialization
-	fmt.Println("Testing example service...")
-	_ = example.NewExampleService(app.Queries, nil)
-	fmt.Println("Example service initialized successfully")
 
 	// Test basic query
 	fmt.Println("Testing basic database query...")

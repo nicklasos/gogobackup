@@ -133,11 +133,27 @@ func (s *StorageService) UpdateStorage(ctx context.Context, id int64, req *Stora
 	return &storage, nil
 }
 
+// DeleteStorage removes a storage that no plan uploads to. One that plans use is a 409 whose
+// details list those plans.
 func (s *StorageService) DeleteStorage(ctx context.Context, id int64) error {
 	if _, err := s.GetStorage(ctx, id); err != nil {
 		return err
 	}
-	return errs.WrapDatabaseError(s.queries.DeleteStorage(ctx, id))
+	err := s.queries.DeleteStorage(ctx, id)
+	if !errs.IsForeignKeyViolation(err) {
+		return errs.WrapDatabaseError(err)
+	}
+
+	plans, err := s.queries.ListPlansUsingStorage(ctx, id)
+	if err != nil {
+		return errs.WrapDatabaseError(err)
+	}
+	using := make([]map[string]any, len(plans))
+	for i, plan := range plans {
+		using[i] = map[string]any{"id": plan.ID, "name": plan.Name}
+	}
+	return errs.NewDomainError(errs.ErrKeyStoragesInUse, "Backup plans upload to this storage", http.StatusConflict).
+		WithDetails(map[string]interface{}{"plans": using})
 }
 
 // TestDraft tests a storage form before it is saved. A form that leaves the credentials blank

@@ -5,7 +5,7 @@
 //	create := factory.New(t, conn, secrets)
 //	user := create.User()
 //	admin := create.User(factory.WithRoles("admin"), factory.WithEmail("boss@example.com"))
-//	example := create.Example(user.ID, factory.WithTitle("Release notes"))
+//	storage := create.Storage(factory.LocalStorage("/var/backups"))
 //
 // In a test the factory is already there as app.Create (see tests/testkit).
 // A failure stops the caller through TB, so there is no error to check.

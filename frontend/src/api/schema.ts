@@ -24,6 +24,8 @@ export interface AppInternalErrsValidationErrorResponse {
   message: string;
 }
 
+export type AppInternalStoragesKind = "local" | "s3" | "gcs";
+
 export interface InternalAuthForgotPasswordRequest {
   email: string;
 }
@@ -106,34 +108,6 @@ export interface InternalAuthVerifyEmailRequest {
   token: string;
 }
 
-export interface InternalExampleCreateExampleRequest {
-  description?: string;
-  title: string;
-}
-
-export interface InternalExampleExampleDataResponse {
-  data: InternalExampleExampleResponse;
-}
-
-export interface InternalExampleExampleResponse {
-  created_at: string;
-  description: string;
-  id: number;
-  title: string;
-  updated_at: string;
-  user_id: number;
-}
-
-export interface InternalExamplePaginatedExamplesResponse {
-  data: InternalExampleExampleResponse[];
-  pagination: InternalPaginationMeta;
-}
-
-export interface InternalExampleUpdateExampleRequest {
-  description?: string;
-  title: string;
-}
-
 export interface InternalMessageData {
   message: string;
 }
@@ -148,6 +122,182 @@ export interface InternalPaginationMeta {
   per_page: number;
   total: number;
 }
+
+export interface InternalPlansFilesConfig {
+  excludes: string[];
+  paths: string[];
+}
+
+export interface InternalPlansFilesInput {
+  excludes?: string[];
+  /** @minItems 1 */
+  paths: string[];
+}
+
+export interface InternalPlansMySQLConfig {
+  database: string;
+  host: string;
+  port: number;
+  user: string;
+}
+
+export interface InternalPlansMySQLInput {
+  /** @maxLength 255 */
+  database: string;
+  /** @maxLength 255 */
+  host: string;
+  password?: string;
+  /**
+   * @min 1
+   * @max 65535
+   */
+  port?: number;
+  /** @maxLength 255 */
+  user: string;
+}
+
+export interface InternalPlansPaginatedPlansResponse {
+  data: InternalPlansPlanResponse[];
+  pagination: InternalPaginationMeta;
+}
+
+export interface InternalPlansPlanDataResponse {
+  data: InternalPlansPlanResponse;
+}
+
+export interface InternalPlansPlanRequest {
+  enabled: boolean;
+  files?: InternalPlansFilesInput;
+  /**
+   * @min 0
+   * @max 240
+   */
+  keep_monthly: number;
+  /**
+   * @min 0
+   * @max 520
+   */
+  keep_weekly: number;
+  /**
+   * @min 0
+   * @max 3650
+   */
+  max_age_days: number;
+  mysql?: InternalPlansMySQLInput;
+  /** @maxLength 100 */
+  name: string;
+  postgres?: InternalPlansPostgresInput;
+  schedules: InternalPlansScheduleInput[];
+  source_kind: "postgres" | "mysql" | "sqlite" | "files";
+  sqlite?: InternalPlansSQLiteInput;
+  /** @minItems 1 */
+  storage_ids: number[];
+}
+
+export interface InternalPlansPlanResponse {
+  created_at: string;
+  enabled: boolean;
+  files?: InternalPlansFilesConfig;
+  id: number;
+  keep_monthly: number;
+  keep_weekly: number;
+  max_age_days: number;
+  mysql?: InternalPlansMySQLConfig;
+  name: string;
+  next_run_at?: string | null;
+  postgres?: InternalPlansPostgresConfig;
+  schedules: InternalPlansSchedule[];
+  secret_set: boolean;
+  source_kind: "postgres" | "mysql" | "sqlite" | "files";
+  sqlite?: InternalPlansSQLiteConfig;
+  storages: InternalPlansPlanStorageResponse[];
+  updated_at: string;
+}
+
+export interface InternalPlansPlanStorageResponse {
+  id: number;
+  kind: "local" | "s3" | "gcs";
+  name: string;
+}
+
+export interface InternalPlansPostgresConfig {
+  database: string;
+  host: string;
+  port: number;
+  ssl_mode: "disable" | "require" | "verify-full";
+  user: string;
+}
+
+export interface InternalPlansPostgresInput {
+  /** @maxLength 255 */
+  database: string;
+  /** @maxLength 255 */
+  host: string;
+  password?: string;
+  /**
+   * @min 1
+   * @max 65535
+   */
+  port?: number;
+  ssl_mode?: "disable" | "require" | "verify-full";
+  /** @maxLength 255 */
+  user: string;
+}
+
+export interface InternalPlansSQLiteConfig {
+  path: string;
+}
+
+export interface InternalPlansSQLiteInput {
+  path: string;
+}
+
+export interface InternalPlansSchedule {
+  days: InternalPlansWeekday[];
+  time: string;
+}
+
+export interface InternalPlansScheduleInput {
+  days: ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[];
+  time: string;
+}
+
+export type InternalPlansSourceKind = "postgres" | "mysql" | "sqlite" | "files";
+
+export interface InternalPlansSourceRequest {
+  files?: InternalPlansFilesInput;
+  mysql?: InternalPlansMySQLInput;
+  postgres?: InternalPlansPostgresInput;
+  source_kind: "postgres" | "mysql" | "sqlite" | "files";
+  sqlite?: InternalPlansSQLiteInput;
+}
+
+export interface InternalPlansSourceTestDataResponse {
+  data: InternalPlansSourceTestResponse;
+}
+
+export interface InternalPlansSourceTestResponse {
+  error?: string;
+  ok: boolean;
+  server_version?: string;
+  step?: "connect" | "tool" | "path";
+  tool?: InternalPlansToolResponse;
+}
+
+export interface InternalPlansToolResponse {
+  found: boolean;
+  name: string;
+  version?: string;
+}
+
+export type InternalPlansWeekday =
+  | "mon"
+  | "tue"
+  | "wed"
+  | "thu"
+  | "fri"
+  | "sat"
+  | "sun";
 
 export interface InternalStoragesGCSConfig {
   bucket: string;

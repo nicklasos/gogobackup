@@ -7,37 +7,40 @@ Simple guide for using the `errs` package for consistent error handling.
 ### 1. Define Errors in Services
 
 ```go
-package example
+package storages
 
 import "app/internal/errs"
 
 var (
-    ErrExampleNotFound = errs.NewNotFoundError(errs.ErrKeyExampleNotFound, "Example not found")
+    ErrStorageNotFound = errs.NewNotFoundError(errs.ErrKeyStoragesNotFound, "Storage not found")
 )
 ```
 
 ### 2. Return Errors from Services
 
 ```go
-func (s *Service) GetExample(ctx context.Context, id int64) (*db.Example, error) {
-    example, err := s.queries.GetExampleByID(ctx, id)
-    if err != nil {
-        return nil, ErrExampleNotFound  // Return domain error
+func (s *StorageService) GetStorage(ctx context.Context, id int64) (*db.Storage, error) {
+    storage, err := s.queries.GetStorageByID(ctx, id)
+    if errors.Is(err, sql.ErrNoRows) {
+        return nil, ErrStorageNotFound
     }
-    return &example, nil
+    if err != nil {
+        return nil, errs.WrapDatabaseError(err)
+    }
+    return &storage, nil
 }
 ```
 
 ### 3. Handle Errors in Handlers
 
 ```go
-func (h *Handler) GetExample(c *gin.Context) {
-    example, err := h.service.GetExample(ctx, id)
+func (h *Handler) GetStorage(c *gin.Context) {
+    storage, err := h.service.GetStorage(c.Request.Context(), id)
     if err != nil {
-        errs.RespondWithError(c, err)  // Automatically formats response
+        errs.RespondWithError(c, err)
         return
     }
-    c.JSON(http.StatusOK, response)
+    h.respondStorage(c, storage)
 }
 ```
 
@@ -66,18 +69,24 @@ Add error keys in `internal/errs/keys.go`:
 
 ```go
 const (
-    ErrKeyExampleNotFound = "examples.not_found"
+    ErrKeyStoragesNotFound = "storages.not_found"
 )
 ```
 
-Keys are grouped by module (`auth.*`, `users.*`, `examples.*`, `storages.*`, `validation.*`).
+Keys are grouped by module (`auth.*`, `users.*`, `storages.*`, `plans.*`, `validation.*`). Clients translate them, so treat a key as part of the API contract.
 
 | Key | Status | When |
 |---|---|---|
 | `storages.not_found` | 404 | No storage with this ID |
 | `storages.name_taken` | 400, as a field error on `name` | Another storage has this name (case-insensitive) |
 | `storages.invalid_prefix` | 400 | `?prefix=` of a listing climbs out with `..` or is absolute |
-| `storages.unreachable` | 502 | Listing a storage failed; `details.reason` says why | Clients translate them, so treat a key as part of the API contract.
+| `storages.unreachable` | 502 | Listing a storage failed; `details.reason` says why |
+| `storages.in_use` | 409 | Deleting a storage that plans upload to; `details.plans` lists them as `{id, name}` |
+| `plans.not_found` | 404 | No plan with this ID |
+| `plans.name_taken` | 400, as a field error on `name` | Another plan has this name (case-insensitive) |
+| `plans.storage_not_found` | 400, as a field error on `storage_ids` | One of the storage IDs does not exist |
+| `plans.duplicate_schedule` | 400, as a field error on `schedules.N` | Row N repeats an earlier time and set of days |
+| `plans.keep_needs_max_age` | 400, as a field error on `keep_weekly` / `keep_monthly` | Keeping weekly or monthly archives needs `max_age_days` |
 
 Validation failures have their own shape and always return 400:
 
@@ -134,13 +143,13 @@ All errors return:
 
 ```json
 {
-  "error_key": "examples.not_found",
-  "message": "Example not found",
+  "error_key": "storages.not_found",
+  "message": "Storage not found",
   "status": 404,
   "timestamp": "2024-01-01T00:00:00Z"
 }
 ```
 
-## Examples
+## Reference
 
-See `internal/example/example_service.go` and `internal/example/handler.go` for complete examples.
+`internal/storages/storage_service.go` and `internal/storages/handler.go` use all of the above.

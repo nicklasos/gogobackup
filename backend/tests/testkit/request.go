@@ -11,7 +11,7 @@ import (
 
 // Client makes requests to the test server. A path can take arguments, as in fmt.Sprintf:
 //
-//	app.GET("/api/v1/examples/%d", example.ID)
+//	app.As(admin).GET("/api/v1/storages/%d", storage.ID)
 //
 // A body can be a struct or map (sent as JSON), or raw JSON as a string, []byte or io.Reader.
 type Client struct {

@@ -8,7 +8,7 @@
 
 ## Start here
 - **Recipes**: `docs/recipes/` has step-by-step procedures: build a feature across the API and this UI, add a feature, add a Playwright test. Use the matching one instead of improvising.
-- **Reference feature**: `src/features/examples`.
+- **Reference feature**: `src/features/storages`.
 - **The kit**: this repo is the admin UI. [gogo](https://github.com/nicklasos/gogo) is the API, expected next to it at `../backend`; its OpenAPI file becomes `src/api/schema.ts` through `make api-types`.
 
 ## Role
@@ -37,7 +37,7 @@ tests/e2e/   specs, pages/ (page objects), helpers/
 Import with the `@/` alias. A feature imports from `api`, `auth`, `layout` and `shared`, never from another feature.
 
 ## Adding a module
-1. Run `make swagger` in gogo and `make api-types` here, then give the generated types short names in `features/<module>/types.ts` (`export type Example = InternalExampleExampleResponse`). Do not hand-write a type the backend already describes, and never edit `src/api/schema.ts`.
+1. Run `make swagger` in gogo and `make api-types` here, then give the generated types short names in `features/<module>/types.ts` (`export type Storage = InternalStoragesStorageResponse`). Do not hand-write a type the backend already describes, and never edit `src/api/schema.ts`.
 2. `features/<module>/api.ts` — an `xApi` object of calls built on `api` from `@/api/client`.
 3. `features/<module>/hooks.ts` — `useX` queries, `useSaveX({ id?, body })`, `useDeleteX`. Mutations invalidate a key prefix from `qk`.
 4. Add the keys to `api/queryKeys.ts`.
@@ -45,7 +45,7 @@ Import with the `@/` alias. A feature imports from `api`, `auth`, `layout` and `
 6. Add the route to `app/router.tsx` as a `lazy(() => import(...))` page (default export) and the menu entry to `layout/nav.tsx`.
 7. Add locale keys to both `en` and `uk`; a unit test fails when the two files have different keys.
 
-`features/examples` is the reference for a paginated list plus a full-page editor with a markdown field; `features/users` for a table with modal forms.
+`features/storages` is the reference for a paginated list plus a full-page editor; `features/users` for a table with modal forms.
 
 ## API client
 - `api.get/post/put/patch/del<T>()` return the response's `data` field.
@@ -70,17 +70,10 @@ Import with the `@/` alias. A feature imports from `api`, `auth`, `layout` and `
 - User pages: `/admin/super-admins` and `/admin/admins` (super admins), `/users` (admins and super admins). All three use `features/users/components/UserManagement.tsx`.
 
 ## Policies
-- Who may do what to a record lives in `features/<module>/policy.ts` as pure functions: `canUpdateExample(user, example)`.
+- Who may do what to a record lives in `features/<module>/policy.ts` as pure functions: `canManageUser(actor, target)`, or `canManageStorages(user)` for an area that is admins only.
 - They mirror the API's `internal/<module>/policy.go` and only decide what the UI offers (a hidden button, a disabled action). The API enforces the same rule and is the authority.
 - Route guards (`RequireRole`) are for "this page is for these roles". A policy is for rules that depend on the record.
 - Every policy has cases in `src/features/policies.test.ts`, the same cases as the API's policy test.
-
-## Markdown
-- `shared/components/markdown/MarkdownEditor` is a WYSIWYG editor whose value is markdown text. Use it as a controlled field: `<Form.Item name="body"><MarkdownEditor testId="..." /></Form.Item>`. It loads its code (about 600 kB) only when rendered.
-- `MarkdownViewer` renders markdown. Raw HTML in the content is shown as text, never executed.
-- `markdownToPlainText(md, max)` gives a short plain preview for table cells and cards.
-- The backend stores the markdown as plain text; there is nothing markdown-specific on the API side.
-- In E2E, the writing area is `getByTestId('<testId>').locator('[contenteditable="true"]')`.
 
 ## Crashes and unknown URLs
 - `AppShell` wraps the routed page in an `ErrorBoundary` keyed by path and a `Suspense`: a render error shows `CrashScreen` in the content area, and navigating elsewhere clears it. `App` has a second, full-screen boundary for everything else.
@@ -94,7 +87,7 @@ Import with the `@/` alias. A feature imports from `api`, `auth`, `layout` and `
 Use AntD components and tokens (`theme.useToken()`); no literal colours or ad-hoc CSS. Branding lives in `app/theme.ts`. Page skeleton: `PageStack` > `Card` > `PageHeader` + content.
 
 ## Test locators (required)
-- Naming: `<entity>-<element>[-<id>]`, for example `add-user-button`, `user-email-input`, `edit-example-button-12`, `users-table`.
+- Naming: `<entity>-<element>[-<id>]`, for example `add-user-button`, `user-email-input`, `edit-storage-button-12`, `users-table`.
 - AntD `Result` and `Modal` do not give the test id a visible box: wrap `Result` in a `div`, and assert on a control inside a modal.
 - E2E: page objects in `tests/e2e/pages/`, `getByTestId` first. Table rows: `tr[data-row-key]`. Field errors: `aria-invalid="true"` on the input.
 - No assertions on copy or on Ant Design class names.

@@ -21,6 +21,7 @@ import (
 	"app/internal/scheduler"
 	"app/internal/secretbox"
 	"app/internal/server"
+	"app/internal/tools"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -28,7 +29,7 @@ import (
 
 // @title           Gogo API Template
 // @version         1.0
-// @description     A production-ready Go API template with authentication and CRUD examples
+// @description     Gogobackup: storages, backup plans and the accounts that manage them
 // @termsOfService  http://swagger.io/terms/
 
 // @contact.name   API Support
@@ -125,6 +126,7 @@ func main() {
 		Logger:  logger,
 		Mail:    mail.NewService(cfg, logger),
 		Secrets: secrets,
+		Tools:   tools.System{},
 		Api:     r.Group("/api/v1"),
 	}
 

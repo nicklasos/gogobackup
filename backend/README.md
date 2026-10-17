@@ -83,6 +83,7 @@ Run the tests with `make test`. They need no database setup: each test gets its 
 - **Safe defaults**: registration closed unless `ALLOW_REGISTRATION=true`, and a weak `JWT_SECRET` is refused in production
 - **Roles**: `super-admin`, `admin`, `user` with `RequireRole` middleware; roles are read from the database on every request
 - **User management**: super admins manage super admins and admins, admins manage users
+- **Backup plans**: what to back up (Postgres, MySQL, SQLite or files), when (UTC times on chosen weekdays), where to (storages) and how long to keep it, with a source test that also checks the dump program on PATH
 - **Storages**: where backups go (a local directory, S3-compatible or Google Cloud Storage), with a connection test and a browser. Credentials are encrypted with `ENCRYPTION_KEY` and never returned
 - **Mail**: SMTP service (`app.Mail`), logged instead of sent in debug mode, with an in-memory sender for tests
 - **Policies**: who may do what to a record, one small `policy.go` per module
@@ -91,7 +92,6 @@ Run the tests with `make test`. They need no database setup: each test gets its 
 - **Transactions**: `app.Tx.WithTx(ctx, func(q *db.Queries) error { ... })`
 - **Request ID**: `X-Request-ID` on every response and in every `*Context` log line
 - **Graceful shutdown** and env-driven CORS
-- **CRUD Example**: Complete example module with `Remember` caching
 - **Pagination**: `?page` / `?page_size` parsing and a `pagination` block on every list
 - **Type Safety**: SQLC for type-safe database operations
 - **Swagger**: Auto-generated API documentation
@@ -119,7 +119,8 @@ gogo/
 │   ├── server/                  # Engine middleware + the list of modules
 │   ├── auth/                    # Authentication module
 │   ├── users/                   # User management
-│   ├── example/                 # Example CRUD module (cache demo)
+│   ├── plans/                   # Backup plans: sources registry, schedules, source tests
+│   ├── tools/                   # Dump programs on PATH, and a fake for tests
 │   ├── storages/                # Storages: kinds registry, service, handlers
 │   │   └── driver/              # Local, S3 and GCS drivers: Put, Open, List, Delete, Probe
 │   ├── secretbox/               # AES-256-GCM for credentials at rest
@@ -176,12 +177,14 @@ make swagger          # Generate API docs
 
 Admins can only manage accounts whose role is `user`; anything else returns 403 `users.forbidden_role`.
 
-### Examples
-- `GET /api/v1/examples` - List examples with pagination (protected, cached)
-- `POST /api/v1/examples` - Create example (protected)
-- `GET /api/v1/examples/:id` - Get example (protected)
-- `PUT /api/v1/examples/:id` - Update example (protected)
-- `DELETE /api/v1/examples/:id` - Delete example (protected)
+### Backup plans (admins)
+- `GET /api/v1/plans` - List plans, without source passwords, with their storages and `next_run_at`
+- `POST /api/v1/plans` - Create a plan: `{name, source_kind, postgres|mysql|sqlite|files: {...}, schedules, max_age_days, keep_weekly, keep_monthly, storage_ids, enabled}`
+- `GET /api/v1/plans/:id` - Get a plan (`secret_set` says whether a password is stored)
+- `PUT /api/v1/plans/:id` - Update; a blank password keeps the stored one
+- `DELETE /api/v1/plans/:id` - Delete a plan; its storages and archives stay
+- `POST /api/v1/plans/test` - Test an unsaved source (`?plan_id=` reuses that plan's password)
+- `POST /api/v1/plans/:id/test` - Test a saved plan's source: connect, and find the dump program on PATH
 
 ### Storages (admins)
 - `GET /api/v1/storages` - List storages, without credentials
@@ -234,11 +237,11 @@ page, ok := middleware.Page(c)              // 400 when ?page / ?page_size are i
 
 ### Types.go Pattern
 - All request/response types go in `types.go` within each module
-- Services define internal types (e.g., `PaginatedExamplesResult`) in service files
+- Services define internal types (e.g., `PaginatedStoragesResult`) in service files
 - Handlers convert service types to response types from `types.go`
 
 ### Cache Pattern
-- Use `cache.Remember` for short-lived list responses (see `example` module)
+- Use `cache.Remember` for short-lived list responses
 - The cache is `cache.MemoryCache`, in the API process: it starts empty on every restart
 - Invalidate on create/update/delete
 
@@ -305,7 +308,7 @@ The project uses structured error handling with the `errs` package. See `docs/ER
 - Services return domain errors: `errs.NewNotFoundError(key, message)`
 - Handlers use: `errs.RespondWithError(c, err)` or `errs.RespondWithValidationError(c, err)`
 - DB helpers: `errs.WrapDatabaseError`, `errs.DomainErrorFromUniqueViolation`
-- See `internal/example/` for complete examples
+- See `internal/storages/` for a complete module
 
 ## Links
 

@@ -62,7 +62,7 @@
   },
   "navigation": {
     "dashboard": "Дашборд",
-    "examples": "Приклади",
+    "plans": "Плани копіювання",
     "storages": "Сховища",
     "users": "Користувачі",
     "profile": "Профіль",
@@ -86,26 +86,154 @@
       "write": "Запис",
       "read": "Читання",
       "delete": "Видалення"
+    },
+    "sourceKind": {
+      "postgres": "PostgreSQL",
+      "mysql": "MySQL",
+      "sqlite": "SQLite",
+      "files": "Файли"
+    },
+    "sourceTestStep": {
+      "connect": "Підключення",
+      "tool": "Програма дампу",
+      "path": "Шлях"
+    },
+    "sslMode": {
+      "disable": "Вимкнено",
+      "require": "Обовʼязково, без перевірки сертифіката",
+      "verify-full": "Обовʼязково, з перевіркою сертифіката"
+    },
+    "weekdayShort": {
+      "mon": "Пн",
+      "tue": "Вт",
+      "wed": "Ср",
+      "thu": "Чт",
+      "fri": "Пт",
+      "sat": "Сб",
+      "sun": "Нд"
     }
   },
   "dashboard": {
     "title": "Дашборд",
     "welcome": "Вітаємо, {{name}}",
-    "subtitle": "Використовуйте меню для керування прикладами."
+    "subtitle": "Скористайтеся меню, щоб перейти до потрібних сторінок."
   },
-  "examples": {
-    "title": "Приклади",
-    "add": "Додати приклад",
-    "edit": "Редагувати приклад",
-    "create": "Створити приклад",
-    "titleField": "Заголовок",
-    "descriptionField": "Опис",
-    "titleRequired": "Заголовок обовʼязковий",
-    "deleted": "Приклад видалено",
-    "saved": "Приклад збережено",
-    "deleteConfirm": "Видалити цей приклад?",
-    "empty": "Прикладів ще немає",
-    "view": "Переглянути"
+  "plans": {
+    "title": "Плани резервного копіювання",
+    "subtitle": "Що копіювати, коли, куди і як довго зберігати.",
+    "add": "Додати план",
+    "create": "Новий план",
+    "edit": "Редагувати план",
+    "empty": "Планів ще немає",
+    "saved": "План збережено",
+    "deleted": "План видалено",
+    "deleteConfirm": "Видалити цей план?",
+    "deleteHint": "Створені ним архіви залишаться у сховищах.",
+    "nameField": "Назва",
+    "namePlaceholder": "myproject-prod",
+    "nameRequired": "Дайте плану назву",
+    "source": "Джерело",
+    "schedules": "Розклад",
+    "nextRunColumn": "Наступний запуск",
+    "storagesColumn": "Сховища",
+    "enabledColumn": "Увімкнено",
+    "on": "Так",
+    "off": "Ні",
+    "paused": "Призупинено",
+    "manual": "Вручну",
+    "sections": {
+      "what": "Що копіювати",
+      "when": "Коли",
+      "where": "Куди",
+      "keep": "Зберігання"
+    },
+    "kindHint": {
+      "postgres": "База даних PostgreSQL, дамп робить pg_dump на цьому сервері.",
+      "mysql": "База даних MySQL або MariaDB, дамп робить mysqldump на цьому сервері.",
+      "sqlite": "Файл бази SQLite на цьому сервері, копіює sqlite3.",
+      "files": "Каталоги й файли на цьому сервері, упаковані в один архів."
+    },
+    "url": {
+      "label": "Вставте адресу підключення",
+      "hint": "Заповнює поля нижче. Саму адресу не зберігаємо.",
+      "filled": "Заповнено з адреси. Перевірте поля нижче.",
+      "invalid": "Це не адреса postgres:// чи mysql://"
+    },
+    "fields": {
+      "host": "Хост",
+      "port": "Порт",
+      "user": "Користувач",
+      "database": "База даних",
+      "sslMode": "SSL",
+      "password": "Пароль",
+      "passwordKeep": "Збережено. Залиште порожнім, щоб не змінювати",
+      "sqlitePath": "Файл бази",
+      "sqlitePathHint": "Абсолютний шлях до файлу бази на цьому сервері.",
+      "paths": "Шляхи",
+      "pathsHint": "Абсолютні шляхи до каталогів або файлів на цьому сервері.",
+      "addPath": "Додати шлях",
+      "excludes": "Пропустити",
+      "excludesHint": "Необовʼязкові шаблони, наприклад *.log або cache/*.",
+      "addExclude": "Додати шаблон",
+      "remove": "Прибрати",
+      "absolutePath": "Вкажіть абсолютний шлях, що починається з /"
+    },
+    "test": {
+      "button": "Перевірити підключення",
+      "ok": "Готово до копіювання",
+      "failed": "Збій на кроці: {{step}}",
+      "server": "Сервер",
+      "notFound": "не знайдено"
+    },
+    "schedule": {
+      "time": "Час",
+      "utc": "UTC",
+      "everyDay": "Щодня",
+      "daily": "Щодня",
+      "add": "Додати час",
+      "remove": "Прибрати час",
+      "manualOnly": "Лише ручний запуск",
+      "manualHint": "Часу не задано: план запускається лише вручну.",
+      "nextRun": "Наступний запуск: {{when}}",
+      "duplicate": "Цей час і ці дні вже є у списку",
+      "hint": "Час у UTC. Кожен рядок запускається у вибрані дні або щодня."
+    },
+    "where": {
+      "field": "Завантажувати в",
+      "placeholder": "Виберіть сховища",
+      "required": "Виберіть хоча б одне сховище",
+      "none": "Сховищ ще немає.",
+      "add": "Додати сховище"
+    },
+    "keep": {
+      "prune": "Видаляти старі копії",
+      "olderThan": "Старші за",
+      "days": "днів",
+      "weekly": "Також зберігати одну копію на тиждень протягом",
+      "weeks": "тижнів",
+      "monthly": "Також зберігати одну копію на місяць протягом",
+      "months": "місяців"
+    },
+    "retention": {
+      "forever": "Усі копії зберігаються назавжди.",
+      "olderThan_one": "копії, старші за {{count}} день",
+      "olderThan_few": "копії, старші за {{count}} дні",
+      "olderThan_many": "копії, старші за {{count}} днів",
+      "olderThan_other": "копії, старші за {{count}} дня",
+      "weekly_one": "першу копію останнього тижня",
+      "weekly_few": "першу копію кожного з останніх {{count}} тижнів",
+      "weekly_many": "першу копію кожного з останніх {{count}} тижнів",
+      "weekly_other": "першу копію кожного з останніх {{count}} тижня",
+      "monthly_one": "першу копію останнього місяця",
+      "monthly_few": "першу копію кожного з останніх {{count}} місяців",
+      "monthly_many": "першу копію кожного з останніх {{count}} місяців",
+      "monthly_other": "першу копію кожного з останніх {{count}} місяця",
+      "and": " і ",
+      "sentence": "Видаляти {{rule}}.",
+      "sentenceExcept": "Видаляти {{rule}}, але зберігати {{keeps}}."
+    },
+    "enabled": "Запускати за розкладом",
+    "enabledHint": "Вимкнений план зберігає налаштування, але не запускається за розкладом."
   },
   "storages": {
     "title": "Сховища",
@@ -164,7 +292,8 @@
     "objectModified": "Змінено",
     "refresh": "Оновити",
     "root": "Корінь",
-    "folderEmpty": "Тека порожня"
+    "folderEmpty": "Тека порожня",
+    "inUse": "У це сховище завантажують плани: {{plans}}. Спершу приберіть його з цих планів."
   },
   "userManagement": {
     "byRole": {
@@ -238,7 +367,6 @@
     "users.not_found": "Користувача не знайдено",
     "users.forbidden_role": "Ви не можете керувати користувачами з цією роллю",
     "users.cannot_delete_self": "Ви не можете видалити себе",
-    "examples.not_found": "Приклад не знайдено",
     "validation.failed": "Помилка валідації",
     "validation.required": "Обовʼязкове поле",
     "validation.email": "Некоректний email",
@@ -248,7 +376,6 @@
     "validation.invalid": "Некоректне значення",
     "validation.type_mismatch": "Невірний тип значення",
     "validation.body_invalid": "Некоректний запит",
-    "validation.title.required": "Заголовок обовʼязковий",
     "network": "Не вдалося зʼєднатися із сервером. Перевірте зʼєднання і спробуйте ще раз.",
     "auth.too_many_requests": "Забагато спроб. Спробуйте пізніше.",
     "auth.registration_disabled": "Реєстрацію вимкнено",
@@ -266,86 +393,18 @@
     "validation.s3.endpoint.invalid": "Вкажіть адресу на кшталт https://s3.example.com, без шляху",
     "validation.s3.prefix.invalid": "Тека не може містити ..",
     "validation.gcs.prefix.invalid": "Тека не може містити ..",
-    "validation.gcs.credentials_json.invalid": "Вставте файл ключа сервісного акаунта: JSON із \"type\": \"service_account\""
-  },
-  "editor": {
-    "placeholder": "Введіть текст",
-    "dialogControls": {
-      "save": "Зберегти",
-      "cancel": "Скасувати"
-    },
-    "createLink": {
-      "url": "URL",
-      "urlPlaceholder": "Виберіть або вставте URL",
-      "title": "Назва",
-      "saveTooltip": "Установити URL",
-      "cancelTooltip": "Скасувати зміну"
-    },
-    "linkPreview": {
-      "open": "Відкрити {{url}} у новому вікні",
-      "edit": "Редагувати URL посилання",
-      "copyToClipboard": "Скопіювати в буфер обміну",
-      "copied": "Скопійовано!",
-      "remove": "Видалити посилання"
-    },
-    "toolbar": {
-      "blockTypes": {
-        "paragraph": "Абзац",
-        "quote": "Цитата",
-        "heading": "Заголовок {{level}}"
-      },
-      "blockTypeSelect": {
-        "selectBlockTypeTooltip": "Виберіть тип блоку",
-        "placeholder": "Тип блоку"
-      },
-      "toggleGroup": "Група перемикачів",
-      "removeBold": "Прибрати жирний шрифт",
-      "bold": "Жирний шрифт",
-      "removeItalic": "Видалити курсив",
-      "italic": "Курсив",
-      "underline": "Прибрати підкреслення",
-      "removeUnderline": "Підкреслення",
-      "removeInlineCode": "Видалити форматування коду",
-      "inlineCode": "Формат вбудованого коду",
-      "link": "Створити посилання",
-      "richText": "Розширений текст",
-      "diffMode": "Режим різниці",
-      "source": "Режим вихідних даних",
-      "admonition": "Вставити застереження",
-      "codeBlock": "Вставити блок коду",
-      "editFrontmatter": "Редагувати frontmatter",
-      "insertFrontmatter": "Вставити frontmatter",
-      "image": "Вставити зображення",
-      "insertSandpack": "Вставити Sandpack",
-      "table": "Вставити таблицю",
-      "thematicBreak": "Вставити тематичний розрив",
-      "bulletedList": "Маркований список",
-      "numberedList": "Нумерований список",
-      "checkList": "Контрольний список",
-      "deleteSandpack": "Видалити цей блок коду",
-      "undo": "Скасувати {{shortcut}}",
-      "redo": "Повторити скасоване {{shortcut}}",
-      "highlight": "Виділити",
-      "removeHighlight": "Прибрати виділення"
-    },
-    "customLinks": {
-      "phone": {
-        "button": "Телефон",
-        "tooltip": "Вставити посилання на телефон",
-        "placeholder": "Введіть номер телефону",
-        "submit": "Вставити телефон"
-      },
-      "email": {
-        "button": "Ел. пошта",
-        "tooltip": "Вставити посилання на email",
-        "placeholder": "Введіть email адресу",
-        "submit": "Вставити email"
-      }
-    },
-    "contentArea": {
-      "editableMarkdown": "редагований маркдаун"
-    },
-    "crashMessage": "Редактор зіткнувся з проблемою. Можна спробувати ще раз, не залишаючи сторінку.",
-    "crashRetry": "Спробувати ще раз"
+    "validation.gcs.credentials_json.invalid": "Вставте файл ключа сервісного акаунта: JSON із \"type\": \"service_account\"",
+    "plans.not_found": "План не знайдено",
+    "plans.name_taken": "План з такою назвою вже існує",
+    "plans.storage_not_found": "Одного з вибраних сховищ уже немає",
+    "plans.duplicate_schedule": "Цей час і ці дні вже є у списку",
+    "plans.keep_needs_max_age": "Спершу увімкніть видалення старих копій",
+    "storages.in_use": "У це сховище завантажують плани",
+    "validation.sqlite.path.invalid": "Вкажіть абсолютний шлях, наприклад /var/lib/app/app.db",
+    "validation.max_age_days.max": "Не більше 3650 днів",
+    "validation.keep_weekly.max": "Не більше 520 тижнів",
+    "validation.keep_monthly.max": "Не більше 240 місяців",
+    "validation.storage_ids.min": "Виберіть хоча б одне сховище",
+    "validation.storage_ids.required": "Виберіть хоча б одне сховище"
   }
 }

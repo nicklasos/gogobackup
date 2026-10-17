@@ -96,7 +96,7 @@ test.describe('Storages as a plain user', () => {
     const list = new StoragesPage(page)
 
     await shell.goto('/')
-    await expect(shell.navItem('examples')).toBeVisible()
+    await expect(shell.navItem('dashboard')).toBeVisible()
     await expect(shell.navItem('storages')).toHaveCount(0)
 
     for (const target of ['/storages', '/storages/new', '/storages/1/browse']) {

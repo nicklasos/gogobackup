@@ -9,13 +9,19 @@ import (
 	"time"
 )
 
-type Example struct {
-	ID          int64          `db:"id" json:"id"`
-	UserID      int64          `db:"user_id" json:"user_id"`
-	Title       string         `db:"title" json:"title"`
-	Description sql.NullString `db:"description" json:"description"`
-	CreatedAt   sql.NullTime   `db:"created_at" json:"created_at"`
-	UpdatedAt   sql.NullTime   `db:"updated_at" json:"updated_at"`
+type Plan struct {
+	ID           int64        `db:"id" json:"id"`
+	Name         string       `db:"name" json:"name"`
+	SourceKind   string       `db:"source_kind" json:"source_kind"`
+	SourceConfig string       `db:"source_config" json:"source_config"`
+	SourceSecret []byte       `db:"source_secret" json:"source_secret"`
+	Schedules    string       `db:"schedules" json:"schedules"`
+	MaxAgeDays   int64        `db:"max_age_days" json:"max_age_days"`
+	KeepWeekly   int64        `db:"keep_weekly" json:"keep_weekly"`
+	KeepMonthly  int64        `db:"keep_monthly" json:"keep_monthly"`
+	Enabled      bool         `db:"enabled" json:"enabled"`
+	CreatedAt    sql.NullTime `db:"created_at" json:"created_at"`
+	UpdatedAt    sql.NullTime `db:"updated_at" json:"updated_at"`
 }
 
 type RefreshToken struct {

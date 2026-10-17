@@ -30,13 +30,6 @@ interface CreateUserOptions {
 
 export type EmailTokenPurpose = 'password_reset' | 'email_verification'
 
-export interface TestExample {
-  id: number
-  user_id: number
-  title: string
-  description: string
-}
-
 let sequence = 0
 
 /** Emails start with `e2e-` so cleanup can find every user a test created, including through the UI. */
@@ -106,29 +99,34 @@ export class DatabaseHelper {
     return token
   }
 
-  async createExample(userId: number, { title = `E2E Example ${Date.now()}`, description = 'desc' } = {}): Promise<TestExample> {
+  /** A local storage; the name should start with "E2E" so cleanup finds it. */
+  async createStorage(name: string, dir: string): Promise<{ id: number; name: string }> {
     return this.connection()
-      .prepare(
-        `INSERT INTO examples (user_id, title, description)
-         VALUES (?, ?, ?)
-         RETURNING id, user_id, title, description`
-      )
-      .get(userId, title, description) as unknown as TestExample
+      .prepare(`INSERT INTO storages (name, kind, config) VALUES (?, 'local', ?) RETURNING id, name`)
+      .get(name, JSON.stringify({ path: dir })) as { id: number; name: string }
   }
 
-  async createExamples(userId: number, count: number, prefix = 'E2E Example'): Promise<void> {
-    this.connection()
+  /** A files plan, 03:00 every day, uploading to the given storage; the name should start with "E2E". */
+  async createPlan(name: string, storageId: number, paths: string[] = ['/tmp']): Promise<{ id: number; name: string }> {
+    const db = this.connection()
+    const plan = db
       .prepare(
-        `WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < ?)
-         INSERT INTO examples (user_id, title, description)
-         SELECT ?, ? || ' ' || printf('%03d', n), 'desc' FROM seq`
+        `INSERT INTO plans (name, source_kind, source_config, schedules, max_age_days)
+         VALUES (?, 'files', ?, '[{"time":"03:00","days":[]}]', 30) RETURNING id, name`
       )
-      .run(count, userId, prefix)
+      .get(name, JSON.stringify({ paths, excludes: [] })) as { id: number; name: string }
+    db.prepare('INSERT INTO plan_storages (plan_id, storage_id) VALUES (?, ?)').run(plan.id, storageId)
+    return plan
   }
 
-  /** Examples and refresh tokens go with their user (ON DELETE CASCADE). Storages are global: theirs start with "E2E". */
+  /**
+   * Refresh tokens and emailed tokens go with their user (ON DELETE CASCADE). Plans and storages
+   * are global: theirs start with "E2E". Plans go first, because a storage a plan uses cannot be deleted.
+   */
   async cleanupTestData(): Promise<void> {
-    this.connection().exec(`DELETE FROM users WHERE email LIKE 'e2e-%@example.com'; DELETE FROM storages WHERE name LIKE 'E2E%'`)
+    this.connection().exec(
+      `DELETE FROM users WHERE email LIKE 'e2e-%@example.com'; DELETE FROM plans WHERE name LIKE 'E2E%'; DELETE FROM storages WHERE name LIKE 'E2E%'`
+    )
   }
 }
 

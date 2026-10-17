@@ -7,7 +7,7 @@ import (
 
 // DomainError represents a structured application error with an error key
 type DomainError struct {
-	Key     string                 // Error key (e.g., "examples.not_found")
+	Key     string                 // Error key (e.g., "storages.not_found")
 	Message string                 // Human-readable message (for logging)
 	Status  int                    // HTTP status code
 	Err     error                  // Wrapped error (for error chain)

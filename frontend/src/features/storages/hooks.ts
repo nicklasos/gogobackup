@@ -49,10 +49,12 @@ export function useTestStorage() {
   })
 }
 
+/** A storage that plans use cannot be deleted; the page says which plans, so the toast is silenced. */
 export function useDeleteStorage() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (id: ID) => storagesApi.remove(id),
     onSuccess: () => client.invalidateQueries({ queryKey: qk.storages.all }),
+    meta: { silent: true },
   })
 }

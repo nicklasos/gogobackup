@@ -80,6 +80,10 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      # The E2E suite tests a SQLite plan, whose connection test looks for sqlite3 on PATH
+      - name: Install sqlite3
+        run: command -v sqlite3 || (sudo apt-get update && sudo apt-get install -y sqlite3)
+
       - name: Typecheck, lint, unit and E2E tests
         run: make test
 

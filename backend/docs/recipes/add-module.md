@@ -1,7 +1,9 @@
 # Add a module
 
 A module is one resource: a table, its queries, and the endpoints over it. The steps below add
-`orders`; copy `internal/example` and rename as you go.
+`orders`; copy `internal/storages` and rename as you go. Storages belong to the whole installation
+and only admins reach them, so that module has no `policy.go`; orders belong to a user, so they get one
+(`internal/users/policy.go` shows the shape).
 
 ## 1. Schema and queries
 
@@ -38,7 +40,7 @@ Details that are easy to get wrong:
   Timestamps through `internal.FormatTime`.
 - **Two writes that must both happen** go inside `s.tx.WithTx(ctx, func(q *db.Queries) error { ... })`.
 - **Role-restricted routes**: `group.Use(app.AuthMiddleware, middleware.RequireRole(middleware.RoleAdmin))`.
-- **Swagger annotations** on every handler, copied from the example module and adjusted. Errors are `errs.ErrorResponse`.
+- **Swagger annotations** on every handler, copied from `internal/storages/handler.go` and adjusted. Errors are `errs.ErrorResponse`.
 
 ## 3. Register it
 

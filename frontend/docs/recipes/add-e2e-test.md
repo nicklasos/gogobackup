@@ -15,9 +15,8 @@ A spec runs because of the folder it is in. There is nothing to register.
 ## 2. Data
 
 - `loginAs(page, 'admin')` creates a user with that role and signs the page in. It returns the user.
-- `dbHelper.createUser({ roles, emailVerified })`, `dbHelper.createExample(userId, {...})`, `dbHelper.createExamples(userId, 25)`,
-  `dbHelper.createEmailToken(userId, 'password_reset')` seed the database directly.
-- Records created through the UI must be findable by cleanup: emails from `uniqueEmail('label')`, titles starting with `E2E`.
+- `dbHelper.createUser({ roles, emailVerified })` and `dbHelper.createEmailToken(userId, 'password_reset')` seed the database directly.
+- Records created through the UI must be findable by cleanup: emails from `uniqueEmail('label')`, names starting with `E2E`.
 - Add a method to `tests/e2e/helpers/db-helper.ts` when a new table needs seeding.
 
 ## 3. Page objects
@@ -33,7 +32,6 @@ Put locators and multi-step actions in `tests/e2e/pages/<Name>Page.ts`, extendin
 | A row's button | `row.locator('[data-testid^="edit-order-button-"]')` |
 | The delete confirmation | `page.locator('[data-testid^="confirm-delete-order-button-"]')` |
 | A field in error | `expect(input).toHaveAttribute('aria-invalid', 'true')` |
-| The markdown editor's text area | `page.getByTestId('<id>').locator('[contenteditable="true"]')` |
 
 Never assert on visible copy (it is translated) or on Ant Design class names. A `Modal` or `Result` wrapper
 has no visible box of its own: assert on a control inside it.

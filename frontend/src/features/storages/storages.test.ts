@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import { ApiError } from '@/api/errors'
 import { childPrefix, normalizePrefix, prefixCrumbs } from './browsePath'
+import { plansUsingStorage } from './inUse'
 import { emptyStorageForm, formToRequest, hasStoredSecret, storageLocation, storageToForm } from './storageForm'
 import type { Storage } from './types'
 
@@ -62,5 +64,20 @@ describe('browse path', () => {
     assert.equal(childPrefix('a', 'b'), 'a/b/')
     assert.equal(normalizePrefix('/a//b'), 'a/b/')
     assert.equal(normalizePrefix(null), '')
+  })
+})
+
+describe('a storage in use', () => {
+  it('reads the plans from a 409', () => {
+    const error = new ApiError(409, 'storages.in_use', 'in use', undefined, { plans: [{ id: 2, name: 'Blog' }, { id: 1, name: 'Shop' }, { bad: true }] })
+    assert.deepEqual(plansUsingStorage(error), [
+      { id: 2, name: 'Blog' },
+      { id: 1, name: 'Shop' },
+    ])
+  })
+
+  it('ignores other errors', () => {
+    assert.equal(plansUsingStorage(new ApiError(404, 'storages.not_found', 'gone')), null)
+    assert.equal(plansUsingStorage(new Error('network')), null)
   })
 })

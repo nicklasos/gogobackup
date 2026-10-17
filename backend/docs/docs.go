@@ -544,14 +544,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/examples": {
+        "/api/v1/plans": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all examples for the authenticated user with pagination",
+                "description": "Every plan, without source passwords. Admins only.",
                 "consumes": [
                     "application/json"
                 ],
@@ -559,9 +559,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "examples"
+                    "plans"
                 ],
-                "summary": "List examples (paginated)",
+                "summary": "List backup plans (paginated)",
                 "parameters": [
                     {
                         "type": "integer",
@@ -582,7 +582,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_example.PaginatedExamplesResponse"
+                            "$ref": "#/definitions/internal_plans.PaginatedPlansResponse"
                         }
                     },
                     "400": {
@@ -593,6 +593,12 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/app_internal_errs.ErrorResponse"
                         }
@@ -611,7 +617,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new example for the authenticated user",
+                "description": "Send the source block named by source_kind (postgres, mysql, sqlite or files) and no other. Postgres and MySQL need a password. Admins only.",
                 "consumes": [
                     "application/json"
                 ],
@@ -619,17 +625,17 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "examples"
+                    "plans"
                 ],
-                "summary": "Create example",
+                "summary": "Create backup plan",
                 "parameters": [
                     {
-                        "description": "Example details",
+                        "description": "Plan",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_example.CreateExampleRequest"
+                            "$ref": "#/definitions/internal_plans.PlanRequest"
                         }
                     }
                 ],
@@ -637,17 +643,23 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_example.ExampleDataResponse"
+                            "$ref": "#/definitions/internal_plans.PlanDataResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                            "$ref": "#/definitions/app_internal_errs.ValidationErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/app_internal_errs.ErrorResponse"
                         }
@@ -661,14 +673,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/examples/{id}": {
-            "get": {
+        "/api/v1/plans/test": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get an example by ID for the authenticated user",
+                "description": "Connects to the database (or opens the files) and looks for the dump program on this server. A failed test is a 200 whose step says what failed. On an edit form, pass plan_id so a blank password is taken from that plan. Admins only.",
                 "consumes": [
                     "application/json"
                 ],
@@ -676,13 +688,88 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "examples"
+                    "plans"
                 ],
-                "summary": "Get example",
+                "summary": "Test an unsaved source",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Example ID",
+                        "description": "The plan being edited, whose password a blank form uses",
+                        "name": "plan_id",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Source",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_plans.SourceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_plans.SourceTestDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/plans/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "A plan without its source password: secret_set says whether one is stored. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plans"
+                ],
+                "summary": "Get backup plan",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Plan ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -692,7 +779,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_example.ExampleDataResponse"
+                            "$ref": "#/definitions/internal_plans.PlanDataResponse"
                         }
                     },
                     "400": {
@@ -733,7 +820,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update an existing example for the authenticated user",
+                "description": "A password left blank keeps the stored one, unless the source kind changes. Admins only.",
                 "consumes": [
                     "application/json"
                 ],
@@ -741,24 +828,24 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "examples"
+                    "plans"
                 ],
-                "summary": "Update example",
+                "summary": "Update backup plan",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Example ID",
+                        "description": "Plan ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Example details",
+                        "description": "Plan",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_example.UpdateExampleRequest"
+                            "$ref": "#/definitions/internal_plans.PlanRequest"
                         }
                     }
                 ],
@@ -766,13 +853,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_example.ExampleDataResponse"
+                            "$ref": "#/definitions/internal_plans.PlanDataResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                            "$ref": "#/definitions/app_internal_errs.ValidationErrorResponse"
                         }
                     },
                     "401": {
@@ -807,7 +894,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete an example for the authenticated user",
+                "description": "Removes the plan. Its storages and the archives in them are not touched. Admins only.",
                 "consumes": [
                     "application/json"
                 ],
@@ -815,13 +902,13 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "examples"
+                    "plans"
                 ],
-                "summary": "Delete example",
+                "summary": "Delete backup plan",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Example ID",
+                        "description": "Plan ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -832,6 +919,73 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/plans/{id}/test": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Connects to the database (or opens the files) and looks for the dump program on this server. A failed test is a 200 whose step says what failed. Admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plans"
+                ],
+                "summary": "Test a plan's source",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_plans.SourceTestDataResponse"
                         }
                     },
                     "400": {
@@ -1217,7 +1371,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Removes the storage from Gogobackup. The files in it are not touched. Admins only.",
+                "description": "Removes the storage from Gogobackup. The files in it are not touched. A storage that backup plans use is a 409 storages.in_use whose details.plans lists them. Admins only.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1264,6 +1418,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/app_internal_errs.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/app_internal_errs.ErrorResponse"
                         }
@@ -1833,6 +1993,19 @@ const docTemplate = `{
                 }
             }
         },
+        "app_internal_storages.Kind": {
+            "type": "string",
+            "enum": [
+                "local",
+                "s3",
+                "gcs"
+            ],
+            "x-enum-varnames": [
+                "KindLocal",
+                "KindS3",
+                "KindGCS"
+            ]
+        },
         "internal.MessageData": {
             "type": "object",
             "required": [
@@ -2120,63 +2293,102 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_example.CreateExampleRequest": {
+        "internal_plans.FilesConfig": {
             "type": "object",
             "required": [
-                "title"
+                "excludes",
+                "paths"
             ],
             "properties": {
-                "description": {
-                    "type": "string"
+                "excludes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
-                "title": {
-                    "type": "string"
+                "paths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
-        "internal_example.ExampleDataResponse": {
+        "internal_plans.FilesInput": {
             "type": "object",
             "required": [
-                "data"
+                "paths"
             ],
             "properties": {
-                "data": {
-                    "$ref": "#/definitions/internal_example.ExampleResponse"
+                "excludes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "paths": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
-        "internal_example.ExampleResponse": {
+        "internal_plans.MySQLConfig": {
             "type": "object",
             "required": [
-                "created_at",
-                "description",
-                "id",
-                "title",
-                "updated_at",
-                "user_id"
+                "database",
+                "host",
+                "port",
+                "user"
             ],
             "properties": {
-                "created_at": {
+                "database": {
                     "type": "string"
                 },
-                "description": {
+                "host": {
                     "type": "string"
                 },
-                "id": {
+                "port": {
                     "type": "integer"
                 },
-                "title": {
+                "user": {
                     "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
                 }
             }
         },
-        "internal_example.PaginatedExamplesResponse": {
+        "internal_plans.MySQLInput": {
+            "type": "object",
+            "required": [
+                "database",
+                "host",
+                "user"
+            ],
+            "properties": {
+                "database": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "host": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "password": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1
+                },
+                "user": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "internal_plans.PaginatedPlansResponse": {
             "type": "object",
             "required": [
                 "data",
@@ -2186,7 +2398,7 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_example.ExampleResponse"
+                        "$ref": "#/definitions/internal_plans.PlanResponse"
                     }
                 },
                 "pagination": {
@@ -2194,19 +2406,479 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_example.UpdateExampleRequest": {
+        "internal_plans.PlanDataResponse": {
             "type": "object",
             "required": [
-                "title"
+                "data"
             ],
             "properties": {
-                "description": {
+                "data": {
+                    "$ref": "#/definitions/internal_plans.PlanResponse"
+                }
+            }
+        },
+        "internal_plans.PlanRequest": {
+            "type": "object",
+            "required": [
+                "enabled",
+                "keep_monthly",
+                "keep_weekly",
+                "max_age_days",
+                "name",
+                "schedules",
+                "source_kind",
+                "storage_ids"
+            ],
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "files": {
+                    "$ref": "#/definitions/internal_plans.FilesInput"
+                },
+                "keep_monthly": {
+                    "type": "integer",
+                    "maximum": 240,
+                    "minimum": 0
+                },
+                "keep_weekly": {
+                    "type": "integer",
+                    "maximum": 520,
+                    "minimum": 0
+                },
+                "max_age_days": {
+                    "type": "integer",
+                    "maximum": 3650,
+                    "minimum": 0
+                },
+                "mysql": {
+                    "$ref": "#/definitions/internal_plans.MySQLInput"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "postgres": {
+                    "$ref": "#/definitions/internal_plans.PostgresInput"
+                },
+                "schedules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_plans.ScheduleInput"
+                    }
+                },
+                "source_kind": {
+                    "enum": [
+                        "postgres",
+                        "mysql",
+                        "sqlite",
+                        "files"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_plans.SourceKind"
+                        }
+                    ]
+                },
+                "sqlite": {
+                    "$ref": "#/definitions/internal_plans.SQLiteInput"
+                },
+                "storage_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "internal_plans.PlanResponse": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "enabled",
+                "id",
+                "keep_monthly",
+                "keep_weekly",
+                "max_age_days",
+                "name",
+                "next_run_at",
+                "schedules",
+                "secret_set",
+                "source_kind",
+                "storages",
+                "updated_at"
+            ],
+            "properties": {
+                "created_at": {
                     "type": "string"
                 },
-                "title": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "files": {
+                    "$ref": "#/definitions/internal_plans.FilesConfig"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "keep_monthly": {
+                    "type": "integer"
+                },
+                "keep_weekly": {
+                    "type": "integer"
+                },
+                "max_age_days": {
+                    "type": "integer"
+                },
+                "mysql": {
+                    "$ref": "#/definitions/internal_plans.MySQLConfig"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "next_run_at": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "postgres": {
+                    "$ref": "#/definitions/internal_plans.PostgresConfig"
+                },
+                "schedules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_plans.Schedule"
+                    }
+                },
+                "secret_set": {
+                    "type": "boolean"
+                },
+                "source_kind": {
+                    "enum": [
+                        "postgres",
+                        "mysql",
+                        "sqlite",
+                        "files"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_plans.SourceKind"
+                        }
+                    ]
+                },
+                "sqlite": {
+                    "$ref": "#/definitions/internal_plans.SQLiteConfig"
+                },
+                "storages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_plans.PlanStorageResponse"
+                    }
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
+        },
+        "internal_plans.PlanStorageResponse": {
+            "type": "object",
+            "required": [
+                "id",
+                "kind",
+                "name"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "enum": [
+                        "local",
+                        "s3",
+                        "gcs"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/app_internal_storages.Kind"
+                        }
+                    ]
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_plans.PostgresConfig": {
+            "type": "object",
+            "required": [
+                "database",
+                "host",
+                "port",
+                "ssl_mode",
+                "user"
+            ],
+            "properties": {
+                "database": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "ssl_mode": {
+                    "type": "string",
+                    "enum": [
+                        "disable",
+                        "require",
+                        "verify-full"
+                    ]
+                },
+                "user": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_plans.PostgresInput": {
+            "type": "object",
+            "required": [
+                "database",
+                "host",
+                "user"
+            ],
+            "properties": {
+                "database": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "host": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "password": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1
+                },
+                "ssl_mode": {
+                    "type": "string",
+                    "enum": [
+                        "disable",
+                        "require",
+                        "verify-full"
+                    ]
+                },
+                "user": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "internal_plans.SQLiteConfig": {
+            "type": "object",
+            "required": [
+                "path"
+            ],
+            "properties": {
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_plans.SQLiteInput": {
+            "type": "object",
+            "required": [
+                "path"
+            ],
+            "properties": {
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_plans.Schedule": {
+            "type": "object",
+            "required": [
+                "days",
+                "time"
+            ],
+            "properties": {
+                "days": {
+                    "type": "array",
+                    "items": {
+                        "enum": [
+                            "mon",
+                            "tue",
+                            "wed",
+                            "thu",
+                            "fri",
+                            "sat",
+                            "sun"
+                        ],
+                        "$ref": "#/definitions/internal_plans.Weekday"
+                    }
+                },
+                "time": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_plans.ScheduleInput": {
+            "type": "object",
+            "required": [
+                "days",
+                "time"
+            ],
+            "properties": {
+                "days": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "mon",
+                            "tue",
+                            "wed",
+                            "thu",
+                            "fri",
+                            "sat",
+                            "sun"
+                        ]
+                    }
+                },
+                "time": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_plans.SourceKind": {
+            "type": "string",
+            "enum": [
+                "postgres",
+                "mysql",
+                "sqlite",
+                "files"
+            ],
+            "x-enum-varnames": [
+                "SourcePostgres",
+                "SourceMySQL",
+                "SourceSQLite",
+                "SourceFiles"
+            ]
+        },
+        "internal_plans.SourceRequest": {
+            "type": "object",
+            "required": [
+                "source_kind"
+            ],
+            "properties": {
+                "files": {
+                    "$ref": "#/definitions/internal_plans.FilesInput"
+                },
+                "mysql": {
+                    "$ref": "#/definitions/internal_plans.MySQLInput"
+                },
+                "postgres": {
+                    "$ref": "#/definitions/internal_plans.PostgresInput"
+                },
+                "source_kind": {
+                    "enum": [
+                        "postgres",
+                        "mysql",
+                        "sqlite",
+                        "files"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_plans.SourceKind"
+                        }
+                    ]
+                },
+                "sqlite": {
+                    "$ref": "#/definitions/internal_plans.SQLiteInput"
+                }
+            }
+        },
+        "internal_plans.SourceTestDataResponse": {
+            "type": "object",
+            "required": [
+                "data"
+            ],
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_plans.SourceTestResponse"
+                }
+            }
+        },
+        "internal_plans.SourceTestResponse": {
+            "type": "object",
+            "required": [
+                "ok"
+            ],
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "server_version": {
+                    "type": "string"
+                },
+                "step": {
+                    "type": "string",
+                    "enum": [
+                        "connect",
+                        "tool",
+                        "path"
+                    ]
+                },
+                "tool": {
+                    "$ref": "#/definitions/internal_plans.ToolResponse"
+                }
+            }
+        },
+        "internal_plans.ToolResponse": {
+            "type": "object",
+            "required": [
+                "found",
+                "name"
+            ],
+            "properties": {
+                "found": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_plans.Weekday": {
+            "type": "string",
+            "enum": [
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat",
+                "sun"
+            ],
+            "x-enum-varnames": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday"
+            ]
         },
         "internal_storages.GCSConfig": {
             "type": "object",
@@ -2654,7 +3326,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Gogo API Template",
-	Description:      "A production-ready Go API template with authentication and CRUD examples",
+	Description:      "Gogobackup: storages, backup plans and the accounts that manage them",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

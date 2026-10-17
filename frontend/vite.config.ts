@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
         output: {
           // React and the libraries every page needs change far less often than app code,
           // so in their own files they stay cached across deploys. Everything else is left
-          // to Rollup on purpose: it keeps heavy code (the table, the markdown editor) in
+          // to Rollup on purpose: it keeps heavy code (such as the table) in
           // the chunk of the pages that use it, instead of in the first download.
           manualChunks(id) {
             if (!id.includes('node_modules')) return undefined

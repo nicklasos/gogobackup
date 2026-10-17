@@ -24,3 +24,13 @@ func IsUniqueViolation(err error, column string) bool {
 		sqliteErr.Code() == sqlite3.SQLITE_CONSTRAINT_UNIQUE &&
 		strings.Contains(sqliteErr.Error(), column)
 }
+
+// IsForeignKeyViolation reports a write refused by a foreign key, such as deleting a row that
+// another table still points at. SQLite reports ON DELETE RESTRICT with the trigger code, so
+// this goes by the primary code and the message.
+func IsForeignKeyViolation(err error) bool {
+	var sqliteErr *sqlite.Error
+	return errors.As(err, &sqliteErr) &&
+		sqliteErr.Code()&0xff == sqlite3.SQLITE_CONSTRAINT &&
+		strings.Contains(sqliteErr.Error(), "FOREIGN KEY constraint failed")
+}

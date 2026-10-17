@@ -1,13 +1,13 @@
 // Package testkit is what a test starts from:
 //
-//	func TestExamples_List(t *testing.T) {
+//	func TestStorages_List(t *testing.T) {
 //		app := testkit.New(t)
-//		user := app.Create.User()
-//		app.Create.Example(user.ID, factory.WithTitle("Hello"))
+//		admin := app.Create.User(factory.Admin())
+//		app.Create.Storage(factory.WithStorageName("Nightly"))
 //
-//		app.As(user).GET("/api/v1/examples").
+//		app.As(admin).GET("/api/v1/storages").
 //			AssertOK().
-//			AssertJSONPath("data.0.title", "Hello")
+//			AssertJSONPath("data.0.name", "Nightly")
 //	}
 //
 // New gives each test its own freshly migrated SQLite file, so tests never see each other's
@@ -32,6 +32,7 @@ import (
 	"app/internal/middleware"
 	"app/internal/secretbox"
 	"app/internal/server"
+	"app/internal/tools"
 	"app/tests"
 
 	"github.com/gin-gonic/gin"
@@ -42,6 +43,13 @@ const JWTSecret = "test-secret-key"
 
 // EncryptionKey seals storage credentials in tests.
 var EncryptionKey = []byte("testkit-encryption-key-32-bytes!")
+
+// FakeToolVersions is what app.Tools reports for `<name> --version` at the start of a test.
+var FakeToolVersions = map[string]string{
+	"pg_dump":   "pg_dump (PostgreSQL) 17.2",
+	"mysqldump": "mysqldump  Ver 8.0.36 for Linux on x86_64 (MySQL Community Server - GPL)",
+	"sqlite3":   "3.45.1 2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa87ffb5b82257ccalt1",
+}
 
 type App struct {
 	// Client sends requests without a token. Use As for an authenticated one.
@@ -64,6 +72,9 @@ type App struct {
 
 	// Secrets seals and opens stored credentials with the test key
 	Secrets *secretbox.Box
+
+	// Tools stands in for the dump programs on PATH: every one is installed until Remove
+	Tools *tools.Fake
 
 	t      *testing.T
 	server *httptest.Server
@@ -111,6 +122,7 @@ func New(t *testing.T, configure ...func(*config.Config)) *App {
 		Cache:    cache.NewMemoryCache(),
 		Mail:     mail.NewMemorySender(),
 		Secrets:  secrets,
+		Tools:    tools.NewFake(FakeToolVersions),
 		t:        t,
 	}
 	app.Client = &Client{app: app}
@@ -169,6 +181,7 @@ func (a *App) baseURL() string {
 		Logger:  a.Logger,
 		Mail:    a.Mail,
 		Secrets: a.Secrets,
+		Tools:   a.Tools,
 		Api:     router.Group("/api/v1"),
 	})
 
